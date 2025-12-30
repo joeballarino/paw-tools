@@ -13,17 +13,14 @@
   --field-border:rgba(15,23,42,.14);
 }
 
-/* Base */
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
   background:var(--bg);
   color:var(--text);
-  font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
-
-/* Embed mode background */
 html[data-embed="1"] body{ background:#fff; }
 
 /* App container */
@@ -57,37 +54,6 @@ html[data-embed="1"] .panel{
   box-shadow:none;
 }
 
-/* Embed: simplify topbar so the outer host page can own the title */
-html[data-embed="1"] .panel-topbar{
-  background:transparent;
-}
-html[data-embed="1"] .topbar-left{
-  display:none;
-}
-html[data-embed="1"] .topbar-row1{
-  padding:10px 10px;
-}
-html[data-embed="1"] .topbar-right{
-  margin-left:auto;
-}
-html[data-embed="1"] .utility-pair{
-  border:1px solid rgba(5,195,249,.25);
-  background:rgba(5,195,249,.08);
-  border-radius:999px;
-  overflow:hidden;
-}
-html[data-embed="1"] .util-btn{
-  height:34px;
-  padding:0 12px;
-  background:transparent;
-}
-html[data-embed="1"] .util-btn + .util-btn{
-  border-left:1px solid rgba(5,195,249,.25);
-}
-html[data-embed="1"] .util-btn:hover{
-  background:rgba(5,195,249,.12);
-}
-
 /* Topbar container */
 .panel-topbar{
   border-bottom:1px solid var(--border);
@@ -106,26 +72,27 @@ html[data-embed="1"] .util-btn:hover{
   display:flex;
   gap:10px;
   align-items:center;
+  flex-wrap:wrap;
   min-width:0;
 }
 .topbar-right{
   display:flex;
   align-items:center;
-  gap:10px;
+  justify-content:flex-end;
 }
 
-/* Utility buttons group */
+/* Standardized utility pair (Reset + Tips) */
 .utility-pair{
   display:inline-flex;
   align-items:center;
-  border:1px solid var(--border);
+  border:1px solid var(--border-strong);
   border-radius:12px;
   overflow:hidden;
   background:#fff;
 }
 .util-btn{
-  height:36px;
-  padding:0 14px;
+  height:34px;
+  padding:0 12px;
   border:0;
   background:#fff;
   color:var(--text-strong);
@@ -137,26 +104,67 @@ html[data-embed="1"] .util-btn:hover{
   border-left:1px solid var(--border-strong);
 }
 .util-btn:hover{ background:rgba(15,23,42,.03); }
-.util-btn:active{ transform:translateY(0.5px); }
+.util-btn:active{ background:rgba(15,23,42,.05); }
 
-/* Messages area */
-.messages{
-  padding:14px 14px 0;
-  min-height:360px;
+/* Embed-only: make utility buttons feel nested + slightly branded */
+html[data-embed="1"] .panel-topbar{
+  background:transparent;
 }
+html[data-embed="1"] .topbar-row1{
+  padding:10px 10px;
+}
+html[data-embed="1"] .utility-pair{
+  border-color: rgba(5,195,249,.25);
+  background: rgba(5,195,249,.08);
+  border-radius: 999px;
+}
+html[data-embed="1"] .util-btn{
+  background: transparent;
+  color: #050E3D;
+  font-weight: 800;
+  height: 34px;
+  padding: 0 12px;
+}
+html[data-embed="1"] .util-btn + .util-btn{
+  border-left-color: rgba(5,195,249,.25);
+}
+html[data-embed="1"] .util-btn:hover{
+  background: rgba(5,195,249,.12);
+}
+
+/* Checkboxes */
+.check{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 14px;
+  color:var(--text);
+  font-size:14px;
+}
+.check input{ transform: translateY(1px); }
+
+/* Messages */
+.messages{
+  padding:18px 18px;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  min-height:0;
+  max-height:420px;
+}
+/* FIX: no giant empty area when there are no messages yet */
+.messages:empty{ display:none; }
 
 /* Composer */
 .composer{
-  padding:14px;
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
+  position:relative;
+  padding:14px 14px 16px;
 }
-textarea#input,
-textarea{
+#input, textarea#input, textarea{
   width:100%;
   resize:vertical;
-  min-height:120px;
+  min-height:160px;
   border:1px solid var(--field-border);
   border-radius:14px;
   padding:14px 14px;
@@ -172,6 +180,9 @@ textarea:focus{
 }
 
 .send{
+  position:absolute;
+  right:18px;
+  top:22px;
   width:52px;
   height:52px;
   border:0;
@@ -184,7 +195,12 @@ textarea:focus{
 }
 .send:hover{ filter:saturate(1.05); }
 .send:active{ transform:translateY(0.5px); }
-.send svg{ width:22px; height:22px; fill:#fff; }
+.send-icon{
+  color:#fff;
+  font-size:18px;
+  font-weight:900;
+  line-height:1;
+}
 
-/* Generic helpers used by shell */
+/* Generic helpers */
 .hidden{ display:none !important; }
