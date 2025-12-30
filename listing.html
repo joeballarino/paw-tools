@@ -190,6 +190,12 @@
 
   <script>
     (function () {
+      // IMPORTANT: Enable embed styling when loaded with ?embed=1
+      try {
+        const p = new URLSearchParams(location.search);
+        if (p.get("embed") === "1") document.documentElement.dataset.embed = "1";
+      } catch {}
+
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
 
       const $type = document.getElementById("typeSel");
@@ -337,14 +343,9 @@ Tip: If location isn’t clear, the tool may ask for city & state first.`;
           tone: mapTone($tone.value),
           length: mapLen($len.value),
           safe_mode: true,
-
-          // No UI toggle. Allow the worker to ask ONLY when truly blocked.
           ask_followups: true,
-
           local_highlights: !!$local.checked,
-
           compelling_feature: normText($compelling.value),
-
           locked: {
             beds: normEnum($beds.value),
             baths: normEnum($baths.value),
@@ -355,7 +356,6 @@ Tip: If location isn’t clear, the tool may ask for city & state first.`;
           }
         }),
 
-        // When local highlights is enabled, treat the first send as "get highlights"
         getExtraPayload: (text, ctx) => {
           const prefs = ctx.prefs || {};
           if (prefs.local_highlights){
@@ -366,7 +366,6 @@ Tip: If location isn’t clear, the tool may ask for city & state first.`;
           return {};
         },
 
-        // If server returns highlights, show the panel and skip printing the default reply
         onResponse: (data, ctx) => {
           const prefs = (ctx && ctx.prefs) ? ctx.prefs : {};
           if (!prefs.local_highlights) return;
@@ -379,13 +378,11 @@ Tip: If location isn’t clear, the tool may ask for city & state first.`;
         }
       });
 
-      // Ensure reset also clears local panel
       document.getElementById("reset").addEventListener("click", () => {
         hideLocalPanel();
         lastNotesForLocal = "";
       });
 
-      // start hidden
       hideLocalPanel();
     })();
   </script>
