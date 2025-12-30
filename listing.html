@@ -12,53 +12,17 @@
     <div class="frame">
       <div class="panel">
 
-        <!-- TOP BAR (Row 1) -->
+        <!-- TOP BAR -->
         <div class="panel-topbar">
-          <div class="topbar-row1">
-            <div class="topbar-left">
-              <div class="ctl">
-                <label for="typeSel">Type</label>
-                <span class="select-wrap">
-                  <select id="typeSel">
-                    <option value="" selected>Choose…</option>
-                    <option value="general">General</option>
-                    <option value="starter">Starter</option>
-                    <option value="moveup">Move-Up</option>
-                    <option value="luxury">Luxury</option>
-                    <option value="investor">Investor</option>
-                    <option value="relocation">Relocation</option>
-                  </select>
-                </span>
-              </div>
 
-              <div class="ctl">
-                <label for="toneSel">Tone</label>
-                <span class="select-wrap">
-                  <select id="toneSel">
-                    <option value="" selected>Choose…</option>
-                    <option value="general">General</option>
-                    <option value="professional">Professional</option>
-                    <option value="warm">Warm</option>
-                    <option value="elevated">Elevated</option>
-                  </select>
-                </span>
-              </div>
-
-              <div class="ctl">
-                <label for="lenSel">Length</label>
-                <span class="select-wrap">
-                  <select id="lenSel">
-                    <option value="" selected>Choose…</option>
-                    <option value="standard">Standard</option>
-                    <option value="short">Short</option>
-                    <option value="long">Long</option>
-                  </select>
-                </span>
-              </div>
+          <!-- Header row (subtitle + utilities on same line) -->
+          <div class="topbar-row0">
+            <div class="tool-head">
+              <div class="tool-title">Listing Description Writer</div>
+              <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
             </div>
 
             <div class="topbar-right">
-              <!-- standardized utility pair: Reset + Tips -->
               <div class="utility-pair" role="group" aria-label="Tool utilities">
                 <button id="reset" class="util-btn" type="button">Reset</button>
                 <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
@@ -66,7 +30,50 @@
             </div>
           </div>
 
-          <!-- LOCK KEY FACTS (Row 2) -->
+          <!-- Row 1: primary controls -->
+          <div class="topbar-row1 controls-row">
+            <div class="ctl">
+              <label for="typeSel">Type</label>
+              <span class="select-wrap">
+                <select id="typeSel">
+                  <option value="" selected>Choose…</option>
+                  <option value="general">General</option>
+                  <option value="starter">Starter</option>
+                  <option value="moveup">Move-Up</option>
+                  <option value="luxury">Luxury</option>
+                  <option value="investor">Investor</option>
+                  <option value="relocation">Relocation</option>
+                </select>
+              </span>
+            </div>
+
+            <div class="ctl">
+              <label for="toneSel">Tone</label>
+              <span class="select-wrap">
+                <select id="toneSel">
+                  <option value="" selected>Choose…</option>
+                  <option value="general">General</option>
+                  <option value="professional">Professional</option>
+                  <option value="warm">Warm</option>
+                  <option value="elevated">Elevated</option>
+                </select>
+              </span>
+            </div>
+
+            <div class="ctl">
+              <label for="lenSel">Length</label>
+              <span class="select-wrap">
+                <select id="lenSel">
+                  <option value="" selected>Choose…</option>
+                  <option value="standard">Standard</option>
+                  <option value="short">Short</option>
+                  <option value="long">Long</option>
+                </select>
+              </span>
+            </div>
+          </div>
+
+          <!-- Row 2: Lock key facts -->
           <div class="topbar-row2">
             <div class="lock-head">
               <div class="lock-title">Lock key facts (optional)</div>
@@ -77,7 +84,6 @@
               </label>
             </div>
 
-            <!-- one-line grid when room -->
             <div class="lock-grid">
               <div class="field">
                 <label for="bedsSel">Beds</label>
@@ -111,7 +117,7 @@
                 </select>
               </div>
 
-              <div class="field field-wide">
+              <div class="field">
                 <label for="sqftInp">Sqft</label>
                 <input id="sqftInp" type="text" inputmode="numeric" placeholder="e.g. 1800" />
               </div>
@@ -146,17 +152,16 @@
               </div>
             </div>
 
-            <!-- second line: most compelling feature -->
             <div class="lock-row2">
               <div class="field field-wide">
                 <label for="compellingInp">Most Compelling Feature</label>
-                <input id="compellingInp" type="text" placeholder="Location, design, price advantage, lifestyle, etc" />
+                <input id="compellingInp" type="text" placeholder="Location, design, lifestyle, value, etc." />
               </div>
             </div>
           </div>
         </div>
 
-        <!-- optional local highlights selector panel (used when worker returns the list) -->
+        <!-- optional local highlights selector panel -->
         <div id="localPanel" class="local-panel" aria-live="polite">
           <div class="local-head">
             <div>
@@ -190,7 +195,7 @@
 
   <script>
     (function () {
-      // IMPORTANT: Enable embed styling when loaded with ?embed=1
+      // Enable embed styling when loaded with ?embed=1
       try {
         const p = new URLSearchParams(location.search);
         if (p.get("embed") === "1") document.documentElement.dataset.embed = "1";
@@ -244,7 +249,6 @@ Optional: Add Local Highlights (2-step)
 2) Select highlights, then click “Write description”
 
 Tip: If location isn’t clear, the tool may ask for city & state first.`;
-
 
       const mapType = (v) => ({
         general: "General",

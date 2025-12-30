@@ -1,3 +1,4 @@
+/* ===== Existing styles (keep as-is if you already have these) ===== */
 :root{
   --bg:#ffffff;
   --card:#ffffff;
@@ -56,96 +57,181 @@ html[data-embed="1"] .panel{
 
 /* Topbar container */
 .panel-topbar{
-  border-bottom:1px solid var(--border);
   background:#fff;
 }
 
-/* Row 1 */
-.topbar-row1{
+/* Dropdown “field” (still compact for toolbar) */
+.ctl{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.ctl label{
+  font-size:12px;
+  font-weight:900;
+  color:var(--text-strong);
+  white-space:nowrap;
+}
+.select-wrap{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+}
+.select-wrap select{
+  height:32px;
+  border-radius:10px;
+  border:1px solid var(--field-border);
+  background:var(--field);
+  padding:6px 30px 6px 10px;
+  font-size:13px;
+  font-weight:800;
+  color:var(--text-strong);
+  outline:none;
+  appearance:none;
+}
+.select-wrap:after{
+  content:"";
+  position:absolute;
+  right:10px;
+  width:0;height:0;
+  border-left:5px solid transparent;
+  border-right:5px solid transparent;
+  border-top:6px solid rgba(17,24,39,.55);
+  transform:translateY(-35%);
+  pointer-events:none;
+}
+
+/* Row 2 = app-like “tray”, not bubbles */
+.topbar-row2{
+  padding:12px 14px 14px;
+  border-top:1px solid rgba(15,23,42,.06);
+  background:rgba(15,23,42,.015);
+}
+
+.lock-head{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:12px;
-  padding:10px 12px;
+  margin-bottom:10px;
 }
-.topbar-left{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-  min-width:0;
-}
-.topbar-right{
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-}
-
-/* Standardized utility pair (Reset + Tips) */
-.utility-pair{
-  display:inline-flex;
-  align-items:center;
-  border:1px solid var(--border-strong);
-  border-radius:12px;
-  overflow:hidden;
-  background:#fff;
-}
-.util-btn{
-  height:34px;
-  padding:0 12px;
-  border:0;
-  background:#fff;
+.lock-title{
+  font-size:14px;
+  font-weight:900;
   color:var(--text-strong);
-  font-weight:800;
-  cursor:pointer;
-  white-space:nowrap;
 }
-.util-btn + .util-btn{
-  border-left:1px solid var(--border-strong);
-}
-.util-btn:hover{ background:rgba(15,23,42,.03); }
-.util-btn:active{ background:rgba(15,23,42,.05); }
-
-/* Embed-only: make utility buttons feel nested + slightly branded */
-html[data-embed="1"] .panel-topbar{
-  background:transparent;
-}
-html[data-embed="1"] .topbar-row1{
-  padding:10px 10px;
-}
-html[data-embed="1"] .utility-pair{
-  border-color: rgba(5,195,249,.25);
-  background: rgba(5,195,249,.08);
-  border-radius: 999px;
-}
-html[data-embed="1"] .util-btn{
-  background: transparent;
-  color: #050E3D;
-  font-weight: 800;
-  height: 34px;
-  padding: 0 12px;
-}
-html[data-embed="1"] .util-btn + .util-btn{
-  border-left-color: rgba(5,195,249,.25);
-}
-html[data-embed="1"] .util-btn:hover{
-  background: rgba(5,195,249,.12);
-}
-
-/* Checkboxes */
 .check{
   display:flex;
   align-items:center;
   gap:10px;
-  padding:8px 14px;
-  color:var(--text);
-  font-size:14px;
+  padding:6px 0;
 }
-.check input{ transform: translateY(1px); }
+.check span{
+  font-size:12px;
+  font-weight:800;
+  color:var(--text-strong);
+}
+.check-plain{
+  padding:6px 0;
+}
+
+.field label{
+  display:block;
+  font-size:12px;
+  font-weight:900;
+  color:var(--text-strong);
+  margin-bottom:6px;
+}
+.field input,
+.field select{
+  width:100%;
+  height:38px;
+  border-radius:10px;
+  border:1px solid var(--field-border);
+  background:var(--field);
+  padding:8px 10px;
+  font-size:14px;
+  font-weight:700;
+  color:var(--text-strong);
+  outline:none;
+}
+.field input:focus,
+.field select:focus{
+  border-color:rgba(5,195,249,.55);
+  box-shadow:0 0 0 3px rgba(5,195,249,.18);
+}
+.field-wide{ width:100%; }
+
+.lock-grid{
+  display:grid;
+  grid-template-columns: 120px 120px 200px 170px 160px 160px;
+  gap:12px;
+  align-items:end;
+}
+.lock-row2{
+  margin-top:12px;
+}
+
+/* Local highlights selector panel */
+.local-panel{
+  display:none;
+  padding:12px;
+  border-bottom:1px solid var(--border);
+  background:#fff;
+}
+.local-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.local-title{
+  font-size:14px;
+  font-weight:900;
+  color:var(--text-strong);
+}
+.local-sub{
+  font-size:12px;
+  color:var(--muted);
+}
+.local-actions{
+  display:flex;
+  gap:10px;
+}
+.btn{
+  height:34px;
+  padding:0 12px;
+  border-radius:10px;
+  border:1px solid var(--border-strong);
+  background:#fff;
+  font-weight:800;
+  cursor:pointer;
+}
+.btn.primary{
+  background:#050E3D;
+  color:#fff;
+  border-color:#050E3D;
+}
+.local-list{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  gap:8px;
+}
+.local-item{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px;
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:12px;
+}
 
 /* Messages */
 .messages{
-  padding:18px 18px;
+  padding:18px 18px 0;
   overflow:auto;
   display:flex;
   flex-direction:column;
@@ -153,7 +239,6 @@ html[data-embed="1"] .util-btn:hover{
   min-height:0;
   max-height:420px;
 }
-/* FIX: no giant empty area when there are no messages yet */
 .messages:empty{ display:none; }
 
 /* Composer */
@@ -161,13 +246,13 @@ html[data-embed="1"] .util-btn:hover{
   position:relative;
   padding:14px 14px 16px;
 }
-#input, textarea#input, textarea{
+textarea{
   width:100%;
   resize:vertical;
   min-height:160px;
   border:1px solid var(--field-border);
   border-radius:14px;
-  padding:14px 14px;
+  padding:14px 58px 14px 14px;
   font-size:14px;
   line-height:1.5;
   outline:none;
@@ -192,15 +277,99 @@ textarea:focus{
   display:grid;
   place-items:center;
   box-shadow:0 10px 22px rgba(5,195,249,.30);
+  color:#fff;
 }
 .send:hover{ filter:saturate(1.05); }
 .send:active{ transform:translateY(0.5px); }
-.send-icon{
-  color:#fff;
-  font-size:18px;
+.send svg{ display:block; }
+
+/* ===== Additions for a clean, modern Listing header + tight layout ===== */
+
+/* Header row (subtitle + utilities on one line) */
+.topbar-row0{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  border-bottom:1px solid rgba(15,23,42,.06);
+  background:#fff;
+}
+.tool-head{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.tool-title{
+  font-size:14px;
   font-weight:900;
-  line-height:1;
+  letter-spacing:-0.01em;
+  color:var(--text-strong);
+  line-height:1.1;
+}
+.tool-subtitle{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.2;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:72ch;
 }
 
-/* Generic helpers */
-.hidden{ display:none !important; }
+/* Embed mode: hide duplicate title, keep subtitle in that row */
+html[data-embed="1"] .tool-title{ display:none; }
+html[data-embed="1"] .tool-subtitle{
+  font-size:13px;
+  font-weight:700;
+  white-space:normal;
+  max-width:none;
+}
+
+/* Row 1 controls (Type/Tone/Length) */
+.controls-row{
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-start;
+  gap:14px;
+  padding:10px 14px 12px;
+  background:#fff;
+}
+html[data-embed="1"] .controls-row{
+  border-bottom:1px solid rgba(15,23,42,.06);
+}
+
+/* Modern segmented control for Reset / Tips */
+.utility-pair{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid rgba(5,195,249,.28);
+  background:rgba(5,195,249,.08);
+  border-radius:999px;
+  overflow:hidden;
+}
+.util-btn{
+  height:34px;
+  padding:0 12px;
+  border:0;
+  background:transparent;
+  color:#050E3D;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.util-btn + .util-btn{
+  border-left:1px solid rgba(5,195,249,.22);
+}
+.util-btn:hover{ background:rgba(5,195,249,.12); }
+.util-btn:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 4px rgba(5,195,249,.18);
+}
+
+/* Make the lock grid responsive (no jumbled stacking) */
+.lock-grid{
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
