@@ -17,27 +17,27 @@
         <div class="panel-topbar">
           <div class="topbar-row1">
             <div class="topbar-left">
-              <!-- Intentionally blank for Assistant (keeps layout consistent across tools) -->
+              <div class="tool-title">Assistant</div>
             </div>
-
             <div class="topbar-right">
-              <div class="utility-pair" role="group" aria-label="Tool utilities">
-                <button id="reset" class="util-btn" type="button">Reset</button>
-                <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
-              </div>
+              <button id="reset" class="btn btn-ghost" type="button">Reset</button>
+              <button id="tips" class="btn btn-ghost" type="button">Tips &amp; How To</button>
             </div>
           </div>
         </div>
 
-        <div id="messages" class="messages"></div>
+        <!-- CONTENT -->
+        <div class="panel-body">
+          <div class="chat-shell">
+            <div id="messages" class="messages"></div>
 
-        <div class="composer">
-          <textarea id="input" placeholder="How can I assist you today?"></textarea>
-          <button id="send" class="send" aria-label="Send" type="button">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8L6.4 13.4 5 12l7-7z" fill="currentColor"/>
-            </svg>
-          </button>
+            <div class="composer">
+              <textarea id="input" class="input" rows="5" placeholder="How can I assist you today?"></textarea>
+              <button id="send" class="send" type="button" aria-label="Send">
+                <span class="send-icon">↑</span>
+              </button>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -48,26 +48,33 @@
 
   <script>
     (function () {
-      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+      // IMPORTANT: Enable embed styling when iframe is loaded with ?embed=1
+      try {
+        const p = new URLSearchParams(location.search);
+        if (p.get("embed") === "1") {
+          document.documentElement.dataset.embed = "1";
+        }
+      } catch {}
 
-      const DISCLAIMER_TEXT =
-        "Important: This assistant provides guidance intended to be compliant with Fair Housing, MLS rules, and general legal standards. It is NOT a substitute for your own knowledge, broker guidance, or legal advice, and compliance cannot be guaranteed.";
+      const API_ENDPOINT = "/api/ask";
 
       const TIPS_TEXT =
-`How to use this assistant
-• Ask questions in plain English — like you would ask a knowledgeable colleague
-• Paste an email, text, or draft and tell me what you want it to sound like (shorter, warmer, more professional, etc.)
-• Use it to think through next steps, messaging, objections, or client situations
-• If you’re unsure what tool to use, ask — I’ll point you to the right one
+`What this is best for:
+• Quick answers + next steps
+• Rewriting texts, emails, bios, and social posts
+• Talking through tricky client situations
 
-Good to know
-• I’ll keep responses practical and ready to use
-• If details are missing, I’ll either ask one quick question or make conservative assumptions and label them
+How to get the best output:
+• Paste the text you want improved
+• Tell me your audience (buyer, seller, agent, lender, etc.)
+• Tell me your tone (friendly, firm, confident, luxury, casual)
+• Add local constraints (state, brokerage rules, MLS rules) if relevant`;
 
-Compliance note
-${DISCLAIMER_TEXT}`;
+      const DISCLAIMER_TEXT =
+`Important: This tool is not legal, tax, or brokerage advice.
+Always confirm compliance with your local MLS rules, brokerage policies, and Fair Housing guidance.`;
 
-      const DISCLAIMER_TRIGGER = /(offer|contract|addendum|inspection|escrow|closing|tenant|landlord|lease|rent|hoa|mls|broker|commission|referral|agency|disclosure|fair housing|compliance|legal|attorney|lien|title|short sale|rezen|transaction)/i;
+      const DISCLAIMER_TRIGGER = /(fair housing|mls rule|legal|law|attorney|tax|discrimination|protected class|race|religion|gender|sexual orientation|disability|familial status|national origin|hud|ethics|fine|penalty|license|licensing|brokerage policy|commission|contract|lease|eviction|foreclosure|lien|title|short sale|agency|disclosure|compliance)/i;
 
       window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
@@ -75,7 +82,6 @@ ${DISCLAIMER_TEXT}`;
         inputPlaceholder: "How can I assist you today?",
         tipsText: TIPS_TEXT,
 
-        // Uses the current tool-shell.js disclaimer mechanism
         enableDisclaimer: true,
         disclaimerTrigger: DISCLAIMER_TRIGGER,
         getDisclaimerText: () => DISCLAIMER_TEXT,
@@ -83,7 +89,6 @@ ${DISCLAIMER_TEXT}`;
         sendHistoryItems: 10,
         maxHistoryItems: 20,
 
-        // Keep deliverable output card off for general assistant
         deliverableMode: false
       });
     })();
