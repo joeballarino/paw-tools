@@ -4,10 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Assistant</title>
+
+  <!--
+    NOTE: paw-ui.css is SHARED across tools.
+    Keep header markup consistent:
+    panel-topbar > topbar-row0 > tool-head + topbar-right (utility-pair).
+    Changing shared classes affects multiple tools.
+  -->
   <link rel="stylesheet" href="/paw-ui.css">
-  <!-- NOTE: paw-ui.css is shared across tools. Keep header markup consistent:
-     panel-topbar > topbar-row0 > tool-head + topbar-right (utility-pair)
-     Changing classes here can affect other tools. -->
 </head>
 
 <body>
@@ -15,10 +19,10 @@
     <div class="frame">
       <div class="panel">
 
-        <!-- TOP BAR (parity with Listing) -->
         <div class="panel-topbar">
           <div class="topbar-row0">
             <div class="tool-head">
+              <div class="tool-title">Assistant</div>
               <div class="tool-subtitle">Quick answers, rewrites, and next steps.</div>
             </div>
 
@@ -50,7 +54,12 @@
 
   <script>
     (function () {
-      // Ensure embed styling reliably applies in Circle iframe
+      // ------------------------------------------------------------
+      // EMBED MODE (LOCKED):
+      // When this page is loaded in Circle as an iframe, we pass ?embed=1.
+      // We MUST set html[data-embed="1"] so paw-ui.css flattens the UI
+      // (removes nested "card" styling). Otherwise you get double containers.
+      // ------------------------------------------------------------
       try {
         const p = new URLSearchParams(location.search);
         if (p.get("embed") === "1") document.documentElement.dataset.embed = "1";
@@ -62,4 +71,32 @@
         "Important: This assistant provides guidance intended to support your work. It is not brokerage policy guidance, legal advice, and compliance cannot be guaranteed.";
 
       const DISCLAIMER_TRIGGER =
-        /(fair housing|mls|compliance|legal|law|attorney|contract|offer|addendum|inspection|lien|title|short sale|age
+        /(fair housing|mls|compliance|legal|law|attorney|contract|offer|addendum|inspection|lien|title|short sale|agency|disclosure)/i;
+
+      const TIPS_TEXT =
+`How to use this assistant
+• Ask questions in plain English
+• Paste an email, text, or draft and tell me what you want it to sound like
+• Use it to think through next steps, messaging, objections, or client situations
+
+Compliance note
+${DISCLAIMER_TEXT}`;
+
+      window.PAWToolShell.init({
+        apiEndpoint: API_ENDPOINT,
+        toolId: "",
+        inputPlaceholder: "How can I assist you today?",
+        tipsText: TIPS_TEXT,
+
+        enableDisclaimer: true,
+        disclaimerTrigger: DISCLAIMER_TRIGGER,
+        getDisclaimerText: () => DISCLAIMER_TEXT,
+
+        sendHistoryItems: 10,
+        maxHistoryItems: 20,
+        deliverableMode: false
+      });
+    })();
+  </script>
+</body>
+</html>
