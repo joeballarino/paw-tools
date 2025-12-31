@@ -1,3 +1,40 @@
+/* ==========================================================
+   ProAgent Works — Shared UI Styles (paw-ui.css)
+   ----------------------------------------------------------
+   IMPORTANT:
+   - This file is SHARED across ALL tools (ask.html, listing.html, etc).
+   - Any change here can affect multiple pages.
+   - Before changing layout-related selectors, verify BOTH:
+       1) Assistant (ask.html)
+       2) Listing Description Writer (listing.html)
+
+   HEADER CONTRACT (LOCKED):
+   To avoid cross-tool regressions, tools should use this
+   canonical header structure:
+
+   <div class="panel-topbar">
+     <div class="topbar-row0">
+       <div class="tool-head">
+         <div class="tool-title">...</div>
+         <div class="tool-subtitle">...</div>
+       </div>
+       <div class="topbar-right">
+         <div class="utility-pair">
+           <button class="util-btn">Reset</button>
+           <button class="util-btn">Tips & How To</button>
+         </div>
+       </div>
+     </div>
+     <!-- optional rows: .controls-row, .topbar-row2, etc. -->
+   </div>
+
+   If a tool still uses legacy header markup (topbar-row1),
+   the BACK-COMPAT section below keeps it stable.
+
+   If you introduce a new header pattern, add it WITHOUT
+   breaking existing tools, or update all tools together.
+   ========================================================== */
+
 :root{
   --bg:#ffffff;
 
@@ -87,7 +124,10 @@ html[data-embed="1"] .panel{
     var(--surface);
 }
 
-/* Listing header row (subtitle + utilities) */
+/* ==========================================================
+   Canonical Header (topbar-row0)
+   - Used by Listing + should be used by Assistant for parity
+   ========================================================== */
 .topbar-row0{
   display:flex;
   align-items:center;
@@ -122,9 +162,11 @@ html[data-embed="1"] .panel{
   max-width:72ch;
 }
 
-/* Embed mode: hide duplicate title, keep subtitle */
-html[data-embed="1"] .tool-title{ display:none; }
-html[data-embed="1"] .tool-subtitle{
+/* Embed mode behavior:
+   - Only hide tool-title when using the canonical header row.
+   - This avoids breaking legacy headers/tools. */
+html[data-embed="1"] .topbar-row0 .tool-title{ display:none; }
+html[data-embed="1"] .topbar-row0 .tool-subtitle{
   font-size:13px;
   font-weight:700;
   white-space:normal;
@@ -132,7 +174,7 @@ html[data-embed="1"] .tool-subtitle{
   color:rgba(15,23,42,.62);
 }
 
-/* Type/Tone/Length row */
+/* ===== Controls row (Type/Tone/Length) ===== */
 .controls-row{
   display:flex;
   align-items:flex-end;
@@ -484,11 +526,51 @@ textarea:focus{
 /* Utility */
 .hidden{ display:none !important; }
 
+/* ==========================================================
+   BACKWARD COMPATIBILITY (Legacy headers)
+   ----------------------------------------------------------
+   If a tool still uses:
+     <div class="topbar-row1">
+       <div class="topbar-left">...</div>
+       <div class="topbar-right">...</div>
+     </div>
+   These rules keep it aligned and prevent regressions.
+   ========================================================== */
+.topbar-row1{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--border-soft);
+}
+
+.topbar-row1 .topbar-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.topbar-row1 .topbar-right{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+
 /* Responsive: tighten spacing on small widths */
 @media (max-width: 720px){
   .topbar-row0{ padding:10px 12px; }
-  .controls-row{ padding:10px 12px 12px; gap:10px; flex-wrap:wrap; }
+  .topbar-row1{ padding:10px 12px; }
+
+  .controls-row{
+    padding:10px 12px 12px;
+    gap:10px;
+    flex-wrap:wrap;
+  }
   .select-wrap select{ min-width: 148px; }
+
   .messages{ padding:14px 14px 0; }
   .composer{ padding:12px 12px 14px; }
   .send{ right:14px; top:20px; }

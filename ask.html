@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Assistant</title>
-
   <link rel="stylesheet" href="/paw-ui.css">
 </head>
 
@@ -13,10 +12,11 @@
     <div class="frame">
       <div class="panel">
 
-        <!-- TOP BAR -->
+        <!-- TOP BAR (parity with Listing) -->
         <div class="panel-topbar">
-          <div class="topbar-row1">
-            <div class="topbar-left">
+          <div class="topbar-row0">
+            <div class="tool-head">
+              <div class="tool-title">Assistant</div>
               <div class="tool-subtitle">Quick answers, rewrites, and next steps.</div>
             </div>
 
@@ -33,10 +33,9 @@
 
         <div class="composer">
           <textarea id="input" placeholder="How can I assist you today?"></textarea>
-
           <button id="send" class="send" aria-label="Send" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8L6.4 13.4 5 12l7-7z"/>
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8L6.4 13.4 5 12l7-7z" fill="currentColor"/>
             </svg>
           </button>
         </div>
@@ -49,7 +48,7 @@
 
   <script>
     (function () {
-      // Enable embed styling when loaded via iframe with ?embed=1
+      // Ensure embed styling reliably applies in Circle iframe
       try {
         const p = new URLSearchParams(location.search);
         if (p.get("embed") === "1") document.documentElement.dataset.embed = "1";
@@ -60,37 +59,5 @@
       const DISCLAIMER_TEXT =
         "Important: This assistant provides guidance intended to support your work. It is not brokerage policy guidance, legal advice, and compliance cannot be guaranteed.";
 
-      const TIPS_TEXT =
-`How to use this assistant
-• Ask questions in plain English — like you would ask a knowledgeable colleague
-• Paste an email, text, or draft and tell me what you want it to sound like (shorter, warmer, more professional, etc.)
-• Use it to think through next steps, messaging, objections, or client situations
-• If you’re unsure what tool to use, ask — I’ll point you to the right one
-
-Good to know
-• I’ll keep responses practical and ready to use
-• If details are missing, I’ll either ask one quick question or make conservative assumptions and label them
-
-Compliance note
-${DISCLAIMER_TEXT}`;
-
-      const DISCLAIMER_TRIGGER = /(offer|contract|addendum|inspection|fair housing|mls|compliance|legal|attorney|lien|title|short sale|transaction)/i;
-
-      window.PAWToolShell.init({
-        apiEndpoint: API_ENDPOINT,
-        toolId: "",
-        inputPlaceholder: "How can I assist you today?",
-        tipsText: TIPS_TEXT,
-
-        enableDisclaimer: true,
-        disclaimerTrigger: DISCLAIMER_TRIGGER,
-        getDisclaimerText: () => DISCLAIMER_TEXT,
-
-        sendHistoryItems: 10,
-        maxHistoryItems: 20,
-        deliverableMode: false
-      });
-    })();
-  </script>
-</body>
-</html>
+      const DISCLAIMER_TRIGGER =
+        /(fair housing|mls|compliance|legal|law|attorney|contract|offer|addendum|inspection|lien|title|short sale|age
