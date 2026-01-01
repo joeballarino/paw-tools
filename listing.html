@@ -1,4 +1,3 @@
-<!-- listing.html (FULL REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,15 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Listing Description Writer</title>
   <link rel="stylesheet" href="/paw-ui.css">
-
-  <!--
-    HEADER CONTRACT (LOCKED):
-    The panel top bar (.topbar-row0) MUST NEVER include a title.
-    It only contains:
-      - .tool-subtitle (left)
-      - Reset / Tips buttons (right)
-    Titles belong ABOVE the panel in the outer shell, not inside this bar.
-  -->
 </head>
 
 <body>
@@ -22,19 +12,23 @@
     <div class="frame">
       <div class="panel">
 
-        <!-- TOP BAR -->
         <div class="panel-topbar">
           <div class="topbar-row0">
-            <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
+            <div class="tool-head">
+              <div class="tool-title">Listing Description Writer</div>
+              <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
+            </div>
 
             <div class="topbar-right">
-              <button class="util-btn" id="reset" type="button">Reset</button>
-              <button class="util-btn" id="tipsBtn" type="button">Tips &amp; How To</button>
+              <div class="utility-pair" role="group" aria-label="Tool utilities">
+                <button id="reset" class="util-btn" type="button">Reset</button>
+                <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
+              </div>
             </div>
           </div>
 
           <!-- Controls row -->
-          <div class="controls-row">
+          <div class="topbar-row1 controls-row">
             <div class="ctl">
               <label for="typeSel">Type</label>
               <span class="select-wrap">
@@ -103,12 +97,10 @@
             </div>
           </div>
 
-          <!-- Key facts -->
           <div class="topbar-row2">
             <div class="lock-head">
               <div class="lock-title">Lock key facts (optional)</div>
-
-              <label class="check check-plain" for="localChk" title="Generate a shortlist of local highlights before writing">
+              <label class="check check-plain" for="localChk">
                 <input id="localChk" type="checkbox" />
                 <span>Add Local Highlights</span>
               </label>
@@ -121,11 +113,7 @@
                 <label for="bedsSel">Beds</label>
                 <select id="bedsSel">
                   <option value="" selected>—</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5+">5+</option>
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5+">5+</option>
                 </select>
               </div>
 
@@ -133,11 +121,7 @@
                 <label for="bathsSel">Baths</label>
                 <select id="bathsSel">
                   <option value="" selected>—</option>
-                  <option value="1">1</option>
-                  <option value="1.5">1.5</option>
-                  <option value="2">2</option>
-                  <option value="2.5">2.5</option>
-                  <option value="3+">3+</option>
+                  <option value="1">1</option><option value="1.5">1.5</option><option value="2">2</option><option value="2.5">2.5</option><option value="3+">3+</option>
                 </select>
               </div>
 
@@ -154,18 +138,14 @@
               <div class="field">
                 <label for="poolSel">Pool</label>
                 <select id="poolSel">
-                  <option value="" selected>—</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
+                  <option value="" selected>—</option><option value="yes">Yes</option><option value="no">No</option>
                 </select>
               </div>
 
               <div class="field">
                 <label for="porchSel">Porch</label>
                 <select id="porchSel">
-                  <option value="" selected>—</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
+                  <option value="" selected>—</option><option value="yes">Yes</option><option value="no">No</option>
                 </select>
               </div>
             </div>
@@ -177,7 +157,6 @@
               </label>
             </div>
 
-            <!-- Local highlights panel -->
             <div id="localPanel" class="local-panel" style="display:none;">
               <div class="local-head">
                 <div>
@@ -191,9 +170,8 @@
               </div>
               <ul id="localList" class="local-list"></ul>
             </div>
-
-          </div><!-- /topbar-row2 -->
-        </div><!-- /panel-topbar -->
+          </div>
+        </div>
 
         <div id="messages" class="messages"></div>
 
@@ -210,17 +188,6 @@
     </div>
   </div>
 
-  <!-- Tips modal -->
-  <div id="tipsModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tipsTitle">
-      <div class="modal-head">
-        <div id="tipsTitle" class="modal-title">Tips &amp; How To</div>
-        <button class="modal-close" id="tipsClose" aria-label="Close" type="button">✕</button>
-      </div>
-      <div class="modal-body" id="tipsBody"></div>
-    </div>
-  </div>
-
   <script src="/tool-shell.js"></script>
 
   <script>
@@ -230,34 +197,12 @@
       const TIPS_TEXT =
 `What this tool does
 • Writes MLS-ready listing remarks with real estate best practices baked in.
-
-Best inputs
 • Paste features and upgrades (renovations, finishes, systems, appliances).
 • Add anything that must be included or avoided.
 • Include HOA details if relevant.
-
-Local highlights
 • Add City + State above for accurate local highlights.
-
-Compliance
 • Avoid protected-class language. This tool is designed to stay fair-housing safe.`;
 
-      // Tips modal
-      const $tipsBtn = document.getElementById("tipsBtn");
-      const $tipsModal = document.getElementById("tipsModal");
-      const $tipsClose = document.getElementById("tipsClose");
-      const $tipsBody = document.getElementById("tipsBody");
-      $tipsBody.textContent = TIPS_TEXT;
-
-      function openTips(){ $tipsModal.classList.add("show"); $tipsModal.setAttribute("aria-hidden", "false"); }
-      function closeTips(){ $tipsModal.classList.remove("show"); $tipsModal.setAttribute("aria-hidden", "true"); }
-
-      $tipsBtn.addEventListener("click", openTips);
-      $tipsClose.addEventListener("click", closeTips);
-      $tipsModal.addEventListener("click", (e) => { if (e.target === $tipsModal) closeTips(); });
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTips(); });
-
-      // Controls
       const $type = document.getElementById("typeSel");
       const $tone = document.getElementById("toneSel");
       const $len  = document.getElementById("lenSel");
@@ -286,10 +231,6 @@ Compliance
       function digitsOnly(v){ return String(v || "").replace(/[^\d]/g, ""); }
       function normEnum(v){ const t = normText(v); return t ? t : ""; }
 
-      function mapType(v){ return normText(v) || "general"; }
-      function mapTone(v){ return normText(v) || "general"; }
-      function mapLen(v){ return normText(v) || "standard"; }
-
       function cityVal(){ return normText($city.value); }
       function stateVal(){ return normText($state.value).toUpperCase(); }
       function locationVal(){
@@ -299,9 +240,12 @@ Compliance
         return c;
       }
 
+      function mapType(v){ return normText(v) || "general"; }
+      function mapTone(v){ return normText(v) || "general"; }
+      function mapLen(v){ return normText(v) || "standard"; }
+
       function validateLocalHint(){
-        if (!$localHint) return;
-        if (!$local.checked){ $localHint.style.display = "none"; return; }
+        if (!$local.checked) { $localHint.style.display = "none"; return; }
         const ok = !!cityVal() && !!stateVal();
         $localHint.style.display = ok ? "none" : "block";
       }
@@ -318,6 +262,7 @@ Compliance
         });
         $localPanel.style.display = "block";
       }
+
       function hideLocalPanel(){
         $localPanel.style.display = "none";
         $localList.innerHTML = "";
@@ -326,23 +271,19 @@ Compliance
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "listing_description_writer",
-        inputPlaceholder: "Add upgrades, finishes, neighborhood notes, disclosures, HOA details, or paste listing data here",
         tipsText: TIPS_TEXT,
-        sendHistoryItems: 8,
-        maxHistoryItems: 16,
+        deliverableTitle: "Your MLS Description",
 
         getPrefs: () => ({
           listing_type: mapType($type.value),
           output_use: "MLS",
           tone: mapTone($tone.value),
           length: mapLen($len.value),
-
           safe_mode: true,
 
-          // LOCKED PRODUCT DECISION: do not ask questions in this tool
+          // LOCKED: this tool should not ask follow-ups
           ask_followups: false,
 
-          // Pass location strongly so Worker never needs to ask
           city: cityVal(),
           state: stateVal(),
           location: locationVal(),
@@ -361,27 +302,25 @@ Compliance
           }
         }),
 
-        // IMPORTANT: tool-shell merges this into TOP-LEVEL payload too
-        // so the Worker can read city/state/location even if it ignores prefs.
         getExtraPayload: (text, ctx) => {
           const c = cityVal();
           const s = stateVal();
           const loc = locationVal();
 
-          // If Local Highlights is checked but missing location, just hint and continue normally.
-          if ($local.checked && (!c || !s)) {
-            validateLocalHint();
-            return { city: c, state: s, location: loc };
-          }
+          // Always send location at top-level too (Worker fallback safety)
+          const base = { city: c, state: s, location: loc };
 
-          // If local highlights is enabled & we have location, request highlights phase.
-          if ($local.checked && c && s) {
+          if ($local.checked) {
+            if (!c || !s) {
+              validateLocalHint();
+              return base;
+            }
             lastNotesForLocal = text;
-            return { phase: "highlights", city: c, state: s, location: loc };
+            return Object.assign({}, base, { phase: "highlights" });
           }
 
           lastNotesForLocal = "";
-          return { city: c, state: s, location: loc };
+          return base;
         },
 
         onResponse: (data, ctx) => {
@@ -389,8 +328,9 @@ Compliance
           if (!prefs.local_highlights) return;
 
           const highlights = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
-          if (highlights && highlights.length) {
+          if (highlights && highlights.length){
             showLocalPanel(highlights);
+            return { skipDefault: true };
           }
         }
       });
@@ -412,14 +352,13 @@ Compliance
         shell.sendExtra(lastNotesForLocal, { phase: "write", selected_highlights: selected }, { echoUser: false });
       });
 
-      // If user toggles local highlights after entering city/state, fetch immediately (no extra prompt)
+      // Toggle behavior
       $local.addEventListener("change", () => {
         validateLocalHint();
         if ($local.checked && cityVal() && stateVal()) {
           shell.sendExtra(normText($input.value) || "Generate local highlights.", { phase: "highlights" }, { echoUser: false });
         }
       });
-
       $city.addEventListener("input", validateLocalHint);
       $state.addEventListener("change", validateLocalHint);
 
@@ -428,7 +367,9 @@ Compliance
         hideLocalPanel();
         lastNotesForLocal = "";
         try { $city.value = ""; $state.value = ""; } catch {}
-        try { if ($localHint) $localHint.style.display = "none"; } catch {}
+        try { $local.checked = false; } catch {}
+        validateLocalHint();
+        if (shell && shell.reset) shell.reset();
       });
 
       hideLocalPanel();
