@@ -1,4 +1,4 @@
-/* paw-ui.css */
+/* paw-ui.css (FULL REPLACEMENT) */
 /* ==========================================================
    ProAgent Works — Shared UI Styles (paw-ui.css)
    ----------------------------------------------------------
@@ -100,21 +100,6 @@ body{
   padding:12px 14px 8px;
 }
 
-.tool-head{
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:3px;
-}
-
-.tool-title{
-  font-size:14px;
-  font-weight:700;
-  letter-spacing:-0.01em;
-  color:var(--text-strong);
-  line-height:1.1;
-}
-
 .tool-subtitle{
   font-size:12px;
   color:rgba(15,23,42,.62);
@@ -180,7 +165,14 @@ body{
   align-items:center;
 }
 
-.select-wrap select, .select-wrap input{
+.input-wrap{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+}
+
+.select-wrap select,
+.input-wrap input{
   height:34px;
   min-width: 132px;
   border-radius:999px; /* modern */
@@ -195,11 +187,17 @@ body{
   box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
-.select-wrap input{
-  padding-right:12px; /* no chevron */
+
+/* City input should NOT reserve space for a chevron */
+.input-wrap input{
+  padding-right:12px;
 }
-.select-wrap select:hover, .select-wrap input:hover{ border-color: var(--field-hover); }
-.select-wrap select:focus, .select-wrap input:focus{
+
+.select-wrap select:hover,
+.input-wrap input:hover{ border-color: var(--field-hover); }
+
+.select-wrap select:focus,
+.input-wrap input:focus{
   border-color: rgba(5,195,249,.70);
   box-shadow: 0 0 0 4px rgba(5,195,249,.14);
   background:#fff;
@@ -216,14 +214,12 @@ body{
   border-top:6px solid rgba(15,23,42,.45);
   pointer-events:none;
 }
-.select-wrap input + :after{ content:none; }
 
-.select-wrap.sm select, .select-wrap.sm input{
-  min-width: 92px;
-}
-.select-wrap.md select, .select-wrap.md input{
-  min-width: 150px;
-}
+.select-wrap.sm select{ min-width: 92px; }
+.select-wrap.md select{ min-width: 150px; }
+
+.input-wrap.sm input{ min-width: 92px; }
+.input-wrap.md input{ min-width: 150px; }
 
 /* ===== Lock key facts section ===== */
 .topbar-row2{
@@ -483,48 +479,6 @@ body{
 }
 .send:hover{ filter:brightness(1.02); }
 .send:active{ transform: translateY(1px); }
-
-/* ===== Deliverable card (copy-first output) ===== */
-.deliverable{
-  padding:14px;
-}
-.deliverable-card{
-  border:1px solid rgba(15,23,42,.08);
-  background: rgba(255,255,255,.86);
-  border-radius:18px;
-  overflow:hidden;
-  box-shadow: var(--shadow-soft);
-}
-.deliverable-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px 12px;
-  border-bottom:1px solid rgba(15,23,42,.08);
-  background: linear-gradient(180deg, rgba(5,195,249,.10), rgba(255,255,255,0));
-}
-.deliverable-title{
-  font-size:14px;
-  font-weight:700;
-  color:var(--text-strong);
-}
-.deliverable-actions{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-.deliverable-body{
-  padding:12px 12px 14px;
-}
-.deliverable-text{
-  margin:0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
-  font-size:13px;
-  color:rgba(15,23,42,.92);
-  white-space:pre-wrap;
-  outline:none;
-}
 
 /* ===== Tips modal ===== */
 .modal{

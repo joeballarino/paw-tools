@@ -1,4 +1,4 @@
-<!-- listing.html -->
+<!-- listing.html (FULL REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -21,14 +21,13 @@
 
           <!-- Header row (subtitle + utilities on same line) -->
           <div class="topbar-row0">
-            <div class="tool-head">
-              <div class="tool-title">Listing Description Writer</div>
-              <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
-            </div>
+            <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
 
-            <div class="topbar-right utility-pair">
-              <button class="util-btn" id="reset" type="button">Reset</button>
-              <button class="util-btn" id="tipsBtn" type="button">Tips &amp; How To</button>
+            <div class="topbar-right">
+              <div class="utility-pair" role="group" aria-label="Tool utilities">
+                <button id="reset" class="util-btn" type="button">Reset</button>
+                <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
+              </div>
             </div>
           </div>
 
@@ -76,22 +75,35 @@
 
             <div class="ctl">
               <label for="cityInp">City</label>
-              <span class="select-wrap md">
+              <span class="input-wrap md">
                 <input id="cityInp" type="text" placeholder="City" autocomplete="address-level2" />
               </span>
             </div>
 
             <div class="ctl">
-              <label for="stateInp">State</label>
+              <label for="stateSel">State</label>
               <span class="select-wrap sm">
-                <input id="stateInp" type="text" inputmode="text" maxlength="2" placeholder="ST" autocomplete="address-level1" />
+                <select id="stateSel" autocomplete="address-level1">
+                  <option value="" selected>ST</option>
+                  <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option><option value="AR">AR</option><option value="CA">CA</option>
+                  <option value="CO">CO</option><option value="CT">CT</option><option value="DE">DE</option><option value="DC">DC</option><option value="FL">FL</option>
+                  <option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option><option value="IL">IL</option><option value="IN">IN</option>
+                  <option value="IA">IA</option><option value="KS">KS</option><option value="KY">KY</option><option value="LA">LA</option><option value="ME">ME</option>
+                  <option value="MD">MD</option><option value="MA">MA</option><option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
+                  <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option><option value="NV">NV</option><option value="NH">NH</option>
+                  <option value="NJ">NJ</option><option value="NM">NM</option><option value="NY">NY</option><option value="NC">NC</option><option value="ND">ND</option>
+                  <option value="OH">OH</option><option value="OK">OK</option><option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option>
+                  <option value="SC">SC</option><option value="SD">SD</option><option value="TN">TN</option><option value="TX">TX</option><option value="UT">UT</option>
+                  <option value="VT">VT</option><option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option><option value="WI">WI</option>
+                  <option value="WY">WY</option>
+                </select>
               </span>
             </div>
           </div>
 
           <!-- Row 2: Lock key facts -->
           <div class="topbar-row2">
-           
+
             <div class="lock-head">
               <div class="lock-title">Lock key facts (optional)</div>
 
@@ -237,7 +249,7 @@ Compliance
 • Avoid protected-class language. This tool is designed to stay fair-housing safe.`;
 
       // Simple tips modal
-      const $tipsBtn = document.getElementById("tipsBtn");
+      const $tipsBtn = document.getElementById("tips");
       const $tipsModal = document.getElementById("tipsModal");
       const $tipsClose = document.getElementById("tipsClose");
       const $tipsBody = document.getElementById("tipsBody");
@@ -259,7 +271,7 @@ Compliance
       const $tone = document.getElementById("toneSel");
       const $len  = document.getElementById("lenSel");
       const $city = document.getElementById("cityInp");
-      const $state = document.getElementById("stateInp");
+      const $state = document.getElementById("stateSel");
       const $localHint = document.getElementById("localHint");
 
       const $beds = document.getElementById("bedsSel");
@@ -275,6 +287,8 @@ Compliance
       const $localList = document.getElementById("localList");
       const $localSkip = document.getElementById("localSkip");
       const $localWrite = document.getElementById("localWrite");
+
+      const $input = document.getElementById("input");
 
       let lastNotesForLocal = "";
 
@@ -322,9 +336,29 @@ Compliance
         $localList.innerHTML = "";
       }
 
+      function validateLocalHint(){
+        if (!$localHint) return;
+        if (!$local.checked){ $localHint.style.display = "none"; return; }
+        const hasCity = !!normText($city.value);
+        const hasState = !!normText($state.value);
+        $localHint.style.display = (!hasCity || !hasState) ? "block" : "none";
+      }
+
+      $local.addEventListener("change", () => {
+        validateLocalHint();
+        const hasCity = !!normText($city.value);
+        const hasState = !!normText($state.value);
+        // If the user enables highlights after city/state are filled, fetch highlights immediately.
+        if ($local.checked && hasCity && hasState){
+          // We do not echo a user message; this is a background helper call.
+          shell.sendExtra(normText($input.value) || "Generate local highlights.", { phase: "highlights" }, { echoUser: false });
+        }
+      });
+      $city.addEventListener("input", validateLocalHint);
+      $state.addEventListener("change", validateLocalHint);
+
       $localSkip.addEventListener("click", () => {
         hideLocalPanel();
-        // Proceed directly to write phase without highlights
         shell.sendExtra(lastNotesForLocal, { phase: "write", selected_highlights: [] }, { echoUser: false });
       });
 
@@ -337,22 +371,6 @@ Compliance
         });
         hideLocalPanel();
         shell.sendExtra(lastNotesForLocal, { phase: "write", selected_highlights: selected }, { echoUser: false });
-      });
-
-      function validateLocalHint(){
-        if (!$localHint) return;
-        if (!$local.checked){ $localHint.style.display = "none"; return; }
-        const hasCity = !!normText($city.value);
-        const hasState = !!normText($state.value);
-        $localHint.style.display = (!hasCity || !hasState) ? "block" : "none";
-      }
-
-      $local.addEventListener("change", validateLocalHint);
-      $city.addEventListener("input", validateLocalHint);
-      $state.addEventListener("input", () => {
-        // Keep state tidy (2-letter uppercase)
-        try { $state.value = String($state.value || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0,2); } catch {}
-        validateLocalHint();
       });
 
       const shell = window.PAWToolShell.init({
@@ -372,7 +390,7 @@ Compliance
           ask_followups: true,
           local_highlights: !!$local.checked && !!normText($city.value) && !!normText($state.value),
           city: normText($city.value),
-          state: normText($state.value).toUpperCase(),
+          state: normText($state.value),
           compelling_feature: normText($compelling.value),
           locked: {
             beds: normEnum($beds.value),
@@ -391,7 +409,7 @@ Compliance
             const hasState = !!normText($state.value);
             if (!hasCity || !hasState){
               if ($localHint) $localHint.style.display = "block";
-              return {};
+              return {}; // still writes description (without highlights)
             }
             if ($localHint) $localHint.style.display = "none";
             lastNotesForLocal = text;
@@ -420,6 +438,7 @@ Compliance
       });
 
       hideLocalPanel();
+      validateLocalHint();
     })();
   </script>
 </body>
