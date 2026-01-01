@@ -15,13 +15,10 @@
   // ==========================================================
   // EMBED MODE (LOCKED)
   // ----------------------------------------------------------
-  // When this tool is rendered inside another page (iframe),
-  // we must disable the outer shell styling (app/frame/panel)
-  // to avoid "containers inside containers".
-  //
-  // Triggers embed mode when:
-  // - URL includes ?embed=1
-  // - Page is inside an iframe (or cross-origin iframe)
+  // When a tool is rendered inside another page (iframe),
+  // the tool must NOT draw an additional outer shell.
+  // We set <html data-embed="1"> automatically when embedded
+  // (or when the URL includes ?embed=1).
   // ==========================================================
   (function setEmbedMode() {
     try {
@@ -131,28 +128,22 @@
     const r = String(reply || "").trim();
     if (!r) return false;
 
-    // Only for tools (not the generic assistant route)
     if (!ctx || !ctx.toolId) return false;
 
-    // Never elevate errors or follow-up questions
     if (/^Error reaching the assistant\b/i.test(r)) return false;
     if (/^Upstream error\b/i.test(r)) return false;
 
-    // Common “need more info” openers
     if (/^(one|a couple|a few)\s+quick\s+(question|questions|clarifiers)\b/i.test(r)) return false;
     if (/^(to write|before i write|to draft|to generate)\b/i.test(r)) return false;
     if (/\b(i need|i'll need|need a few|need some|please provide|please share)\b/i.test(r)) return false;
 
-    // If it contains a direct question prompt, do not elevate.
     if (/[?]\s*$/.test(r)) return false;
     if (/\b(what|which|when|where|who|why|how)\b[^.\n]{0,120}\?/i.test(r)) return false;
     if (/\b(can you|could you|would you|do you|are you)\b[^.\n]{0,120}\?/i.test(r)) return false;
 
-    // Any question marks at all usually means it’s not final copy.
     const qMarks = (r.match(/\?/g) || []).length;
     if (qMarks >= 1) return false;
 
-    // Typical deliverables are longer than short chat replies
     return r.length >= 240;
   }
 
@@ -183,7 +174,7 @@
     head.appendChild(actions);
 
     const body = el("div", "deliverable-body");
-    const text = el("pre", "deliverable-text");
+    const text = el("div", "deliverable-text"); // IMPORTANT: div for readable body text
     text.setAttribute("tabindex", "0");
     body.appendChild(text);
 
@@ -267,7 +258,6 @@
       history: Array.isArray(history) ? history : [],
       prefs: prefs || {},
 
-      // Compatibility fields
       tool_id: tool || "",
       text: String(message || "")
     };
@@ -283,6 +273,10 @@
 
   // ─────────────────────────────────────────────
   // Tips modal (shared)
+  // ─────────────────────────────────────────────
+  // LOCKED UX PATTERN:
+  // Tips must open in a clean, closeable MODAL (not inline text, not chat messages).
+  // This is now the standard across all tools.
   // ─────────────────────────────────────────────
   function ensureTipsModal() {
     let modal = qs("#pawTipsModal");
@@ -334,9 +328,6 @@
     const raw = String(tipsText || "").trim();
     if (!raw) return "<p style=\"margin:0;\">No tips available.</p>";
 
-    // Supports both:
-    // - multi-line text
-    // - single-line bullets separated by "•"
     let parts = [];
     if (raw.includes("•")) {
       parts = raw.split("•").map(s => s.trim()).filter(Boolean);
@@ -344,9 +335,9 @@
       parts = raw.split("\n").map(s => s.trim()).filter(Boolean);
     }
 
-    let html = "<ul style=\"margin:0; padding-left:18px;\">";
+    let html = "<ul class=\"tips-list\">";
     for (const p of parts) {
-      html += "<li style=\"margin:6px 0;\">" + escapeHtml(p) + "</li>";
+      html += "<li>" + escapeHtml(p) + "</li>";
     }
     html += "</ul>";
     return html;
@@ -362,9 +353,8 @@
       minThinkMs: 500,
       maxMessageChars: 8000,
 
-      // Deliverable behavior
       deliverableTitle: "",
-      deliverableAckText: "",      // no longer used (kept for compatibility)
+      deliverableAckText: "",
       isDeliverableReply: defaultIsDeliverableReply,
 
       inputPlaceholder: "",
@@ -401,7 +391,6 @@
 
     const addMsg = addMsgFactory($messages);
 
-    // Deliverable UI
     const deliverable = makeDeliverableUI($messages);
     if (cfg.deliverableTitle) {
       deliverable.wrap.querySelector(".deliverable-title").textContent = String(cfg.deliverableTitle);
@@ -432,7 +421,6 @@
       try { $messages.scrollTo({ top: 0, behavior: "auto" }); } catch {}
     }
 
-    // Tips: modal, not chat
     if (cfg.tipsText) {
       const tipsModal = ensureTipsModal();
       $tips.addEventListener("click", () => {
@@ -443,7 +431,6 @@
       });
     }
 
-    // Restore prior history
     if (history.length) renderHistory($messages, history, addMsg);
 
     $send.addEventListener("click", () => { sendFromInput(); });
@@ -486,12 +473,11 @@
 
       const payload = buildPayload(cfg, safeText, outboundHistory, extra);
 
-      let res;
       let data = null;
       let reply = "";
 
       try {
-        res = await fetch(cfg.apiEndpoint, {
+        const res = await fetch(cfg.apiEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -507,7 +493,6 @@
 
       thinking.remove();
 
-      // Allow tool pages to intercept/handle responses
       let skipDefault = false;
       if (typeof cfg.onResponse === "function") {
         try {
@@ -521,7 +506,6 @@
 
         if (useDeliverable) {
           showDeliverable(reply);
-          // IMPORTANT: no extra “Done — …” chat bubble (prevents box-in-box + confusion)
           push("assistant", String(reply || "").trim());
         } else {
           addMsg("bot", reply, { behavior: "smooth" });
