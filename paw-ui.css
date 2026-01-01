@@ -1,48 +1,11 @@
-/* ==========================================================
-   ProAgent Works — Shared UI Styles (paw-ui.css)
-   ----------------------------------------------------------
-   IMPORTANT:
-   - This file is SHARED across ALL tools (ask.html, listing.html, etc).
-   - Any change here can affect multiple pages.
-   - Before changing layout-related selectors, verify BOTH:
-       1) Assistant (ask.html)
-       2) Listing Description Writer (listing.html)
-
-   HEADER CONTRACT (LOCKED):
-   To avoid cross-tool regressions, tools should use this
-   canonical header structure:
-
-   <div class="panel-topbar">
-     <div class="topbar-row0">
-       <!-- IMPORTANT: No title in this bar. Titles belong ABOVE the panel. -->
-       <div class="tool-subtitle">...</div>
-       <div class="topbar-right">
-         <div class="utility-pair">
-           <button class="util-btn">Reset</button>
-           <button class="util-btn">Tips & How To</button>
-         </div>
-       </div>
-     </div>
-     <!-- optional rows: .controls-row, .topbar-row2, etc. -->
-   </div>
-
-   RULE: This top bar must NEVER include a title.
-   If markup includes .tool-title or header tags inside .topbar-row0,
-   they will be hidden by CSS to prevent double-titles.
-
-   If a tool still uses legacy header markup (topbar-row1),
-   the BACK-COMPAT section below keeps it stable.
-
-   If you introduce a new tool page, DO NOT add a title inside
-   .topbar-row0 — titles belong above the panel container.
-   ========================================================== */
+/* paw-ui.css */
 
 :root{
   --bg:#ffffff;
 
   /* Ink */
   --text:#1f2937;
-  --text-strong:#0f172a;     /* slightly softer than pure black */
+  --text-strong:#0f172a;
   --muted:#6b7280;
 
   /* Brand */
@@ -52,28 +15,17 @@
 
   /* Surfaces */
   --surface:#ffffff;
-  --surface-2:rgba(15,23,42,.015);  /* subtle tint */
-  --surface-3:rgba(15,23,42,.03);
 
   /* Borders / shadow */
   --border:rgba(15,23,42,.10);
-  --border-strong:rgba(15,23,42,.14);
   --border-soft:rgba(15,23,42,.08);
 
-  --shadow:0 10px 28px rgba(0,0,0,.08);
   --shadow-soft:0 12px 30px rgba(15,23,42,.08);
-  --shadow-accent:0 12px 26px rgba(5,195,249,.22);
 
   /* Fields */
-  --field:#ffffff;
   --field-border:rgba(15,23,42,.14);
   --field-hover:rgba(15,23,42,.18);
   --field-bg:rgba(255,255,255,.9);
-
-  /* Radius */
-  --r-lg:16px;
-  --r-md:12px;
-  --r-sm:10px;
 }
 
 /* ===== Base ===== */
@@ -81,53 +33,40 @@
 html, body{ height:100%; }
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  background:linear-gradient(180deg, rgba(5,195,249,.10), rgba(255,255,255,0) 220px), var(--bg);
-  color:var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
-/* ===== App shell ===== */
+/* ===== Layout ===== */
 .app{
-  min-height:100%;
   display:flex;
-  align-items:flex-start;
   justify-content:center;
-  padding:22px 14px;
+  padding:16px;
+  background:#fff;
 }
 
 .frame{
-  width:min(1160px, 100%);
-  border-radius:22px;
-  background:rgba(255,255,255,.55);
-  border:1px solid rgba(15,23,42,.06);
-  box-shadow: 0 18px 44px rgba(15,23,42,.08);
-  padding:16px;
+  width:100%;
+  max-width:1100px;
+  display:flex;
+  flex-direction:column;
 }
 
 .panel{
   background:rgba(255,255,255,.78);
-  border:1px solid rgba(15,23,42,.06);
-  border-radius:18px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:var(--shadow-soft);
   overflow:hidden;
-  box-shadow: var(--shadow-soft);
 }
 
-/* Embed mode (remove outer frame) */
-html[data-embed="1"] body{
-  background:transparent;
-}
-html[data-embed="1"] .app{ padding:0; }
-html[data-embed="1"] .frame{
-  padding:0;
-  border:0;
-  box-shadow:none;
-  background:transparent;
-}
-html[data-embed="1"] .panel{
-  border-radius:0;
-  border:none;
-  box-shadow:none;
-}
+/* ==========================================================
+   EMBED MODE (LOCKED)
+   - Remove tool shell visuals to avoid “containers in containers”
+   ========================================================== */
+html[data-embed="1"] body{ background:transparent; }
+html[data-embed="1"] .app{ padding:0; background:transparent; }
+html[data-embed="1"] .frame{ max-width:none; background:transparent; }
+html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; background:transparent; }
 
 /* ===== Top areas ===== */
 .panel-topbar{
@@ -136,9 +75,7 @@ html[data-embed="1"] .panel{
     var(--surface);
 }
 
-/* ==========================================================
-   Canonical top bar row (subtitle + utilities)
-   ========================================================== */
+/* Header row */
 .topbar-row0{
   display:flex;
   align-items:center;
@@ -147,43 +84,10 @@ html[data-embed="1"] .panel{
   padding:12px 14px 8px;
 }
 
-/* If a tool still includes a tool-head wrapper (legacy),
-   keep it from breaking layout. */
-.tool-head{
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:3px;
-}
-
-/* Titles must NOT appear in this bar (ever). */
-.tool-title{
-  font-size:14px;
-  font-weight:900;
-  letter-spacing:-0.01em;
-  color:var(--text-strong);
-  line-height:1.1;
-}
-
-/* LOCKED HEADER RULE:
-   The top bar (topbar-row0) must NEVER display a title.
-   Titles belong above the panel (page header).
-   This prevents double titles across tools (e.g., ask.html).
-*/
-.topbar-row0 .tool-title,
-.topbar-row0 h1,
-.topbar-row0 h2,
-.topbar-row0 h3{ display:none !important; }
-
-/* In case a tool keeps the tool-head wrapper, ensure subtitle still looks right. */
-.topbar-row0 .tool-subtitle{
+.tool-subtitle{
   font-size:12px;
-  font-weight:650;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  max-width:72ch;
   color:rgba(15,23,42,.62);
+  line-height:1.3;
 }
 
 /* Utility buttons (Reset / Tips) */
@@ -213,9 +117,10 @@ html[data-embed="1"] .panel{
 .util-btn:hover{ background:rgba(15,23,42,.05); }
 .util-btn + .util-btn{ border-left:1px solid rgba(15,23,42,.08); }
 
-/* ===== Controls row (Type/Tone/Length) ===== */
+/* Controls row */
 .controls-row{
   display:flex;
+  flex-wrap:wrap;
   align-items:flex-end;
   justify-content:flex-start;
   gap:14px;
@@ -244,14 +149,7 @@ html[data-embed="1"] .panel{
   align-items:center;
 }
 
-.input-wrap{
-  position:relative;
-  display:inline-flex;
-  align-items:center;
-}
-
-.select-wrap select,
-.input-wrap input{
+.select-wrap select{
   height:34px;
   min-width: 132px;
   border-radius:999px;
@@ -259,7 +157,7 @@ html[data-embed="1"] .panel{
   background:var(--field-bg);
   padding:6px 34px 6px 12px;
   font-size:13px;
-  font-weight:650;
+  font-weight:800;
   color:var(--text-strong);
   outline:none;
   appearance:none;
@@ -267,9 +165,25 @@ html[data-embed="1"] .panel{
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
-/* City input should NOT reserve space for a chevron */
+.input-wrap{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+}
+
 .input-wrap input{
-  padding-right:12px;
+  height:34px;
+  min-width: 132px;
+  border-radius:999px;
+  border:1px solid var(--field-border);
+  background:var(--field-bg);
+  padding:6px 12px;
+  font-size:13px;
+  font-weight:800;
+  color:var(--text-strong);
+  outline:none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
 .select-wrap select:hover,
@@ -294,11 +208,8 @@ html[data-embed="1"] .panel{
   pointer-events:none;
 }
 
-.select-wrap.sm select{ min-width: 92px; }
-.select-wrap.md select{ min-width: 150px; }
-
-.input-wrap.sm input{ min-width: 92px; }
-.input-wrap.md input{ min-width: 150px; }
+/* State field fix */
+.select-wrap.sm select{ min-width:96px; text-align:center; }
 
 /* ===== Lock key facts section ===== */
 .topbar-row2{
@@ -359,7 +270,6 @@ html[data-embed="1"] .panel{
 
 .lock-row2{ margin-top:12px; }
 
-/* Field styles */
 .field label{
   display:block;
   font-size:12px;
@@ -376,7 +286,7 @@ html[data-embed="1"] .panel{
   background:var(--field-bg);
   padding:8px 10px;
   font-size:14px;
-  font-weight:650;
+  font-weight:800;
   color:var(--text-strong);
   outline:none;
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
@@ -396,7 +306,7 @@ html[data-embed="1"] .panel{
   background:rgba(255,255,255,.86);
   padding:10px 12px;
   font-size:14px;
-  font-weight:650;
+  font-weight:800;
   color:var(--text-strong);
   outline:none;
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
@@ -405,86 +315,6 @@ html[data-embed="1"] .panel{
   border-color: rgba(5,195,249,.70);
   box-shadow: 0 0 0 4px rgba(5,195,249,.14);
   background:#fff;
-}
-
-/* ===== Local highlights panel ===== */
-.local-panel{
-  margin-top:12px;
-  border:1px solid rgba(15,23,42,.08);
-  border-radius:16px;
-  background:rgba(255,255,255,.75);
-  padding:12px;
-}
-
-.local-head{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom:10px;
-}
-
-.local-title{
-  font-size:14px;
-  font-weight:700;
-  color:var(--text-strong);
-}
-.local-sub{
-  font-size:12px;
-  color:rgba(15,23,42,.60);
-}
-
-.local-actions{ display:flex; gap:10px; }
-
-.btn{
-  height:34px;
-  padding:0 12px;
-  border-radius:12px;
-  border:1px solid rgba(15,23,42,.14);
-  background:rgba(255,255,255,.9);
-  font-weight:700;
-  cursor:pointer;
-  transition: background .15s ease, border-color .15s ease;
-}
-.btn:hover{
-  background:#fff;
-  border-color: rgba(15,23,42,.18);
-}
-.btn.primary{
-  border-color: rgba(5,195,249,.55);
-  background: rgba(5,195,249,.16);
-  color: rgba(15,23,42,.92);
-}
-.btn.primary:hover{
-  background: rgba(5,195,249,.20);
-  border-color: rgba(5,195,249,.70);
-}
-
-.local-list{
-  list-style:none;
-  padding:0;
-  margin:0;
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap:10px;
-}
-@media (max-width: 540px){
-  .local-list{ grid-template-columns: 1fr; }
-}
-
-.local-item{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.08);
-  background:rgba(255,255,255,.75);
-}
-.local-item input{ accent-color: var(--accent); }
-.local-item .txt{
-  font-size:13px;
-  color:rgba(15,23,42,.86);
 }
 
 /* ===== Messages / chat composer ===== */
@@ -532,7 +362,7 @@ html[data-embed="1"] .panel{
   background:rgba(255,255,255,.92);
   padding:12px 12px;
   font-size:14px;
-  font-weight:650;
+  font-weight:800;
   color:var(--text-strong);
   outline:none;
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
@@ -542,6 +372,7 @@ html[data-embed="1"] .panel{
   box-shadow: 0 0 0 4px rgba(5,195,249,.14);
   background:#fff;
 }
+
 .send{
   width:48px;
   height:48px;
@@ -553,7 +384,7 @@ html[data-embed="1"] .panel{
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  box-shadow: var(--shadow-accent);
+  box-shadow: 0 12px 26px rgba(5,195,249,.22);
   transition: transform .08s ease, filter .15s ease;
 }
 .send:hover{ filter:brightness(1.02); }
@@ -576,7 +407,7 @@ html[data-embed="1"] .panel{
   background: rgba(255,255,255,.95);
   border:1px solid rgba(15,23,42,.08);
   border-radius:18px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 10px 28px rgba(0,0,0,.08);
   overflow:hidden;
 }
 .modal-head{
@@ -606,7 +437,7 @@ html[data-embed="1"] .panel{
   line-height:1.45;
 }
 
-/* ===== Toast (global, used for Copy confirmations) ===== */
+/* ===== Toast ===== */
 .toast{
   position:fixed;
   left:50%;

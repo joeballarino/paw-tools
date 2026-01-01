@@ -12,6 +12,36 @@
  */
 
 (function () {
+  // ==========================================================
+  // EMBED MODE (LOCKED)
+  // ----------------------------------------------------------
+  // When this tool is rendered inside another page (iframe),
+  // we must disable the outer shell styling (app/frame/panel)
+  // to avoid "containers inside containers".
+  //
+  // Triggers embed mode when:
+  // - URL includes ?embed=1
+  // - Page is inside an iframe (or cross-origin iframe)
+  // ==========================================================
+  (function setEmbedMode() {
+    try {
+      const p = new URLSearchParams(location.search);
+      if (p.get("embed") === "1") {
+        document.documentElement.dataset.embed = "1";
+        return;
+      }
+    } catch {}
+
+    try {
+      if (window.self !== window.top) {
+        document.documentElement.dataset.embed = "1";
+      }
+    } catch {
+      // Cross-origin iframe access throws; assume embedded
+      document.documentElement.dataset.embed = "1";
+    }
+  })();
+
   const _instances = Object.create(null);
 
   function clampStr(s, max) {
