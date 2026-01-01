@@ -1,4 +1,3 @@
-/* paw-ui.css (FULL REPLACEMENT) */
 /* ==========================================================
    ProAgent Works — Shared UI Styles (paw-ui.css)
    ----------------------------------------------------------
@@ -7,7 +6,35 @@
    - Any change here can affect multiple pages.
    - Before changing layout-related selectors, verify BOTH:
        1) Assistant (ask.html)
-       2) The tool page you're editing (listing.html, etc.)
+       2) Listing Description Writer (listing.html)
+
+   HEADER CONTRACT (LOCKED):
+   To avoid cross-tool regressions, tools should use this
+   canonical header structure:
+
+   <div class="panel-topbar">
+     <div class="topbar-row0">
+       <!-- IMPORTANT: No title in this bar. Titles belong ABOVE the panel. -->
+       <div class="tool-subtitle">...</div>
+       <div class="topbar-right">
+         <div class="utility-pair">
+           <button class="util-btn">Reset</button>
+           <button class="util-btn">Tips & How To</button>
+         </div>
+       </div>
+     </div>
+     <!-- optional rows: .controls-row, .topbar-row2, etc. -->
+   </div>
+
+   RULE: This top bar must NEVER include a title.
+   If markup includes .tool-title or header tags inside .topbar-row0,
+   they will be hidden by CSS to prevent double-titles.
+
+   If a tool still uses legacy header markup (topbar-row1),
+   the BACK-COMPAT section below keeps it stable.
+
+   If you introduce a new tool page, DO NOT add a title inside
+   .topbar-row0 — titles belong above the panel container.
    ========================================================== */
 
 :root{
@@ -85,13 +112,33 @@ body{
   box-shadow: var(--shadow-soft);
 }
 
-/* ===== Panel topbar ===== */
-.panel-topbar{
-  border-bottom:1px solid var(--border-soft);
-  background:linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,255,255,.94));
+/* Embed mode (remove outer frame) */
+html[data-embed="1"] body{
+  background:transparent;
+}
+html[data-embed="1"] .app{ padding:0; }
+html[data-embed="1"] .frame{
+  padding:0;
+  border:0;
+  box-shadow:none;
+  background:transparent;
+}
+html[data-embed="1"] .panel{
+  border-radius:0;
+  border:none;
+  box-shadow:none;
 }
 
-/* Header row 0 */
+/* ===== Top areas ===== */
+.panel-topbar{
+  background:
+    radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.08), rgba(255,255,255,0) 55%),
+    var(--surface);
+}
+
+/* ==========================================================
+   Canonical top bar row (subtitle + utilities)
+   ========================================================== */
 .topbar-row0{
   display:flex;
   align-items:center;
@@ -100,10 +147,43 @@ body{
   padding:12px 14px 8px;
 }
 
-.tool-subtitle{
+/* If a tool still includes a tool-head wrapper (legacy),
+   keep it from breaking layout. */
+.tool-head{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+/* Titles must NOT appear in this bar (ever). */
+.tool-title{
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:-0.01em;
+  color:var(--text-strong);
+  line-height:1.1;
+}
+
+/* LOCKED HEADER RULE:
+   The top bar (topbar-row0) must NEVER display a title.
+   Titles belong above the panel (page header).
+   This prevents double titles across tools (e.g., ask.html).
+*/
+.topbar-row0 .tool-title,
+.topbar-row0 h1,
+.topbar-row0 h2,
+.topbar-row0 h3{ display:none !important; }
+
+/* In case a tool keeps the tool-head wrapper, ensure subtitle still looks right. */
+.topbar-row0 .tool-subtitle{
   font-size:12px;
+  font-weight:650;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:72ch;
   color:rgba(15,23,42,.62);
-  line-height:1.3;
 }
 
 /* Utility buttons (Reset / Tips) */
@@ -133,10 +213,9 @@ body{
 .util-btn:hover{ background:rgba(15,23,42,.05); }
 .util-btn + .util-btn{ border-left:1px solid rgba(15,23,42,.08); }
 
-/* Row 1 controls */
+/* ===== Controls row (Type/Tone/Length) ===== */
 .controls-row{
   display:flex;
-  flex-wrap:wrap;
   align-items:flex-end;
   justify-content:flex-start;
   gap:14px;
@@ -175,7 +254,7 @@ body{
 .input-wrap input{
   height:34px;
   min-width: 132px;
-  border-radius:999px; /* modern */
+  border-radius:999px;
   border:1px solid var(--field-border);
   background:var(--field-bg);
   padding:6px 34px 6px 12px;
@@ -525,23 +604,6 @@ body{
   font-size:14px;
   color:rgba(15,23,42,.86);
   line-height:1.45;
-}
-
-/* Embed mode (remove outer frame) */
-html[data-embed="1"] body{
-  background:transparent;
-}
-html[data-embed="1"] .app{ padding:0; }
-html[data-embed="1"] .frame{
-  padding:0;
-  border:0;
-  box-shadow:none;
-  background:transparent;
-}
-html[data-embed="1"] .panel{
-  border-radius:0;
-  border:0;
-  box-shadow:none;
 }
 
 /* ===== Toast (global, used for Copy confirmations) ===== */
