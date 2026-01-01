@@ -64,15 +64,41 @@
     return { role: role, content: String(content || "") };
   }
 
-  function buildPayload(cfg, text, extra, history) {
+  /**
+   * Worker contract (source: your uploaded Worker code):
+   * - Normal chat expects: { message, history, ... }
+   * - Tools expect:        { tool, message, prefs, history, phase?, selected_highlights? ... }
+   *
+   * Backward compatibility:
+   * - Also include tool_id and text for any older clients.
+   */
+  function buildPayload(cfg, message, extraTopLevel, history) {
     const prefs = cfg.getPrefs ? cfg.getPrefs() : {};
-    return {
-      tool_id: cfg.toolId || "",
-      text: String(text || ""),
+    const tool = String(cfg.toolId || "").trim();
+
+    // extraTopLevel is merged at top-level (phase, selected_highlights, etc)
+    const extra = (extraTopLevel && typeof extraTopLevel === "object") ? extraTopLevel : {};
+
+    const payload = {
+      // Canonical fields used by Worker:
+      tool: tool || "",
+      message: String(message || ""),
       prefs: prefs || {},
-      extra: extra || {},
-      history: history || []
+      history: history || [],
+
+      // Compatibility fields (safe to leave in):
+      tool_id: tool || "",
+      text: String(message || "")
     };
+
+    // Merge phase/selected_highlights/etc at top level
+    for (const k of Object.keys(extra)) {
+      // Avoid clobbering core keys
+      if (k === "tool" || k === "tool_id" || k === "message" || k === "text" || k === "prefs" || k === "history") continue;
+      payload[k] = extra[k];
+    }
+
+    return payload;
   }
 
   function renderMessage(role, content) {
@@ -91,8 +117,7 @@
   function renderThinking() {
     const $messages = $("messages");
     const thinking = el("div", "msg assistant");
-    thinking.innerHTML =
-      '<div class="bubble"><p>Thinking…</p></div>';
+    thinking.innerHTML = '<div class="bubble"><p>Thinking…</p></div>';
     $messages.appendChild(thinking);
     scrollToBottom("auto");
     return thinking;
@@ -117,8 +142,7 @@
     return true;
   }
 
-  function createDeliverableCard($messages) {
-    // Inject a result section right above the message thread
+  function createDeliverableCard($messages, cfg) {
     const wrap = el("div", "deliverable");
     wrap.style.display = "none";
 
@@ -126,7 +150,7 @@
 
     const head = el("div", "deliverable-head");
     const title = el("div", "deliverable-title");
-    title.textContent = "Your MLS Description";
+    title.textContent = cfg.deliverableTitle || "Your MLS Description";
 
     const actions = el("div", "deliverable-actions");
     const copyBtn = el("button", "btn primary");
@@ -152,7 +176,6 @@
     card.appendChild(body);
     wrap.appendChild(card);
 
-    // Place it before the messages container
     $messages.parentNode.insertBefore(wrap, $messages);
 
     return { wrap, text, copyBtn, refineBtn };
@@ -162,7 +185,6 @@
     const t = String(text || "");
     if (!t) return false;
 
-    // Modern API
     if (navigator.clipboard && navigator.clipboard.writeText) {
       try {
         await navigator.clipboard.writeText(t);
@@ -170,7 +192,6 @@
       } catch {}
     }
 
-    // Fallback
     try {
       const ta = el("textarea");
       ta.value = t;
@@ -198,18 +219,22 @@
   function init(config) {
     const cfg = Object.assign({
       apiEndpoint: "",
-      toolId: "",                 // "" => generic assistant route
+      toolId: "",
+
       minThinkMs: 550,
       maxHistoryItems: 16,
       sendHistoryItems: 8,
       maxMessageChars: 8000,
-      deliverableMode: true,       // tools: elevate final output into a copy-first card
+
+      deliverableMode: true,
       deliverableTitle: "Your MLS Description",
       deliverableAckText: "Done — your MLS description is ready above.",
       isDeliverableReply: defaultIsDeliverableReply,
+
       getPrefs: null,
       getExtraPayload: null,
       onResponse: null,
+
       tipsText: "",
       inputPlaceholder: ""
     }, config || {});
@@ -218,13 +243,11 @@
     const $input = $("input");
     const $send = $("send");
 
-    // Apply placeholder if provided
     if (cfg.inputPlaceholder) {
       try { $input.placeholder = cfg.inputPlaceholder; } catch {}
     }
 
-    // Deliverable card (inserted above messages)
-    const deliverable = cfg.deliverableMode ? createDeliverableCard($messages) : null;
+    const deliverable = cfg.deliverableMode ? createDeliverableCard($messages, cfg) : null;
     if (deliverable) {
       deliverable.text.textContent = "";
       deliverable.wrap.style.display = "none";
@@ -232,50 +255,49 @@
 
     if (deliverable) {
       deliverable.copyBtn.addEventListener("click", async () => {
-      const ok = await copyToClipboard(deliverable.text.textContent);
-      if (!ok) return;
-      showToast("Copied to clipboard");
-    });
+        const ok = await copyToClipboard(deliverable.text.textContent);
+        if (!ok) return;
+        showToast("Copied to clipboard");
+      });
 
-    deliverable.refineBtn.addEventListener("click", () => {
-      // Make revisions obvious: jump user into the composer with a starter instruction.
-      try {
-        $input.focus();
-        const starter = "Revise the MLS description above: ";
-        if (!String($input.value || "").trim()) {
-          $input.value = starter;
-          $input.setSelectionRange($input.value.length, $input.value.length);
-          autoGrow($input);
-        }
-        scrollToBottom("smooth");
-      } catch {}
-    });
+      deliverable.refineBtn.addEventListener("click", () => {
+        try {
+          $input.focus();
+          const starter = "Revise the MLS description above: ";
+          if (!String($input.value || "").trim()) {
+            $input.value = starter;
+            $input.setSelectionRange($input.value.length, $input.value.length);
+            autoGrow($input);
+          }
+          scrollToBottom("smooth");
+        } catch {}
+      });
     }
 
-    // Simple in-memory chat history for context
     let history = [];
 
-    async function send(text, extra, opts) {
+    async function send(text, extraTopLevel, opts) {
       const userText = normalizeText(text).trim();
       if (!userText) return;
 
-      // echo user message unless suppressed
       if (!opts || opts.echoUser !== false) {
         renderMessage("user", userText);
       }
 
-      // record to history
       history.push(toHistoryItem("user", userText));
       history = trimHistory(history, cfg.maxHistoryItems);
 
-      // show thinking
       const thinking = renderThinking();
       const start = nowMs();
 
-      // build payload with limited history window for request
       const historyToSend = trimHistory(history, cfg.sendHistoryItems);
-      const extraPayload = cfg.getExtraPayload ? (cfg.getExtraPayload(userText, { prefs: cfg.getPrefs ? cfg.getPrefs() : {}, toolId: cfg.toolId }) || {}) : (extra || {});
-      const payload = buildPayload(cfg, userText, extraPayload, historyToSend);
+
+      // IMPORTANT: extra payload must become TOP-LEVEL fields for the Worker (phase, selected_highlights, etc)
+      const computedExtra = cfg.getExtraPayload
+        ? (cfg.getExtraPayload(userText, { prefs: cfg.getPrefs ? cfg.getPrefs() : {}, toolId: cfg.toolId }) || {})
+        : (extraTopLevel || {});
+
+      const payload = buildPayload(cfg, userText, computedExtra, historyToSend);
 
       let replyText = "";
       let json = null;
@@ -293,26 +315,22 @@
         if (json && typeof json.reply === "string") {
           replyText = json.reply;
         } else if (typeof raw === "string" && raw.trim()) {
-          // some workers might return plain text
           replyText = raw;
         } else {
           replyText = "Error reaching the assistant. Please try again.";
         }
-      } catch (e) {
+      } catch {
         replyText = "Error reaching the assistant. Please try again.";
       }
 
-      // enforce minimum think time for smoother UX
       const elapsed = nowMs() - start;
       const wait = clamp(cfg.minThinkMs - elapsed, 0, cfg.minThinkMs);
       if (wait) await new Promise(r => setTimeout(r, wait));
 
-      // remove thinking
       try { thinking.remove(); } catch {}
 
       const ctx = { prefs: cfg.getPrefs ? cfg.getPrefs() : {}, toolId: cfg.toolId };
 
-      // Deliverable mode: elevate final result into a card
       if (deliverable && cfg.isDeliverableReply(replyText, ctx)) {
         deliverable.text.textContent = String(replyText || "").trim();
         deliverable.wrap.style.display = "block";
@@ -321,11 +339,9 @@
         renderMessage("assistant", replyText);
       }
 
-      // record assistant reply to history
       history.push(toHistoryItem("assistant", replyText));
       history = trimHistory(history, cfg.maxHistoryItems);
 
-      // allow tool page to react to JSON payloads (e.g., local highlights)
       if (cfg.onResponse) {
         try { cfg.onResponse(json, ctx); } catch {}
       }
@@ -350,10 +366,9 @@
     $input.addEventListener("input", () => autoGrow($input));
     autoGrow($input);
 
-    // Exposed helpers for tool pages
     return {
       send: (text) => send(text, null, null),
-      sendExtra: (text, extra, opts) => send(text, extra, opts || {}),
+      sendExtra: (text, extra, opts) => send(text, extra || {}, opts || {}),
       reset: () => {
         history = [];
         if (deliverable) {
@@ -365,6 +380,5 @@
     };
   }
 
-  // Expose
   window.PAWToolShell = { init: init };
 })();
