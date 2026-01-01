@@ -1,18 +1,28 @@
-/* paw-ui.css */
+/* ==========================================================
+   ProAgent Works — Shared UI Styles (paw-ui.css)
+   ----------------------------------------------------------
+   IMPORTANT:
+   - This file is SHARED across ALL tools (ask.html, listing.html, etc).
+   ========================================================== */
 
 :root{
   --bg:#ffffff;
 
+  /* Ink */
   --text:#1f2937;
   --text-strong:#0f172a;
+  --muted:#6b7280;
 
+  /* Brand */
   --accent:#05C3F9;
+  --accent-soft:rgba(5,195,249,.10);
 
+  /* Borders / shadow */
   --border:rgba(15,23,42,.10);
   --border-soft:rgba(15,23,42,.08);
-
   --shadow-soft:0 12px 30px rgba(15,23,42,.08);
 
+  /* Fields */
   --field-border:rgba(15,23,42,.14);
   --field-hover:rgba(15,23,42,.18);
   --field-bg:rgba(255,255,255,.9);
@@ -192,7 +202,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   pointer-events:none;
 }
 
-/* State select: avoid “messed up” narrow look */
+/* State select */
 .select-wrap.sm select{
   min-width:96px;
   text-align:center;
@@ -202,43 +212,6 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .topbar-row2{
   padding:12px 14px 14px;
   background:linear-gradient(180deg, rgba(5,195,249,.05), rgba(255,255,255,0) 120px), rgba(255,255,255,.92);
-}
-
-.lock-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom:10px;
-}
-
-.lock-title{
-  font-size:14px;
-  font-weight:700;
-  color:var(--text-strong);
-}
-
-.check{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  cursor:pointer;
-  user-select:none;
-  color:rgba(15,23,42,.78);
-  font-size:13px;
-  font-weight:650;
-}
-.check input{
-  width:16px;
-  height:16px;
-  accent-color: var(--accent);
-}
-
-.check-plain{
-  padding:6px 10px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.10);
-  background:rgba(255,255,255,.7);
 }
 
 .lock-grid{
@@ -253,6 +226,9 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 @media (max-width: 540px){
   .lock-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* FIX: give “Most Compelling Feature” more breathing room */
+.lock-row2{ margin-top:18px; }
 
 .field label{
   display:block;
@@ -286,61 +262,36 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   outline:none;
 }
 
-/* ===== Deliverable (MLS output) — THIS FIXES YOUR SCREENSHOT ===== */
-.deliverable{
-  padding:14px;
-}
-
-.deliverable-card{
+/* ===== Local highlights panel ===== */
+.local-panel{
+  display:none;
+  padding:12px 14px;
+  margin-top:14px;
+  border-radius:14px;
   border:1px solid rgba(15,23,42,.08);
-  background:rgba(255,255,255,.92);
-  border-radius:16px;
-  box-shadow: 0 10px 24px rgba(15,23,42,.06);
-  overflow:hidden;
+  background:rgba(255,255,255,.90);
 }
 
-.deliverable-head{
+.local-head{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:space-between;
   gap:12px;
-  padding:12px 12px;
-  border-bottom:1px solid rgba(15,23,42,.08);
-  background: linear-gradient(180deg, rgba(5,195,249,.10), rgba(255,255,255,0));
+  margin-bottom:10px;
 }
-
-.deliverable-title{
+.local-title{
   font-size:14px;
   font-weight:800;
   color:var(--text-strong);
 }
-
-.deliverable-actions{
-  display:flex;
-  align-items:center;
-  gap:10px;
+.local-sub{
+  font-size:12px;
+  color:rgba(15,23,42,.60);
+  line-height:1.35;
 }
+.local-actions{ display:flex; gap:10px; align-items:center; }
 
-.deliverable-body{
-  padding:12px 12px 14px;
-}
-
-/* Make the MLS text readable and not “tiny monospace” */
-.deliverable-text{
-  font-size:15px;
-  line-height:1.55;
-  color:rgba(15,23,42,.92);
-  white-space:pre-wrap;
-  word-break:break-word;
-  max-height:280px;         /* keeps page from feeling buried */
-  overflow:auto;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(15,23,42,.08);
-  background: rgba(255,255,255,.86);
-}
-
-/* Modern buttons used by deliverable actions */
+/* Buttons (shared) */
 .btn{
   height:34px;
   padding:0 12px;
@@ -352,12 +303,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   cursor:pointer;
   transition: background .15s ease, border-color .15s ease, transform .06s ease;
 }
-.btn:hover{
-  background:#fff;
-  border-color: rgba(15,23,42,.18);
-}
+.btn:hover{ background:#fff; border-color: rgba(15,23,42,.18); }
 .btn:active{ transform: translateY(1px); }
-
 .btn.primary{
   border-color: rgba(5,195,249,.55);
   background: rgba(5,195,249,.16);
@@ -368,6 +315,71 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   border-color: rgba(5,195,249,.70);
 }
 
+.local-list{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+@media (max-width: 540px){
+  .local-list{ grid-template-columns: 1fr; }
+}
+.local-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.08);
+  background:rgba(255,255,255,.86);
+}
+.local-item input{ accent-color: var(--accent); }
+.local-item .txt{
+  font-size:13px;
+  color:rgba(15,23,42,.86);
+}
+
+/* ===== Deliverable ===== */
+.deliverable{ padding:14px; }
+.deliverable-card{
+  border:1px solid rgba(15,23,42,.08);
+  background:rgba(255,255,255,.92);
+  border-radius:16px;
+  box-shadow: 0 10px 24px rgba(15,23,42,.06);
+  overflow:hidden;
+}
+.deliverable-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 12px;
+  border-bottom:1px solid rgba(15,23,42,.08);
+  background: linear-gradient(180deg, rgba(5,195,249,.10), rgba(255,255,255,0));
+}
+.deliverable-title{
+  font-size:14px;
+  font-weight:800;
+  color:var(--text-strong);
+}
+.deliverable-actions{ display:flex; gap:10px; align-items:center; }
+.deliverable-body{ padding:12px 12px 14px; }
+.deliverable-text{
+  font-size:15px;
+  line-height:1.55;
+  color:rgba(15,23,42,.92);
+  white-space:pre-wrap;
+  word-break:break-word;
+  max-height:280px;
+  overflow:auto;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.08);
+  background: rgba(255,255,255,.86);
+}
+
 /* ===== Messages / composer ===== */
 .messages{
   padding:14px;
@@ -375,12 +387,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   flex-direction:column;
   gap:10px;
 }
-
-.msg{
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
-}
+.msg{ display:flex; gap:10px; align-items:flex-start; }
 .msg .bubble{
   max-width: 860px;
   border:1px solid rgba(15,23,42,.08);
@@ -476,15 +483,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   color:rgba(15,23,42,.86);
   line-height:1.45;
 }
-
-/* Tips list inside modal */
-.tips-list{
-  margin:0;
-  padding-left:18px;
-}
-.tips-list li{
-  margin:6px 0;
-}
+.tips-list{ margin:0; padding-left:18px; }
+.tips-list li{ margin:6px 0; }
 
 /* ===== Toast ===== */
 .toast{
@@ -507,14 +507,4 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .toast.show{
   opacity:1;
   transform:translateX(-50%) translateY(0);
-}
-
-/* Helper */
-.hint{
-  font-size:12px;
-  color:rgba(15,23,42,.60);
-  margin-top:6px;
-}
-.hint.error{
-  color:rgba(220,38,38,.92);
 }

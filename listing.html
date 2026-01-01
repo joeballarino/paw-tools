@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Listing Description Writer</title>
   <link rel="stylesheet" href="/paw-ui.css">
-  <!--
-    HEADER CONTRACT (LOCKED):
-    - The panel top bar (.topbar-row0) MUST NEVER include a title.
-    - It only contains: subtitle (left) + Reset/Tips buttons (right).
-  -->
 </head>
 
 <body>
@@ -19,7 +14,6 @@
 
         <div class="panel-topbar">
 
-          <!-- Top bar: subtitle + utilities ONLY -->
           <div class="topbar-row0">
             <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
 
@@ -29,7 +23,6 @@
             </div>
           </div>
 
-          <!-- Controls row -->
           <div class="controls-row">
             <div class="ctl">
               <label for="typeSel">Type</label>
@@ -99,7 +92,6 @@
             </div>
           </div>
 
-          <!-- Key facts area (no jargon heading) -->
           <div class="topbar-row2">
 
             <div class="lock-grid">
@@ -155,8 +147,7 @@
               </label>
             </div>
 
-            <!-- Local highlights (optional) auto-suggest -->
-            <div id="localPanel" class="local-panel" aria-live="polite" style="display:none;">
+            <div id="localPanel" class="local-panel" aria-live="polite">
               <div class="local-head">
                 <div>
                   <div class="local-title">Local highlights (optional)</div>
@@ -195,6 +186,16 @@
     (function () {
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
 
+      const TIPS_TEXT =
+`What this tool does
+• Generates MLS-ready listing remarks that are accurate, motivating, and Fair Housing–safe.
+
+How to use it
+• Add any details above and/or paste notes/MLS data — messy is fine
+• Include city & state when you can (helps local context + local highlights)
+• If something is unknown, leave it blank (or type “unknown”) and the tool will write conservatively
+• You can always refine the output after it generates`;
+
       const $type = document.getElementById("typeSel");
       const $tone = document.getElementById("toneSel");
       const $len  = document.getElementById("lenSel");
@@ -217,18 +218,9 @@
 
       const $input = document.getElementById("input");
 
-      let lastHighlights = []; // [{id,label}]
       const HIGHLIGHTS_TOKEN = "__PAW_HIGHLIGHTS__";
-
-      const TIPS_TEXT =
-`What this tool does
-• Generates MLS-ready listing remarks that are accurate, motivating, and Fair Housing–safe.
-
-How to use it
-• Add any details above and/or paste notes/MLS data — messy is fine
-• Include city & state when you can (helps local context + local highlights)
-• If something is unknown, leave it blank (or type “unknown”) and the tool will write conservatively
-• You can always refine the output after it generates`;
+      let lastHighlights = [];
+      let lastFetchKey = "";
 
       function normText(v){ return String(v || "").trim(); }
       function digitsOnly(v){ return String(v || "").replace(/[^\d]/g, ""); }
@@ -238,14 +230,13 @@ How to use it
       function mapTone(v){ return normText(v) || "general"; }
       function mapLen(v){ return normText(v) || "standard"; }
 
-      function coerceHighlightLabel(item){
-        if (item == null) return "";
-        if (typeof item === "string") return item;
-        if (typeof item === "number") return String(item);
-        if (typeof item === "object") {
-          return String(item.label || item.name || item.title || item.text || item.value || "").trim() || "";
-        }
-        return String(item).trim();
+      function cityVal(){ return normText($city.value); }
+      function stateVal(){ return normText($state.value).toUpperCase(); }
+      function locationVal(){
+        const c = cityVal(), s = stateVal();
+        if (c && s) return `${c}, ${s}`;
+        if (s) return s;
+        return c;
       }
 
       function hideLocalPanel(){
@@ -254,15 +245,35 @@ How to use it
         lastHighlights = [];
       }
 
+      function coerceHighlightLabel(item){
+        if (item == null) return "";
+        if (typeof item === "string") return item.trim();
+        if (typeof item === "number") return String(item);
+        if (typeof item === "object") {
+          return String(item.label || item.name || item.title || item.text || item.value || "").trim();
+        }
+        return String(item).trim();
+      }
+
+      function isBadHighlightLabel(label){
+        const t = String(label || "").toLowerCase();
+        return (
+          t.includes("please provide") ||
+          t.includes("city/state") ||
+          t.includes("zip code") ||
+          t.includes("zip") && t.includes("provide")
+        );
+      }
+
       function showLocalPanel(highlights){
         const arr = Array.isArray(highlights) ? highlights : [];
-        lastHighlights = arr.map((item, i) => {
-          const label = coerceHighlightLabel(item);
-          const id = (item && typeof item === "object" && (item.id || item.key)) ? (item.id || item.key) : (i + 1);
-          return { id: String(id), label: label };
-        }).filter(x => x.label);
+        const normalized = arr
+          .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)), label: coerceHighlightLabel(it) }))
+          .filter(x => x.label && !isBadHighlightLabel(x.label));
 
-        if (!lastHighlights.length) { hideLocalPanel(); return; }
+        if (!normalized.length) { hideLocalPanel(); return; }
+
+        lastHighlights = normalized;
 
         $localList.innerHTML = "";
         for (const h of lastHighlights){
@@ -271,40 +282,41 @@ How to use it
 
           const cb = document.createElement("input");
           cb.type = "checkbox";
-          cb.id = "lh_" + String(h.id);
+          cb.id = "lh_" + h.id;
           cb.checked = true;
 
-          const label = document.createElement("label");
-          label.className = "txt";
-          label.htmlFor = cb.id;
-          label.textContent = h.label;
+          const lab = document.createElement("label");
+          lab.className = "txt";
+          lab.htmlFor = cb.id;
+          lab.textContent = h.label;
 
           li.appendChild(cb);
-          li.appendChild(label);
+          li.appendChild(lab);
           $localList.appendChild(li);
         }
+
         $localPanel.style.display = "block";
       }
 
       function getSelectedHighlightLabels(){
-        const selected = [];
+        const out = [];
         for (const h of lastHighlights){
-          const cb = document.getElementById("lh_" + String(h.id));
-          if (cb && cb.checked) selected.push(String(h.label || ""));
+          const cb = document.getElementById("lh_" + h.id);
+          if (cb && cb.checked) out.push(h.label);
         }
-        return selected;
+        return out;
       }
 
-      let hlTimer = null;
-      function scheduleHighlightsFetch(){
-        if (hlTimer) clearTimeout(hlTimer);
-        hlTimer = setTimeout(() => {
-          const c = normText($city.value);
-          const s = normText($state.value);
-          if (!c || !s) { hideLocalPanel(); return; }
-          // background request; no user bubble
-          shell.sendExtra(HIGHLIGHTS_TOKEN, {}, { echoUser: false });
-        }, 450);
+      async function fetchHighlights(force){
+        const c = cityVal();
+        const s = stateVal();
+        if (!c || !s) { hideLocalPanel(); return; }
+
+        const key = `${c.toLowerCase()}|${s}`;
+        if (!force && key === lastFetchKey) return;
+        lastFetchKey = key;
+
+        await shell.sendExtra(HIGHLIGHTS_TOKEN, {}, { echoUser: false });
       }
 
       const shell = window.PAWToolShell.init({
@@ -319,16 +331,14 @@ How to use it
           tone: mapTone($tone.value),
           length: mapLen($len.value),
           safe_mode: true,
-
-          // Goal: don't force. Ask only if truly needed.
           ask_followups: false,
 
-          city: normText($city.value),
-          state: normText($state.value),
-          location: (normText($city.value) && normText($state.value)) ? `${normText($city.value)}, ${normText($state.value)}` : (normText($city.value) || normText($state.value) || ""),
+          city: cityVal(),
+          state: stateVal(),
+          location: locationVal(),
 
-          // Keep true when City/State exist so the Worker is aware local context is available
-          local_highlights: (!!normText($city.value) && !!normText($state.value)),
+          // informs Worker that local context exists when it does
+          local_highlights: (!!cityVal() && !!stateVal()),
 
           compelling_feature: normText($compelling.value),
 
@@ -343,28 +353,32 @@ How to use it
         }),
 
         getExtraPayload: (text) => {
-          const c = normText($city.value);
-          const s = normText($state.value);
-          const loc = (c && s) ? `${c}, ${s}` : (c || s || "");
+          const base = { city: cityVal(), state: stateVal(), location: locationVal() };
 
           // Background highlights fetch
           if (String(text).trim() === HIGHLIGHTS_TOKEN) {
-            if (!c || !s) return { city: c, state: s, location: loc };
-            return { phase: "highlights", city: c, state: s, location: loc };
+            if (!base.city || !base.state) return base;
+            return Object.assign({}, base, { phase: "highlights" });
           }
 
+          // Normal write: include selected highlights if any
           const selected = getSelectedHighlightLabels();
-          const base = { city: c, state: s, location: loc };
-
-          // If user selected highlights, send them along with a write phase
           if (selected.length) {
             return Object.assign({}, base, { phase: "write", selected_highlights: selected });
           }
-
           return base;
         },
 
         onResponse: (data) => {
+          // If the Worker replies with the “provide city/state or zip” prompt,
+          // do NOT show it as a highlight. Just keep highlights hidden.
+          const reply = data && typeof data.reply === "string" ? data.reply : "";
+          const replyLower = reply.toLowerCase();
+          if (replyLower.includes("provide") && (replyLower.includes("city/state") || replyLower.includes("zip"))) {
+            hideLocalPanel();
+            return { skipDefault: true };
+          }
+
           const highlights = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
           if (highlights && highlights.length){
             showLocalPanel(highlights);
@@ -372,6 +386,9 @@ How to use it
           }
         }
       });
+
+      // Buttons
+      $localRefresh.addEventListener("click", () => fetchHighlights(true));
 
       $localSkip.addEventListener("click", async () => {
         hideLocalPanel();
@@ -386,21 +403,23 @@ How to use it
         await shell.sendExtra(notes, { phase: "write", selected_highlights: selected }, { echoUser: false });
       });
 
-      // Auto-load local highlights when City + State are present
-      if ($localRefresh) $localRefresh.addEventListener("click", () => scheduleHighlightsFetch());
-      $city.addEventListener("input", () => scheduleHighlightsFetch());
-      $state.addEventListener("change", () => scheduleHighlightsFetch());
+      // KEY BEHAVIOR CHANGE:
+      // Only fetch highlights when the user is done entering location:
+      // - City blur
+      // - State change + blur
+      $city.addEventListener("blur", () => fetchHighlights(false));
+      $state.addEventListener("change", () => {}); // no-op: change alone can be noisy
+      $state.addEventListener("blur", () => fetchHighlights(false));
 
-      // Initial attempt (in case City/State are prefilled)
-      scheduleHighlightsFetch();
+      // On load, don't fetch until both are present AND the user has left the fields.
+      hideLocalPanel();
 
       document.getElementById("reset").addEventListener("click", () => {
         hideLocalPanel();
+        lastFetchKey = "";
         try { $city.value = ""; $state.value = ""; } catch {}
         try { if (shell && shell.reset) shell.reset(); } catch {}
       });
-
-      hideLocalPanel();
     })();
   </script>
 </body>
