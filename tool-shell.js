@@ -1,89 +1,98 @@
-/* tool-shell.js
- * Shared UI + API contract for ALL PAW tools
- *
- * Contract sent to worker:
- * {
- *   tool: "tool_id" | "" (omit for generic assistant),
- *   message: "user text only",
- *   history: [{ role:"user"|"assistant", content:"..." }, ...],
- *   prefs: { ... },              // tool-specific
- *   ...extraPayload              // optional, tool-specific
- * }
- */
-
+// tool-shell.js
 (function () {
-  const _instances = Object.create(null);
+  "use strict";
 
-  function clampStr(s, max) {
-    s = String(s || "");
-    return s.length > max ? s.slice(0, max) : s;
+  // ─────────────────────────────────────────────
+  // Shared Tool Shell (messages + composer + API)
+  // ─────────────────────────────────────────────
+
+  function $(id) { return document.getElementById(id); }
+
+  function el(tag, className) {
+    const n = document.createElement(tag);
+    if (className) n.className = className;
+    return n;
   }
 
-  function qs(sel) { return document.querySelector(sel); }
-  function el(tag, cls) { const d = document.createElement(tag); if (cls) d.className = cls; return d; }
-
-  function nowMs() { return (typeof performance !== "undefined" ? performance.now() : Date.now()); }
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-  function defaultKey(toolId) {
-    return "paw_history_" + (toolId ? toolId : "assistant");
+  // ─────────────────────────────────────────────
+  // Toast (non-blocking confirmations)
+  // ─────────────────────────────────────────────
+  let $toast = null;
+  function ensureToast(){
+    if ($toast) return $toast;
+    $toast = el("div", "toast");
+    $toast.setAttribute("role", "status");
+    $toast.setAttribute("aria-live", "polite");
+    document.body.appendChild($toast);
+    return $toast;
   }
-
-  function loadHistory(key) {
+  function showToast(msg){
     try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return [];
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
-    }
+      const t = ensureToast();
+      t.textContent = String(msg || "");
+      t.classList.add("show");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => t.classList.remove("show"), 950);
+    } catch {}
   }
 
-  function saveHistory(key, history) {
-    try { localStorage.setItem(key, JSON.stringify(history)); } catch {}
+  function scrollToBottom(behavior) {
+    try {
+      const m = $("messages");
+      m.scrollIntoView({ block: "end", behavior: behavior || "smooth" });
+    } catch {}
   }
 
-  function clearHistory(key) {
-    try { localStorage.removeItem(key); } catch {}
+  function safeJsonParse(text) {
+    try { return JSON.parse(text); } catch { return null; }
   }
 
-  function renderHistory($messages, history, addMsgFn) {
-    $messages.innerHTML = "";
-    for (const h of history) addMsgFn(h.role === "user" ? "you" : "bot", h.content, { scroll: false });
-    $messages.scrollTo({ top: $messages.scrollHeight, behavior: "auto" });
+  function nowMs() { return Date.now(); }
+
+  function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+  function normalizeText(t) { return String(t || "").replace(/\r\n/g, "\n"); }
+
+  function trimHistory(history, maxItems) {
+    if (!Array.isArray(history)) return [];
+    const h = history.filter(Boolean);
+    if (h.length <= maxItems) return h;
+    return h.slice(h.length - maxItems);
   }
 
-  function makeAddMsg($messages, scrollToBottom, opts = {}) {
-    const showDisclaimer = !!opts.showDisclaimer;
-    const getDisclaimerText = opts.getDisclaimerText || (() => "");
+  function toHistoryItem(role, content) {
+    return { role: role, content: String(content || "") };
+  }
 
-    return function addMsg(who, text, addOpts = {}) {
-      const row = el("div", "msg " + (who === "you" ? "you" : "bot"));
-
-      const bubble = el("div", "bubble");
-      bubble.textContent = String(text || "");
-
-      if (addOpts.disclaimer && showDisclaimer) {
-        const d = el("div", "disclaimer");
-        d.textContent = getDisclaimerText();
-        bubble.appendChild(d);
-      }
-
-      row.appendChild(bubble);
-      $messages.appendChild(row);
-
-      if (addOpts.scroll !== false) scrollToBottom(addOpts.behavior || "smooth");
-      return row;
+  function buildPayload(cfg, text, extra, history) {
+    const prefs = cfg.getPrefs ? cfg.getPrefs() : {};
+    return {
+      tool_id: cfg.toolId || "",
+      text: String(text || ""),
+      prefs: prefs || {},
+      extra: extra || {},
+      history: history || []
     };
   }
 
-  function makeThinkingRow($messages, scrollToBottom) {
-    const thinking = el("div", "msg bot");
+  function renderMessage(role, content) {
+    const $messages = $("messages");
+    const msg = el("div", "msg " + (role === "user" ? "user" : "assistant"));
+    const bubble = el("div", "bubble");
+    const p = el("p");
+    p.textContent = String(content || "");
+    bubble.appendChild(p);
+    msg.appendChild(bubble);
+    $messages.appendChild(msg);
+    scrollToBottom("smooth");
+    return msg;
+  }
+
+  function renderThinking() {
+    const $messages = $("messages");
+    const thinking = el("div", "msg assistant");
     thinking.innerHTML =
-      '<div class="bubble">' +
-        '<span class="thinking">Thinking<span class="dots"><span></span><span></span><span></span></span></span>' +
-      "</div>";
+      '<div class="bubble"><p>Thinking…</p></div>';
     $messages.appendChild(thinking);
     scrollToBottom("auto");
     return thinking;
@@ -104,20 +113,12 @@
     if (/^Error reaching the assistant\b/i.test(r)) return false;
     if (/^Upstream error\b/i.test(r)) return false;
     if (/^One quick question\b/i.test(r)) return false;
-    if (/^Quick questions\b/i.test(r)) return false;
-    if (/^A couple quick questions\b/i.test(r)) return false;
-    if (/^A few quick clarifiers\b/i.test(r)) return false;
 
-    // If it's clearly a question-only reply, don't elevate it
-    const qMarks = (r.match(/\?/g) || []).length;
-    if (qMarks >= 2 && r.length < 420) return false;
-
-    // Typical deliverables are longer than short chat replies
-    return r.length >= 180;
+    return true;
   }
 
-  function makeDeliverableUI($messages) {
-    // Insert a result section right above the message thread
+  function createDeliverableCard($messages) {
+    // Inject a result section right above the message thread
     const wrap = el("div", "deliverable");
     wrap.style.display = "none";
 
@@ -132,11 +133,12 @@
     copyBtn.type = "button";
     copyBtn.textContent = "Copy";
 
-    const copied = el("div", "deliverable-copied");
-    copied.textContent = "Copied";
+    const refineBtn = el("button", "btn");
+    refineBtn.type = "button";
+    refineBtn.textContent = "Refine";
 
     actions.appendChild(copyBtn);
-    actions.appendChild(copied);
+    actions.appendChild(refineBtn);
 
     head.appendChild(title);
     head.appendChild(actions);
@@ -153,15 +155,15 @@
     // Place it before the messages container
     $messages.parentNode.insertBefore(wrap, $messages);
 
-    return { wrap, text, copyBtn, copied };
+    return { wrap, text, copyBtn, refineBtn };
   }
 
   async function copyToClipboard(text) {
     const t = String(text || "");
     if (!t) return false;
 
-    // Modern clipboard API
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    // Modern API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
       try {
         await navigator.clipboard.writeText(t);
         return true;
@@ -204,273 +206,165 @@
       deliverableMode: true,       // tools: elevate final output into a copy-first card
       deliverableTitle: "Your MLS Description",
       deliverableAckText: "Done — your MLS description is ready above.",
-      isDeliverableReply: null,    // optional (reply, ctx) => boolean
-      storageKey: "",
-      embedOnly: false,
-      inputPlaceholder: "",
-      tipsText: "",
-      enableDisclaimer: false,
-      disclaimerTrigger: null,
-      getDisclaimerText: null,
+      isDeliverableReply: defaultIsDeliverableReply,
       getPrefs: null,
       getExtraPayload: null,
       onResponse: null,
+      tipsText: "",
+      inputPlaceholder: ""
     }, config || {});
 
-    const $messages = qs("#messages");
-    const $input = qs("#input");
-    const $send = qs("#send");
-    const $tips = qs("#tips");
+    const $messages = $("messages");
+    const $input = $("input");
+    const $send = $("send");
 
-    if (!$messages || !$input || !$send || !$tips) {
-      console.log("PAW shell: missing required DOM nodes.");
-      return;
+    // Apply placeholder if provided
+    if (cfg.inputPlaceholder) {
+      try { $input.placeholder = cfg.inputPlaceholder; } catch {}
     }
 
-    // Deliverable UI (copy-first result card)
-    const deliverable = makeDeliverableUI($messages);
-    if (cfg.deliverableTitle) {
-      deliverable.wrap.querySelector(".deliverable-title").textContent = String(cfg.deliverableTitle);
-    }
-
-    function showDeliverable(text) {
-      deliverable.text.textContent = String(text || "").trim();
-      deliverable.wrap.style.display = "block";
-      try { deliverable.wrap.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch {}
-    }
-
-    function clearDeliverable() {
+    // Deliverable card (inserted above messages)
+    const deliverable = cfg.deliverableMode ? createDeliverableCard($messages) : null;
+    if (deliverable) {
       deliverable.text.textContent = "";
       deliverable.wrap.style.display = "none";
     }
 
-    deliverable.copyBtn.addEventListener("click", async () => {
+    if (deliverable) {
+      deliverable.copyBtn.addEventListener("click", async () => {
       const ok = await copyToClipboard(deliverable.text.textContent);
       if (!ok) return;
-      deliverable.copied.classList.add("show");
-      setTimeout(() => deliverable.copied.classList.remove("show"), 900);
+      showToast("Copied to clipboard");
     });
 
-    if (cfg.embedOnly) {
-      const p = new URLSearchParams(location.search);
-      if (p.get("embed") !== "1") {
-        location.replace(location.pathname + "?embed=1");
-        return;
-      }
-      try { document.documentElement.dataset.embed = "1"; } catch {}
-    }
-
-    if (cfg.inputPlaceholder) $input.placeholder = cfg.inputPlaceholder;
-
-    const key = cfg.storageKey || defaultKey(cfg.toolId);
-    let history = loadHistory(key).filter(h => h && typeof h === "object" && h.content);
-
-    function pushHistory(role, content) {
-      history.push({ role, content });
-      if (history.length > cfg.maxHistoryItems) history = history.slice(-cfg.maxHistoryItems);
-      saveHistory(key, history);
-    }
-
-    function scrollToBottom(behavior = "smooth") {
-      try { $messages.scrollTo({ top: $messages.scrollHeight, behavior }); } catch {}
-    }
-
-    const addMsg = makeAddMsg($messages, scrollToBottom, {
-      showDisclaimer: cfg.enableDisclaimer,
-      getDisclaimerText: (typeof cfg.getDisclaimerText === "function") ? cfg.getDisclaimerText : (() => "")
+    deliverable.refineBtn.addEventListener("click", () => {
+      // Make revisions obvious: jump user into the composer with a starter instruction.
+      try {
+        $input.focus();
+        const starter = "Revise the MLS description above: ";
+        if (!String($input.value || "").trim()) {
+          $input.value = starter;
+          $input.setSelectionRange($input.value.length, $input.value.length);
+          autoGrow($input);
+        }
+        scrollToBottom("smooth");
+      } catch {}
     });
-
-    // If user clicks send with empty input, show Tips.
-    let lastEmptySendAt = 0;
-    function maybeShowTipsFromEmptySend() {
-      const tips = String(cfg.tipsText || "").trim();
-      if (!tips) return false;
-
-      const t = Date.now();
-      // Prevent rapid-fire duplicate tips spam if they keep clicking quickly
-      if (t - lastEmptySendAt < 1200) return true;
-      lastEmptySendAt = t;
-
-      addMsg("bot", tips, { behavior: "smooth" });
-      pushHistory("assistant", tips);
-      return true;
     }
 
-    const sendCountKey = "paw_send_count_" + (cfg.toolId || "assistant");
-    function getSendCount() { try { return Number(localStorage.getItem(sendCountKey) || "0"); } catch { return 0; } }
-    function incSendCount() {
-      try {
-        const next = getSendCount() + 1;
-        localStorage.setItem(sendCountKey, String(next));
-        return next;
-      } catch {
-        return 1;
-      }
-    }
+    // Simple in-memory chat history for context
+    let history = [];
 
-    let disclaimerShown = false;
+    async function send(text, extra, opts) {
+      const userText = normalizeText(text).trim();
+      if (!userText) return;
 
-    function resetUI() {
-      history = [];
-      clearHistory(key);
-      $messages.innerHTML = "";
-      clearDeliverable();
-      $input.value = "";
-      disclaimerShown = false;
-      autoGrow($input);
-      try { $messages.scrollTo({ top: 0, behavior: "auto" }); } catch {}
-    }
-
-    if (history.length) renderHistory($messages, history, addMsg);
-
-    if (cfg.tipsText) {
-      $tips.addEventListener("click", () => {
-        addMsg("bot", cfg.tipsText, { behavior: "smooth" });
-        pushHistory("assistant", String(cfg.tipsText || "").trim());
-      });
-    }
-
-    $send.addEventListener("click", () => { sendFromInput(); });
-
-    async function sendMessage(text, extraPayload = {}, options = {}) {
-      const opts = Object.assign({
-        echoUser: true,      // show/persist user bubble
-        behavior: "auto",
-      }, options || {});
-
-      const safeText = clampStr(String(text || "").trim(), cfg.maxMessageChars);
-      if (!safeText) return;
-
-      if (opts.echoUser) {
-        addMsg("you", safeText, { behavior: "auto" });
-        pushHistory("user", safeText);
+      // echo user message unless suppressed
+      if (!opts || opts.echoUser !== false) {
+        renderMessage("user", userText);
       }
 
-      $send.disabled = true;
+      // record to history
+      history.push(toHistoryItem("user", userText));
+      history = trimHistory(history, cfg.maxHistoryItems);
 
-      const thinking = makeThinkingRow($messages, scrollToBottom);
+      // show thinking
+      const thinking = renderThinking();
+      const start = nowMs();
+
+      // build payload with limited history window for request
+      const historyToSend = trimHistory(history, cfg.sendHistoryItems);
+      const extraPayload = cfg.getExtraPayload ? (cfg.getExtraPayload(userText, { prefs: cfg.getPrefs ? cfg.getPrefs() : {}, toolId: cfg.toolId }) || {}) : (extra || {});
+      const payload = buildPayload(cfg, userText, extraPayload, historyToSend);
+
+      let replyText = "";
+      let json = null;
 
       try {
-        const sendCount = incSendCount();
-
-        const prefs = (typeof cfg.getPrefs === "function") ? (cfg.getPrefs() || {}) : {};
-
-        const ctx = { prefs, history: history.slice(-cfg.sendHistoryItems), sendCount };
-
-        const extra = (typeof cfg.getExtraPayload === "function")
-          ? (cfg.getExtraPayload(safeText, ctx) || {})
-          : (extraPayload || {});
-
-        const payload = Object.assign({
-          tool: cfg.toolId || "",
-          message: safeText,
-          history: ctx.history,
-          prefs: prefs,
-        }, extra || {});
-
-        const t0 = nowMs();
-
         const res = await fetch(cfg.apiEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payload)
         });
 
-        const data = await res.json().catch(() => null);
+        const raw = await res.text();
+        json = safeJsonParse(raw);
 
-        const dt = nowMs() - t0;
-        if (dt < cfg.minThinkMs) await sleep(cfg.minThinkMs - dt);
-
-        thinking.remove();
-
-        // Allow tool pages to intercept/handle responses
-        let skipDefault = false;
-        if (typeof cfg.onResponse === "function") {
-          try {
-            const r = cfg.onResponse(data, Object.assign({}, ctx, { lastUserText: safeText })) || {};
-            if (r && r.skipDefault === true) skipDefault = true;
-          } catch {}
+        if (json && typeof json.reply === "string") {
+          replyText = json.reply;
+        } else if (typeof raw === "string" && raw.trim()) {
+          // some workers might return plain text
+          replyText = raw;
+        } else {
+          replyText = "Error reaching the assistant. Please try again.";
         }
-
-        if (!skipDefault) {
-          const reply = (data && data.reply) ? String(data.reply) : "Error reaching the assistant. Please try again.";
-
-          let attachDisclaimer = false;
-          if (cfg.enableDisclaimer && !disclaimerShown && cfg.disclaimerTrigger instanceof RegExp) {
-            attachDisclaimer = cfg.disclaimerTrigger.test(safeText + " " + reply);
-            if (attachDisclaimer) disclaimerShown = true;
-          }
-
-          const detector = (typeof cfg.isDeliverableReply === "function") ? cfg.isDeliverableReply : defaultIsDeliverableReply;
-          const isDeliverable = !!cfg.deliverableMode && detector(reply, { toolId: cfg.toolId });
-
-          if (isDeliverable) {
-            showDeliverable(reply);
-            const ack = String(cfg.deliverableAckText || "Done — your MLS description is ready above.").trim();
-            if (ack) addMsg("bot", ack, { disclaimer: attachDisclaimer, behavior: "smooth" });
-          } else {
-            addMsg("bot", reply, { disclaimer: attachDisclaimer, behavior: "smooth" });
-          }
-
-          pushHistory("assistant", reply);
-        }
-
       } catch (e) {
-        thinking.remove();
-        addMsg("bot", "Error reaching the assistant. Please try again.", { behavior: "smooth" });
-        pushHistory("assistant", "Error reaching the assistant. Please try again.");
-      } finally {
-        $send.disabled = false;
+        replyText = "Error reaching the assistant. Please try again.";
+      }
+
+      // enforce minimum think time for smoother UX
+      const elapsed = nowMs() - start;
+      const wait = clamp(cfg.minThinkMs - elapsed, 0, cfg.minThinkMs);
+      if (wait) await new Promise(r => setTimeout(r, wait));
+
+      // remove thinking
+      try { thinking.remove(); } catch {}
+
+      const ctx = { prefs: cfg.getPrefs ? cfg.getPrefs() : {}, toolId: cfg.toolId };
+
+      // Deliverable mode: elevate final result into a card
+      if (deliverable && cfg.isDeliverableReply(replyText, ctx)) {
+        deliverable.text.textContent = String(replyText || "").trim();
+        deliverable.wrap.style.display = "block";
+        renderMessage("assistant", cfg.deliverableAckText);
+      } else {
+        renderMessage("assistant", replyText);
+      }
+
+      // record assistant reply to history
+      history.push(toHistoryItem("assistant", replyText));
+      history = trimHistory(history, cfg.maxHistoryItems);
+
+      // allow tool page to react to JSON payloads (e.g., local highlights)
+      if (cfg.onResponse) {
+        try { cfg.onResponse(json, ctx); } catch {}
       }
     }
 
-    async function sendFromInput() {
-      const raw = $input.value.trim();
-
-      // NEW: if empty, show Tips instead of doing nothing
-      if (!raw) {
-        maybeShowTipsFromEmptySend();
-        return;
-      }
-
+    function onSend() {
+      const text = $input.value || "";
+      if (!String(text).trim()) return;
       $input.value = "";
       autoGrow($input);
-      await sendMessage(raw, {}, { echoUser: true });
+      send(text, null, null);
     }
 
+    $send.addEventListener("click", onSend);
     $input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
-        // If empty, show Tips (same as clicking send)
-        if (!$input.value.trim()) {
-          e.preventDefault();
-          maybeShowTipsFromEmptySend();
-          return;
-        }
         e.preventDefault();
-        sendFromInput();
+        onSend();
       }
     });
 
     $input.addEventListener("input", () => autoGrow($input));
     autoGrow($input);
 
-    const $reset = qs("#reset");
-    if ($reset) $reset.addEventListener("click", () => resetUI());
-
-    const idKey = cfg.toolId ? cfg.toolId : "assistant";
-    _instances[idKey] = { reset: resetUI, sendMessage };
-
-    return { reset: resetUI, sendMessage };
+    // Exposed helpers for tool pages
+    return {
+      send: (text) => send(text, null, null),
+      sendExtra: (text, extra, opts) => send(text, extra, opts || {}),
+      reset: () => {
+        history = [];
+        if (deliverable) {
+          deliverable.text.textContent = "";
+          deliverable.wrap.style.display = "none";
+        }
+        try { $messages.innerHTML = ""; } catch {}
+      }
+    };
   }
 
-  function reset(toolId) {
-    const k = toolId ? toolId : "assistant";
-    if (_instances[k] && typeof _instances[k].reset === "function") {
-      _instances[k].reset();
-      return;
-    }
-    clearHistory(defaultKey(toolId));
-  }
-
-  window.PAWToolShell = { init, reset };
+  // Expose
+  window.PAWToolShell = { init: init };
 })();

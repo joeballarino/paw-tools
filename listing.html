@@ -1,3 +1,4 @@
+<!-- listing.html -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -25,11 +26,9 @@
               <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
             </div>
 
-            <div class="topbar-right">
-              <div class="utility-pair" role="group" aria-label="Tool utilities">
-                <button id="reset" class="util-btn" type="button">Reset</button>
-                <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
-              </div>
+            <div class="topbar-right utility-pair">
+              <button class="util-btn" id="reset" type="button">Reset</button>
+              <button class="util-btn" id="tipsBtn" type="button">Tips &amp; How To</button>
             </div>
           </div>
 
@@ -74,10 +73,25 @@
                 </select>
               </span>
             </div>
+
+            <div class="ctl">
+              <label for="cityInp">City</label>
+              <span class="select-wrap md">
+                <input id="cityInp" type="text" placeholder="City" autocomplete="address-level2" />
+              </span>
+            </div>
+
+            <div class="ctl">
+              <label for="stateInp">State</label>
+              <span class="select-wrap sm">
+                <input id="stateInp" type="text" inputmode="text" maxlength="2" placeholder="ST" autocomplete="address-level1" />
+              </span>
+            </div>
           </div>
 
           <!-- Row 2: Lock key facts -->
           <div class="topbar-row2">
+           
             <div class="lock-head">
               <div class="lock-title">Lock key facts (optional)</div>
 
@@ -87,20 +101,18 @@
               </label>
             </div>
 
+            <div id="localHint" class="hint error" style="display:none;">Add city and state above to generate local highlights.</div>
+
             <div class="lock-grid">
               <div class="field">
                 <label for="bedsSel">Beds</label>
                 <select id="bedsSel">
                   <option value="" selected>—</option>
-                  <option value="0">0</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
                   <option value="3">3</option>
                   <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8+</option>
+                  <option value="5+">5+</option>
                 </select>
               </div>
 
@@ -112,11 +124,7 @@
                   <option value="1.5">1.5</option>
                   <option value="2">2</option>
                   <option value="2.5">2.5</option>
-                  <option value="3">3</option>
-                  <option value="3.5">3.5</option>
-                  <option value="4">4</option>
-                  <option value="4.5">4.5</option>
-                  <option value="5">5+</option>
+                  <option value="3+">3+</option>
                 </select>
               </div>
 
@@ -134,11 +142,8 @@
                 <label for="poolSel">Pool</label>
                 <select id="poolSel">
                   <option value="" selected>—</option>
-                  <option value="None">None</option>
-                  <option value="Community">Community</option>
-                  <option value="Private">Private</option>
-                  <option value="Both">Both</option>
-                  <option value="Unknown">Unknown</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
                 </select>
               </div>
 
@@ -146,43 +151,41 @@
                 <label for="porchSel">Porch</label>
                 <select id="porchSel">
                   <option value="" selected>—</option>
-                  <option value="None">None</option>
-                  <option value="Screened">Screened</option>
-                  <option value="Enclosed">Enclosed</option>
-                  <option value="Covered">Covered</option>
-                  <option value="Unknown">Unknown</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
                 </select>
               </div>
             </div>
 
             <div class="lock-row2">
-              <div class="field field-wide">
-                <label for="compellingInp">Most Compelling Feature</label>
-                <input id="compellingInp" type="text" placeholder="Location, design, lifestyle, value, etc." />
-              </div>
+              <label class="field" style="width:100%;">
+                <div class="field-label" style="font-size:12px; font-weight:700; color:rgba(15,23,42,.82); margin-bottom:6px; letter-spacing:-0.01em;">Most Compelling Feature</div>
+                <input id="compellingInp" class="big-input" type="text" placeholder="Location, design, lifestyle, value, etc." />
+              </label>
             </div>
-          </div>
-        </div>
 
-        <!-- optional local highlights selector panel -->
-        <div id="localPanel" class="local-panel" aria-live="polite">
-          <div class="local-head">
-            <div>
-              <div class="local-title">Suggested local highlights</div>
-              <div class="local-sub">Select any that apply, then click “Write description.”</div>
+            <!-- Local highlights panel (hidden by default until highlights are generated) -->
+            <div id="localPanel" class="local-panel" style="display:none;">
+              <div class="local-head">
+                <div>
+                  <div class="local-title">Local highlights</div>
+                  <div class="local-sub">Select the ones you want included, then write the description.</div>
+                </div>
+                <div class="local-actions">
+                  <button id="localSkip" class="btn" type="button">Skip</button>
+                  <button id="localWrite" class="btn primary" type="button">Write description</button>
+                </div>
+              </div>
+              <ul id="localList" class="local-list"></ul>
             </div>
-            <div class="local-actions">
-              <button id="localSkip" class="btn" type="button">Skip</button>
-              <button id="localWrite" class="btn primary" type="button">Write description</button>
-            </div>
-          </div>
-          <ul id="localList" class="local-list"></ul>
-        </div>
+
+          </div><!-- /topbar-row2 -->
+        </div><!-- /panel-topbar -->
 
         <div id="messages" class="messages"></div>
 
         <div class="composer">
-          <textarea id="input" placeholder="Provide additional information, city & state, thoughts, or paste listing data here"></textarea>
+          <textarea id="input" placeholder="Add upgrades, finishes, neighborhood notes, disclosures, HOA details, or paste listing data here"></textarea>
           <button id="send" class="send" aria-label="Send" type="button">
             <svg viewBox="0 0 24 24" fill="none">
               <path d="M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8L6.4 13.4 5 12l7-7z" fill="currentColor"/>
@@ -191,6 +194,17 @@
         </div>
 
       </div>
+    </div>
+  </div>
+
+  <!-- Tips modal -->
+  <div id="tipsModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tipsTitle">
+      <div class="modal-head">
+        <div id="tipsTitle" class="modal-title">Tips &amp; How To</div>
+        <button class="modal-close" id="tipsClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body" id="tipsBody"></div>
     </div>
   </div>
 
@@ -206,9 +220,47 @@
 
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
 
+      const TIPS_TEXT =
+`What this tool does
+• Writes MLS-ready listing remarks with real estate best practices baked in.
+
+Best inputs
+• Paste features and upgrades (renovations, finishes, systems, appliances).
+• Add anything that must be included or avoided.
+• Include HOA details if relevant.
+
+Local highlights
+• If enabled, you’ll get a shortlist of nearby highlights to include.
+• Add City + State above so the highlights are accurate.
+
+Compliance
+• Avoid protected-class language. This tool is designed to stay fair-housing safe.`;
+
+      // Simple tips modal
+      const $tipsBtn = document.getElementById("tipsBtn");
+      const $tipsModal = document.getElementById("tipsModal");
+      const $tipsClose = document.getElementById("tipsClose");
+      const $tipsBody = document.getElementById("tipsBody");
+      $tipsBody.textContent = TIPS_TEXT;
+      function openTips(){
+        $tipsModal.classList.add("show");
+        $tipsModal.setAttribute("aria-hidden", "false");
+      }
+      function closeTips(){
+        $tipsModal.classList.remove("show");
+        $tipsModal.setAttribute("aria-hidden", "true");
+      }
+      $tipsBtn.addEventListener("click", openTips);
+      $tipsClose.addEventListener("click", closeTips);
+      $tipsModal.addEventListener("click", (e) => { if (e.target === $tipsModal) closeTips(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTips(); });
+
       const $type = document.getElementById("typeSel");
       const $tone = document.getElementById("toneSel");
       const $len  = document.getElementById("lenSel");
+      const $city = document.getElementById("cityInp");
+      const $state = document.getElementById("stateInp");
+      const $localHint = document.getElementById("localHint");
 
       const $beds = document.getElementById("bedsSel");
       const $baths = document.getElementById("bathsSel");
@@ -221,125 +273,92 @@
 
       const $localPanel = document.getElementById("localPanel");
       const $localList = document.getElementById("localList");
-      const $localWrite = document.getElementById("localWrite");
       const $localSkip = document.getElementById("localSkip");
+      const $localWrite = document.getElementById("localWrite");
 
       let lastNotesForLocal = "";
-      let lastHighlights = []; // [{id,label}]
 
-      const TIPS_TEXT =
-`What this tool does
-Generates MLS-ready listing remarks that are accurate, motivating, and Fair Housing–safe.
+      function normText(v){
+        return String(v || "").trim();
+      }
+      function digitsOnly(v){
+        return String(v || "").replace(/[^\d]/g, "");
+      }
+      function normEnum(v){
+        const t = normText(v);
+        return t ? t : "";
+      }
 
-How to use it
-• Fill in the key details above and/or paste notes/MLS data — messy is fine
-• Include city & state when you can (helps local context)
-• If something is unknown, leave it blank (or type “unknown”) and the tool will write conservatively
-• Goal: create desire to tour without hype or risky claims
-
-Your result
-• When the description is ready, it appears in the “Your MLS Description” box
-• Use the Copy button to paste it into MLS, email, or your marketing
-
-Optional: Lock key facts
-Use this when pasted notes/MLS fields may be wrong or incomplete. Locked facts override pasted content.
-
-Most Compelling Feature
-Add a quick angle (location, design, lifestyle, value). The tool will use it when it helps drive showings, but it won’t force it if it doesn’t fit.
-
-Optional: Add Local Highlights (2-step)
-1) Turn it on, then send your notes
-2) Select highlights, then click “Write description”
-
-Tip: If location isn’t clear, the tool may ask for city & state first.`;
-
-      const mapType = (v) => ({
-        general: "General",
-        starter: "Starter",
-        moveup: "Move-Up",
-        luxury: "Luxury",
-        investor: "Investor",
-        relocation: "Relocation"
-      }[v] || "Default");
-
-      const mapTone = (v) => ({
-        general: "General",
-        professional: "Professional",
-        warm: "Warm",
-        elevated: "Elevated"
-      }[v] || "Professional");
-
-      const mapLen = (v) => ({
-        standard: "Standard",
-        short: "Short",
-        long: "Long"
-      }[v] || "Standard");
-
-      const digitsOnly = (v) => String(v || "").replace(/[^\d]/g, "");
-      const normEnum = (v) => {
-        const s = String(v || "").trim();
-        return (!s || /^unknown$/i.test(s) || s === "—") ? "" : s;
-      };
-      const normText = (v) => {
-        const s = String(v || "").trim();
-        return (!s || /^unknown$/i.test(s)) ? "" : s;
-      };
-
-      function hideLocalPanel(){
-        $localPanel.style.display = "none";
-        $localList.innerHTML = "";
-        lastHighlights = [];
+      function mapType(v){
+        const t = normText(v);
+        return t || "general";
+      }
+      function mapTone(v){
+        const t = normText(v);
+        return t || "general";
+      }
+      function mapLen(v){
+        const t = normText(v);
+        return t || "standard";
       }
 
       function showLocalPanel(highlights){
-        lastHighlights = (Array.isArray(highlights) ? highlights : []);
         $localList.innerHTML = "";
-        for (const h of lastHighlights){
+        (highlights || []).forEach((h, idx) => {
           const li = document.createElement("li");
           li.className = "local-item";
-          const cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.id = "lh_" + String(h.id);
-          const lab = document.createElement("label");
-          lab.setAttribute("for", cb.id);
-          lab.textContent = String(h.label || "");
-          li.appendChild(cb);
-          li.appendChild(lab);
+          const id = "hl_" + idx;
+          li.innerHTML = `
+            <input id="${id}" type="checkbox" checked />
+            <label for="${id}" class="txt"></label>
+          `;
+          li.querySelector("label").textContent = h;
           $localList.appendChild(li);
-        }
-        $localPanel.style.display = lastHighlights.length ? "block" : "none";
+        });
+        $localPanel.style.display = "block";
+      }
+      function hideLocalPanel(){
+        $localPanel.style.display = "none";
+        $localList.innerHTML = "";
       }
 
-      function getSelectedHighlightLabels(){
+      $localSkip.addEventListener("click", () => {
+        hideLocalPanel();
+        // Proceed directly to write phase without highlights
+        shell.sendExtra(lastNotesForLocal, { phase: "write", selected_highlights: [] }, { echoUser: false });
+      });
+
+      $localWrite.addEventListener("click", () => {
         const selected = [];
-        for (const h of lastHighlights){
-          const cb = document.getElementById("lh_" + String(h.id));
-          if (cb && cb.checked) selected.push(String(h.label || ""));
-        }
-        return selected;
+        $localList.querySelectorAll("li").forEach(li => {
+          const cb = li.querySelector("input[type=checkbox]");
+          const label = li.querySelector("label");
+          if (cb && cb.checked && label) selected.push(label.textContent.trim());
+        });
+        hideLocalPanel();
+        shell.sendExtra(lastNotesForLocal, { phase: "write", selected_highlights: selected }, { echoUser: false });
+      });
+
+      function validateLocalHint(){
+        if (!$localHint) return;
+        if (!$local.checked){ $localHint.style.display = "none"; return; }
+        const hasCity = !!normText($city.value);
+        const hasState = !!normText($state.value);
+        $localHint.style.display = (!hasCity || !hasState) ? "block" : "none";
       }
 
-      $local.addEventListener("change", () => {
-        if (!$local.checked) hideLocalPanel();
-      });
-
-      $localSkip.addEventListener("click", async () => {
-        hideLocalPanel();
-        if (!lastNotesForLocal) return;
-        await shell.sendMessage(lastNotesForLocal, { phase: "write", selected_highlights: [] }, { echoUser: false });
-      });
-
-      $localWrite.addEventListener("click", async () => {
-        hideLocalPanel();
-        if (!lastNotesForLocal) return;
-        const selected = getSelectedHighlightLabels();
-        await shell.sendMessage(lastNotesForLocal, { phase: "write", selected_highlights: selected }, { echoUser: false });
+      $local.addEventListener("change", validateLocalHint);
+      $city.addEventListener("input", validateLocalHint);
+      $state.addEventListener("input", () => {
+        // Keep state tidy (2-letter uppercase)
+        try { $state.value = String($state.value || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0,2); } catch {}
+        validateLocalHint();
       });
 
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "listing_description_writer",
-        inputPlaceholder: "Provide additional information, city & state, thoughts, or paste listing data here",
+        inputPlaceholder: "Add upgrades, finishes, neighborhood notes, disclosures, HOA details, or paste listing data here",
         tipsText: TIPS_TEXT,
         sendHistoryItems: 8,
         maxHistoryItems: 16,
@@ -351,7 +370,9 @@ Tip: If location isn’t clear, the tool may ask for city & state first.`;
           length: mapLen($len.value),
           safe_mode: true,
           ask_followups: true,
-          local_highlights: !!$local.checked,
+          local_highlights: !!$local.checked && !!normText($city.value) && !!normText($state.value),
+          city: normText($city.value),
+          state: normText($state.value).toUpperCase(),
           compelling_feature: normText($compelling.value),
           locked: {
             beds: normEnum($beds.value),
@@ -365,7 +386,14 @@ Tip: If location isn’t clear, the tool may ask for city & state first.`;
 
         getExtraPayload: (text, ctx) => {
           const prefs = ctx.prefs || {};
-          if (prefs.local_highlights){
+          if ($local.checked){
+            const hasCity = !!normText($city.value);
+            const hasState = !!normText($state.value);
+            if (!hasCity || !hasState){
+              if ($localHint) $localHint.style.display = "block";
+              return {};
+            }
+            if ($localHint) $localHint.style.display = "none";
             lastNotesForLocal = text;
             return { phase: "highlights" };
           }
@@ -380,7 +408,6 @@ Tip: If location isn’t clear, the tool may ask for city & state first.`;
           const highlights = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
           if (highlights && highlights.length){
             showLocalPanel(highlights);
-            return { skipDefault: true };
           }
         }
       });
@@ -388,6 +415,8 @@ Tip: If location isn’t clear, the tool may ask for city & state first.`;
       document.getElementById("reset").addEventListener("click", () => {
         hideLocalPanel();
         lastNotesForLocal = "";
+        try { $city.value = ""; $state.value = ""; } catch {}
+        try { if ($localHint) $localHint.style.display = "none"; } catch {}
       });
 
       hideLocalPanel();
