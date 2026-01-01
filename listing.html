@@ -6,9 +6,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Listing Description Writer</title>
   <link rel="stylesheet" href="/paw-ui.css">
-  <!-- NOTE: paw-ui.css is shared across tools. Keep header markup consistent:
-     panel-topbar > topbar-row0 > tool-head + topbar-right (utility-pair)
-     Changing classes here can affect other tools. -->
+
+  <!--
+    HEADER CONTRACT (LOCKED):
+    The panel top bar (.topbar-row0) MUST NEVER include a title.
+    It only contains:
+      - .tool-subtitle (left)
+      - Reset / Tips buttons (right)
+    Titles belong ABOVE the panel in the outer shell, not inside this bar.
+  -->
 </head>
 
 <body>
@@ -18,21 +24,17 @@
 
         <!-- TOP BAR -->
         <div class="panel-topbar">
-
-          <!-- Header row (subtitle + utilities on same line) -->
           <div class="topbar-row0">
             <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
 
             <div class="topbar-right">
-              <div class="utility-pair" role="group" aria-label="Tool utilities">
-                <button id="reset" class="util-btn" type="button">Reset</button>
-                <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
-              </div>
+              <button class="util-btn" id="reset" type="button">Reset</button>
+              <button class="util-btn" id="tipsBtn" type="button">Tips &amp; How To</button>
             </div>
           </div>
 
-          <!-- Row 1: primary controls -->
-          <div class="topbar-row1 controls-row">
+          <!-- Controls row -->
+          <div class="controls-row">
             <div class="ctl">
               <label for="typeSel">Type</label>
               <span class="select-wrap">
@@ -101,9 +103,8 @@
             </div>
           </div>
 
-          <!-- Row 2: Lock key facts -->
+          <!-- Key facts -->
           <div class="topbar-row2">
-
             <div class="lock-head">
               <div class="lock-title">Lock key facts (optional)</div>
 
@@ -176,7 +177,7 @@
               </label>
             </div>
 
-            <!-- Local highlights panel (hidden by default until highlights are generated) -->
+            <!-- Local highlights panel -->
             <div id="localPanel" class="local-panel" style="display:none;">
               <div class="local-head">
                 <div>
@@ -224,12 +225,6 @@
 
   <script>
     (function () {
-      // Enable embed styling when loaded with ?embed=1
-      try {
-        const p = new URLSearchParams(location.search);
-        if (p.get("embed") === "1") document.documentElement.dataset.embed = "1";
-      } catch {}
-
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
 
       const TIPS_TEXT =
@@ -242,37 +237,32 @@ Best inputs
 • Include HOA details if relevant.
 
 Local highlights
-• If enabled, you’ll get a shortlist of nearby highlights to include.
-• Add City + State above so the highlights are accurate.
+• Add City + State above for accurate local highlights.
 
 Compliance
 • Avoid protected-class language. This tool is designed to stay fair-housing safe.`;
 
-      // Simple tips modal
-      const $tipsBtn = document.getElementById("tips");
+      // Tips modal
+      const $tipsBtn = document.getElementById("tipsBtn");
       const $tipsModal = document.getElementById("tipsModal");
       const $tipsClose = document.getElementById("tipsClose");
       const $tipsBody = document.getElementById("tipsBody");
       $tipsBody.textContent = TIPS_TEXT;
-      function openTips(){
-        $tipsModal.classList.add("show");
-        $tipsModal.setAttribute("aria-hidden", "false");
-      }
-      function closeTips(){
-        $tipsModal.classList.remove("show");
-        $tipsModal.setAttribute("aria-hidden", "true");
-      }
+
+      function openTips(){ $tipsModal.classList.add("show"); $tipsModal.setAttribute("aria-hidden", "false"); }
+      function closeTips(){ $tipsModal.classList.remove("show"); $tipsModal.setAttribute("aria-hidden", "true"); }
+
       $tipsBtn.addEventListener("click", openTips);
       $tipsClose.addEventListener("click", closeTips);
       $tipsModal.addEventListener("click", (e) => { if (e.target === $tipsModal) closeTips(); });
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTips(); });
 
+      // Controls
       const $type = document.getElementById("typeSel");
       const $tone = document.getElementById("toneSel");
       const $len  = document.getElementById("lenSel");
       const $city = document.getElementById("cityInp");
       const $state = document.getElementById("stateSel");
-      const $localHint = document.getElementById("localHint");
 
       const $beds = document.getElementById("bedsSel");
       const $baths = document.getElementById("bathsSel");
@@ -281,39 +271,39 @@ Compliance
       const $pool = document.getElementById("poolSel");
       const $porch = document.getElementById("porchSel");
       const $compelling = document.getElementById("compellingInp");
-      const $local = document.getElementById("localChk");
 
+      const $local = document.getElementById("localChk");
+      const $localHint = document.getElementById("localHint");
       const $localPanel = document.getElementById("localPanel");
       const $localList = document.getElementById("localList");
       const $localSkip = document.getElementById("localSkip");
       const $localWrite = document.getElementById("localWrite");
-
       const $input = document.getElementById("input");
 
       let lastNotesForLocal = "";
 
-      function normText(v){
-        return String(v || "").trim();
-      }
-      function digitsOnly(v){
-        return String(v || "").replace(/[^\d]/g, "");
-      }
-      function normEnum(v){
-        const t = normText(v);
-        return t ? t : "";
+      function normText(v){ return String(v || "").trim(); }
+      function digitsOnly(v){ return String(v || "").replace(/[^\d]/g, ""); }
+      function normEnum(v){ const t = normText(v); return t ? t : ""; }
+
+      function mapType(v){ return normText(v) || "general"; }
+      function mapTone(v){ return normText(v) || "general"; }
+      function mapLen(v){ return normText(v) || "standard"; }
+
+      function cityVal(){ return normText($city.value); }
+      function stateVal(){ return normText($state.value).toUpperCase(); }
+      function locationVal(){
+        const c = cityVal(), s = stateVal();
+        if (c && s) return `${c}, ${s}`;
+        if (s) return s;
+        return c;
       }
 
-      function mapType(v){
-        const t = normText(v);
-        return t || "general";
-      }
-      function mapTone(v){
-        const t = normText(v);
-        return t || "general";
-      }
-      function mapLen(v){
-        const t = normText(v);
-        return t || "standard";
+      function validateLocalHint(){
+        if (!$localHint) return;
+        if (!$local.checked){ $localHint.style.display = "none"; return; }
+        const ok = !!cityVal() && !!stateVal();
+        $localHint.style.display = ok ? "none" : "block";
       }
 
       function showLocalPanel(highlights){
@@ -322,10 +312,7 @@ Compliance
           const li = document.createElement("li");
           li.className = "local-item";
           const id = "hl_" + idx;
-          li.innerHTML = `
-            <input id="${id}" type="checkbox" checked />
-            <label for="${id}" class="txt"></label>
-          `;
+          li.innerHTML = `<input id="${id}" type="checkbox" checked /><label for="${id}" class="txt"></label>`;
           li.querySelector("label").textContent = h;
           $localList.appendChild(li);
         });
@@ -336,27 +323,79 @@ Compliance
         $localList.innerHTML = "";
       }
 
-      function validateLocalHint(){
-        if (!$localHint) return;
-        if (!$local.checked){ $localHint.style.display = "none"; return; }
-        const hasCity = !!normText($city.value);
-        const hasState = !!normText($state.value);
-        $localHint.style.display = (!hasCity || !hasState) ? "block" : "none";
-      }
+      const shell = window.PAWToolShell.init({
+        apiEndpoint: API_ENDPOINT,
+        toolId: "listing_description_writer",
+        inputPlaceholder: "Add upgrades, finishes, neighborhood notes, disclosures, HOA details, or paste listing data here",
+        tipsText: TIPS_TEXT,
+        sendHistoryItems: 8,
+        maxHistoryItems: 16,
 
-      $local.addEventListener("change", () => {
-        validateLocalHint();
-        const hasCity = !!normText($city.value);
-        const hasState = !!normText($state.value);
-        // If the user enables highlights after city/state are filled, fetch highlights immediately.
-        if ($local.checked && hasCity && hasState){
-          // We do not echo a user message; this is a background helper call.
-          shell.sendExtra(normText($input.value) || "Generate local highlights.", { phase: "highlights" }, { echoUser: false });
+        getPrefs: () => ({
+          listing_type: mapType($type.value),
+          output_use: "MLS",
+          tone: mapTone($tone.value),
+          length: mapLen($len.value),
+
+          safe_mode: true,
+
+          // LOCKED PRODUCT DECISION: do not ask questions in this tool
+          ask_followups: false,
+
+          // Pass location strongly so Worker never needs to ask
+          city: cityVal(),
+          state: stateVal(),
+          location: locationVal(),
+
+          local_highlights: !!$local.checked && !!cityVal() && !!stateVal(),
+
+          compelling_feature: normText($compelling.value),
+
+          locked: {
+            beds: normEnum($beds.value),
+            baths: normEnum($baths.value),
+            sqft: digitsOnly($sqft.value),
+            price: normText($price.value),
+            pool: normEnum($pool.value),
+            porch: normEnum($porch.value)
+          }
+        }),
+
+        // IMPORTANT: tool-shell merges this into TOP-LEVEL payload too
+        // so the Worker can read city/state/location even if it ignores prefs.
+        getExtraPayload: (text, ctx) => {
+          const c = cityVal();
+          const s = stateVal();
+          const loc = locationVal();
+
+          // If Local Highlights is checked but missing location, just hint and continue normally.
+          if ($local.checked && (!c || !s)) {
+            validateLocalHint();
+            return { city: c, state: s, location: loc };
+          }
+
+          // If local highlights is enabled & we have location, request highlights phase.
+          if ($local.checked && c && s) {
+            lastNotesForLocal = text;
+            return { phase: "highlights", city: c, state: s, location: loc };
+          }
+
+          lastNotesForLocal = "";
+          return { city: c, state: s, location: loc };
+        },
+
+        onResponse: (data, ctx) => {
+          const prefs = (ctx && ctx.prefs) ? ctx.prefs : {};
+          if (!prefs.local_highlights) return;
+
+          const highlights = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
+          if (highlights && highlights.length) {
+            showLocalPanel(highlights);
+          }
         }
       });
-      $city.addEventListener("input", validateLocalHint);
-      $state.addEventListener("change", validateLocalHint);
 
+      // Local highlight actions
       $localSkip.addEventListener("click", () => {
         hideLocalPanel();
         shell.sendExtra(lastNotesForLocal, { phase: "write", selected_highlights: [] }, { echoUser: false });
@@ -373,63 +412,18 @@ Compliance
         shell.sendExtra(lastNotesForLocal, { phase: "write", selected_highlights: selected }, { echoUser: false });
       });
 
-      const shell = window.PAWToolShell.init({
-        apiEndpoint: API_ENDPOINT,
-        toolId: "listing_description_writer",
-        inputPlaceholder: "Add upgrades, finishes, neighborhood notes, disclosures, HOA details, or paste listing data here",
-        tipsText: TIPS_TEXT,
-        sendHistoryItems: 8,
-        maxHistoryItems: 16,
-
-        getPrefs: () => ({
-          listing_type: mapType($type.value),
-          output_use: "MLS",
-          tone: mapTone($tone.value),
-          length: mapLen($len.value),
-          safe_mode: true,
-          ask_followups: true,
-          local_highlights: !!$local.checked && !!normText($city.value) && !!normText($state.value),
-          city: normText($city.value),
-          state: normText($state.value),
-          compelling_feature: normText($compelling.value),
-          locked: {
-            beds: normEnum($beds.value),
-            baths: normEnum($baths.value),
-            sqft: digitsOnly($sqft.value),
-            price: normText($price.value),
-            pool: normEnum($pool.value),
-            porch: normEnum($porch.value)
-          }
-        }),
-
-        getExtraPayload: (text, ctx) => {
-          const prefs = ctx.prefs || {};
-          if ($local.checked){
-            const hasCity = !!normText($city.value);
-            const hasState = !!normText($state.value);
-            if (!hasCity || !hasState){
-              if ($localHint) $localHint.style.display = "block";
-              return {}; // still writes description (without highlights)
-            }
-            if ($localHint) $localHint.style.display = "none";
-            lastNotesForLocal = text;
-            return { phase: "highlights" };
-          }
-          lastNotesForLocal = "";
-          return {};
-        },
-
-        onResponse: (data, ctx) => {
-          const prefs = (ctx && ctx.prefs) ? ctx.prefs : {};
-          if (!prefs.local_highlights) return;
-
-          const highlights = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
-          if (highlights && highlights.length){
-            showLocalPanel(highlights);
-          }
+      // If user toggles local highlights after entering city/state, fetch immediately (no extra prompt)
+      $local.addEventListener("change", () => {
+        validateLocalHint();
+        if ($local.checked && cityVal() && stateVal()) {
+          shell.sendExtra(normText($input.value) || "Generate local highlights.", { phase: "highlights" }, { echoUser: false });
         }
       });
 
+      $city.addEventListener("input", validateLocalHint);
+      $state.addEventListener("change", validateLocalHint);
+
+      // Reset
       document.getElementById("reset").addEventListener("click", () => {
         hideLocalPanel();
         lastNotesForLocal = "";
