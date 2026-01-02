@@ -19,7 +19,6 @@
 
         <div class="panel-topbar">
 
-          <!-- Top bar: subtitle + utilities ONLY -->
           <div class="topbar-row0">
             <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
 
@@ -29,7 +28,6 @@
             </div>
           </div>
 
-          <!-- Controls row -->
           <div class="controls-row">
             <div class="ctl">
               <label for="typeSel">Type</label>
@@ -99,7 +97,6 @@
             </div>
           </div>
 
-          <!-- Key facts area (no jargon heading) -->
           <div class="topbar-row2">
 
             <div class="lock-grid">
@@ -173,7 +170,7 @@
     </div>
   </div>
 
-  <!-- Local Highlights Modal (separate from Tips modal in tool-shell.js) -->
+  <!-- Local Highlights Modal -->
   <div id="localModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="localModalTitle">
       <div class="modal-head">
@@ -234,10 +231,9 @@ How to use it
       const $localModalListWrap = document.getElementById("localModalListWrap");
 
       const HIGHLIGHTS_TOKEN = "__PAW_HIGHLIGHTS__";
+
       let pendingHighlightsOffer = false;
-      let lastCityStateKey = "";
       let cachedHighlights = []; // {id,label}
-      let lastDeliverableText = ""; // tracked from replies (best-effort)
 
       function normText(v){ return String(v || "").trim(); }
       function digitsOnly(v){ return String(v || "").replace(/[^\d]/g, ""); }
@@ -254,6 +250,15 @@ How to use it
         if (c && s) return `${c}, ${s}`;
         if (s) return s;
         return c;
+      }
+
+      function escapeHtml(str){
+        return String(str || "")
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;")
+          .replaceAll("'","&#39;");
       }
 
       function coerceHighlightLabel(item){
@@ -273,22 +278,22 @@ How to use it
           t.includes("please provide") ||
           t.includes("city/state") ||
           t.includes("zip code") ||
-          t.includes("zip") && t.includes("provide")
+          (t.includes("zip") && t.includes("provide"))
         );
       }
 
       function looksLikeDeliverableText(reply){
         const r = String(reply || "").trim();
         if (!r) return false;
-        // keep consistent with shell deliverable gating: no questions, long enough
         if ((r.match(/\?/g) || []).length >= 1) return false;
         if (/^(one|a couple|a few)\s+quick\s+(question|questions|clarifiers)\b/i.test(r)) return false;
         return r.length >= 240;
       }
 
       function openLocalModal(highlights){
-        cachedHighlights = highlights.slice(0, 6); // keep it tight
-        // Build checkbox list (none selected by default)
+        cachedHighlights = highlights.slice(0, 6);
+
+        // None selected by default
         let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
         cachedHighlights.forEach((h, idx) => {
           const id = `lh_pick_${idx}`;
@@ -312,15 +317,6 @@ How to use it
         $localModalListWrap.innerHTML = "";
       }
 
-      function escapeHtml(str){
-        return String(str || "")
-          .replaceAll("&","&amp;")
-          .replaceAll("<","&lt;")
-          .replaceAll(">","&gt;")
-          .replaceAll('"',"&quot;")
-          .replaceAll("'","&#39;");
-      }
-
       function getModalSelections(){
         const selected = [];
         cachedHighlights.forEach((h, idx) => {
@@ -330,36 +326,19 @@ How to use it
         return selected;
       }
 
-      function shouldOfferHighlightsNow(){
-        const c = cityVal();
-        const s = stateVal();
-        if (!c || !s) return false;
-
-        const key = `${c.toLowerCase()}|${s}`;
-        // Offer only once per City/State change per submit cycle
-        if (key !== lastCityStateKey) return true;
-        return false;
-      }
-
-      async function fetchHighlightsAfterDeliverable(){
+      async function fetchHighlightsInBackground(){
         const c = cityVal();
         const s = stateVal();
         if (!c || !s) return;
-
-        const key = `${c.toLowerCase()}|${s}`;
-        lastCityStateKey = key;
-
-        // Ask worker for highlights in background; onResponse will handle.
         await shell.sendExtra(HIGHLIGHTS_TOKEN, {}, { echoUser: false });
       }
 
-      // Wire modal close
+      // Modal controls
       $localModalClose.addEventListener("click", closeLocalModal);
       $localModal.addEventListener("click", (e) => { if (e.target === $localModal) closeLocalModal(); });
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLocalModal(); });
       $localModalSkip.addEventListener("click", closeLocalModal);
 
-      // Apply selected highlights via refinement call
       $localModalApply.addEventListener("click", async () => {
         const picked = getModalSelections();
         closeLocalModal();
@@ -373,7 +352,6 @@ Replace generic filler lines first. Do not add fluff. Keep the overall length si
 Selected highlights:
 - ${picked.join("\n- ")}`;
 
-        // Send as a refinement request; include selected_highlights as structured data too
         await shell.sendExtra(instruction, { phase: "write", selected_highlights: picked }, { echoUser: true });
       });
 
@@ -389,15 +367,13 @@ Selected highlights:
           tone: mapTone($tone.value),
           length: mapLen($len.value),
           safe_mode: true,
-
-          // goal: do not force requirements; ask only if truly needed
           ask_followups: false,
 
           city: cityVal(),
           state: stateVal(),
           location: locationVal(),
 
-          // helps worker if it uses this as a hint for local context
+          // allow worker to know local context exists
           local_highlights: (!!cityVal() && !!stateVal()),
 
           compelling_feature: normText($compelling.value),
@@ -412,14 +388,19 @@ Selected highlights:
           }
         }),
 
+        // ✅ KEY FIX: this runs on every submit, so we can arm the offer reliably.
         getExtraPayload: (text) => {
           const base = { city: cityVal(), state: stateVal(), location: locationVal() };
 
-          // Background highlights fetch
+          // Background highlights fetch token
           if (String(text).trim() === HIGHLIGHTS_TOKEN) {
             if (!base.city || !base.state) return base;
             return Object.assign({}, base, { phase: "highlights" });
           }
+
+          // Normal user submit: arm the offer if we have city/state.
+          // The modal is never blocking the initial generation.
+          pendingHighlightsOffer = !!(base.city && base.state);
 
           return base;
         },
@@ -427,34 +408,27 @@ Selected highlights:
         onResponse: (data) => {
           const reply = data && typeof data.reply === "string" ? data.reply : "";
 
-          // Track last deliverable for context (best-effort)
-          if (looksLikeDeliverableText(reply)) lastDeliverableText = reply;
-
-          // If we just generated a deliverable and we were planning to offer highlights, fetch now
+          // After the deliverable is produced, kick off background highlights fetch
           if (pendingHighlightsOffer && looksLikeDeliverableText(reply)) {
             pendingHighlightsOffer = false;
-            // kick off background highlights fetch (do not block)
-            fetchHighlightsAfterDeliverable();
+            fetchHighlightsInBackground(); // async, no block
             return; // allow shell to render deliverable
           }
 
           // Handle highlights response
           const highlightsRaw = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
           if (highlightsRaw && highlightsRaw.length) {
-            // Normalize and filter
             const normalized = highlightsRaw
               .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)), label: coerceHighlightLabel(it) }))
               .filter(x => x.label && !isBadHighlightLabel(x.label));
 
-            // Only offer if we still have a deliverable on screen and city/state exist
             if (normalized.length && cityVal() && stateVal()) {
               openLocalModal(normalized);
             }
-            return { skipDefault: true }; // do not print highlights payload into chat
+            return { skipDefault: true };
           }
 
-          // If worker replied with “provide city/state or zip” as part of highlights,
-          // do not surface it—just ignore silently.
+          // Ignore any “provide city/state or zip” prompt silently
           const lower = reply.toLowerCase();
           if (lower.includes("provide") && (lower.includes("city/state") || lower.includes("zip"))) {
             return { skipDefault: true };
@@ -462,26 +436,10 @@ Selected highlights:
         }
       });
 
-      // Submit behavior: when user sends a normal message, we set a flag so that
-      // after deliverable we attempt to fetch highlights and offer the modal.
-      const origSend = shell.send;
-      shell.send = (text) => {
-        const c = cityVal(), s = stateVal();
-        // Only attempt highlight offer if location exists
-        if (c && s && shouldOfferHighlightsNow()) {
-          pendingHighlightsOffer = true;
-        } else {
-          pendingHighlightsOffer = false;
-        }
-        return origSend(text);
-      };
-
       // Reset
       document.getElementById("reset").addEventListener("click", () => {
         pendingHighlightsOffer = false;
-        lastCityStateKey = "";
         cachedHighlights = [];
-        lastDeliverableText = "";
         closeLocalModal();
         try { $city.value = ""; $state.value = ""; } catch {}
         try { if (shell && shell.reset) shell.reset(); } catch {}
