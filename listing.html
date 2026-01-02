@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Listing Description Writer</title>
   <link rel="stylesheet" href="/paw-ui.css">
+  <!--
+    HEADER CONTRACT (LOCKED):
+    - The panel top bar (.topbar-row0) MUST NEVER include a title.
+    - It only contains: subtitle (left) + Reset/Tips buttons (right).
+  -->
 </head>
 
 <body>
@@ -14,6 +19,7 @@
 
         <div class="panel-topbar">
 
+          <!-- Top bar: subtitle + utilities ONLY -->
           <div class="topbar-row0">
             <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
 
@@ -23,6 +29,7 @@
             </div>
           </div>
 
+          <!-- Controls row -->
           <div class="controls-row">
             <div class="ctl">
               <label for="typeSel">Type</label>
@@ -92,6 +99,7 @@
             </div>
           </div>
 
+          <!-- Key facts area (no jargon heading) -->
           <div class="topbar-row2">
 
             <div class="lock-grid">
@@ -142,24 +150,9 @@
 
             <div class="lock-row2">
               <label class="field" style="width:100%;">
-                <div class="field-label" style="font-size:12px; font-weight:700; color:rgba(15,23,42,.82); margin-bottom:6px; letter-spacing:-0.01em;">Most Compelling Feature</div>
+                <div class="field-label" style="font-size:12px; font-weight:700; color:rgba(15,23,42,.82); margin-bottom:8px; letter-spacing:-0.01em;">Most Compelling Feature</div>
                 <input id="compellingInp" class="big-input" type="text" placeholder="Location, design, lifestyle, value, etc." />
               </label>
-            </div>
-
-            <div id="localPanel" class="local-panel" aria-live="polite">
-              <div class="local-head">
-                <div>
-                  <div class="local-title">Local highlights (optional)</div>
-                  <div class="local-sub">Include any of these? We’ll weave them in naturally.</div>
-                </div>
-                <div class="local-actions">
-                  <button id="localRefresh" class="btn" type="button">Refresh</button>
-                  <button id="localSkip" class="btn" type="button">Skip</button>
-                  <button id="localWrite" class="btn primary" type="button">Write description</button>
-                </div>
-              </div>
-              <ul id="localList" class="local-list"></ul>
             </div>
 
           </div>
@@ -180,6 +173,28 @@
     </div>
   </div>
 
+  <!-- Local Highlights Modal (separate from Tips modal in tool-shell.js) -->
+  <div id="localModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="localModalTitle">
+      <div class="modal-head">
+        <div id="localModalTitle" class="modal-title">Possible nearby highlights (optional)</div>
+        <button class="modal-close" id="localModalClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45; margin-bottom:10px;">
+          We found nearby places that <b>may or may not apply</b> to this listing. Select only what you know is accurate.
+          <b>Nothing is added unless you choose it.</b>
+        </div>
+        <div id="localModalListWrap"></div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+          <button id="localModalSkip" class="btn" type="button">Keep as-is</button>
+          <button id="localModalApply" class="btn primary" type="button">Update description</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/tool-shell.js"></script>
 
   <script>
@@ -192,7 +207,7 @@
 
 How to use it
 • Add any details above and/or paste notes/MLS data — messy is fine
-• Include city & state when you can (helps local context + local highlights)
+• Include city & state when you can (helps local context)
 • If something is unknown, leave it blank (or type “unknown”) and the tool will write conservatively
 • You can always refine the output after it generates`;
 
@@ -209,18 +224,20 @@ How to use it
       const $pool = document.getElementById("poolSel");
       const $porch = document.getElementById("porchSel");
       const $compelling = document.getElementById("compellingInp");
-
-      const $localPanel = document.getElementById("localPanel");
-      const $localList = document.getElementById("localList");
-      const $localWrite = document.getElementById("localWrite");
-      const $localSkip = document.getElementById("localSkip");
-      const $localRefresh = document.getElementById("localRefresh");
-
       const $input = document.getElementById("input");
 
+      // Local highlights modal elements
+      const $localModal = document.getElementById("localModal");
+      const $localModalClose = document.getElementById("localModalClose");
+      const $localModalSkip = document.getElementById("localModalSkip");
+      const $localModalApply = document.getElementById("localModalApply");
+      const $localModalListWrap = document.getElementById("localModalListWrap");
+
       const HIGHLIGHTS_TOKEN = "__PAW_HIGHLIGHTS__";
-      let lastHighlights = [];
-      let lastFetchKey = "";
+      let pendingHighlightsOffer = false;
+      let lastCityStateKey = "";
+      let cachedHighlights = []; // {id,label}
+      let lastDeliverableText = ""; // tracked from replies (best-effort)
 
       function normText(v){ return String(v || "").trim(); }
       function digitsOnly(v){ return String(v || "").replace(/[^\d]/g, ""); }
@@ -239,12 +256,6 @@ How to use it
         return c;
       }
 
-      function hideLocalPanel(){
-        $localPanel.style.display = "none";
-        $localList.innerHTML = "";
-        lastHighlights = [];
-      }
-
       function coerceHighlightLabel(item){
         if (item == null) return "";
         if (typeof item === "string") return item.trim();
@@ -258,6 +269,7 @@ How to use it
       function isBadHighlightLabel(label){
         const t = String(label || "").toLowerCase();
         return (
+          !t ||
           t.includes("please provide") ||
           t.includes("city/state") ||
           t.includes("zip code") ||
@@ -265,59 +277,105 @@ How to use it
         );
       }
 
-      function showLocalPanel(highlights){
-        const arr = Array.isArray(highlights) ? highlights : [];
-        const normalized = arr
-          .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)), label: coerceHighlightLabel(it) }))
-          .filter(x => x.label && !isBadHighlightLabel(x.label));
-
-        if (!normalized.length) { hideLocalPanel(); return; }
-
-        lastHighlights = normalized;
-
-        $localList.innerHTML = "";
-        for (const h of lastHighlights){
-          const li = document.createElement("li");
-          li.className = "local-item";
-
-          const cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.id = "lh_" + h.id;
-          cb.checked = true;
-
-          const lab = document.createElement("label");
-          lab.className = "txt";
-          lab.htmlFor = cb.id;
-          lab.textContent = h.label;
-
-          li.appendChild(cb);
-          li.appendChild(lab);
-          $localList.appendChild(li);
-        }
-
-        $localPanel.style.display = "block";
+      function looksLikeDeliverableText(reply){
+        const r = String(reply || "").trim();
+        if (!r) return false;
+        // keep consistent with shell deliverable gating: no questions, long enough
+        if ((r.match(/\?/g) || []).length >= 1) return false;
+        if (/^(one|a couple|a few)\s+quick\s+(question|questions|clarifiers)\b/i.test(r)) return false;
+        return r.length >= 240;
       }
 
-      function getSelectedHighlightLabels(){
-        const out = [];
-        for (const h of lastHighlights){
-          const cb = document.getElementById("lh_" + h.id);
-          if (cb && cb.checked) out.push(h.label);
-        }
-        return out;
+      function openLocalModal(highlights){
+        cachedHighlights = highlights.slice(0, 6); // keep it tight
+        // Build checkbox list (none selected by default)
+        let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
+        cachedHighlights.forEach((h, idx) => {
+          const id = `lh_pick_${idx}`;
+          html += `
+            <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
+              <input id="${id}" type="checkbox" style="margin-top:2px;" />
+              <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">${escapeHtml(h.label)}</span>
+            </label>
+          `;
+        });
+        html += '</div>';
+        $localModalListWrap.innerHTML = html;
+
+        $localModal.classList.add("show");
+        $localModal.setAttribute("aria-hidden", "false");
       }
 
-      async function fetchHighlights(force){
+      function closeLocalModal(){
+        $localModal.classList.remove("show");
+        $localModal.setAttribute("aria-hidden", "true");
+        $localModalListWrap.innerHTML = "";
+      }
+
+      function escapeHtml(str){
+        return String(str || "")
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;")
+          .replaceAll("'","&#39;");
+      }
+
+      function getModalSelections(){
+        const selected = [];
+        cachedHighlights.forEach((h, idx) => {
+          const cb = document.getElementById(`lh_pick_${idx}`);
+          if (cb && cb.checked) selected.push(h.label);
+        });
+        return selected;
+      }
+
+      function shouldOfferHighlightsNow(){
         const c = cityVal();
         const s = stateVal();
-        if (!c || !s) { hideLocalPanel(); return; }
+        if (!c || !s) return false;
 
         const key = `${c.toLowerCase()}|${s}`;
-        if (!force && key === lastFetchKey) return;
-        lastFetchKey = key;
+        // Offer only once per City/State change per submit cycle
+        if (key !== lastCityStateKey) return true;
+        return false;
+      }
 
+      async function fetchHighlightsAfterDeliverable(){
+        const c = cityVal();
+        const s = stateVal();
+        if (!c || !s) return;
+
+        const key = `${c.toLowerCase()}|${s}`;
+        lastCityStateKey = key;
+
+        // Ask worker for highlights in background; onResponse will handle.
         await shell.sendExtra(HIGHLIGHTS_TOKEN, {}, { echoUser: false });
       }
+
+      // Wire modal close
+      $localModalClose.addEventListener("click", closeLocalModal);
+      $localModal.addEventListener("click", (e) => { if (e.target === $localModal) closeLocalModal(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLocalModal(); });
+      $localModalSkip.addEventListener("click", closeLocalModal);
+
+      // Apply selected highlights via refinement call
+      $localModalApply.addEventListener("click", async () => {
+        const picked = getModalSelections();
+        closeLocalModal();
+        if (!picked.length) return;
+
+        const instruction =
+`Update the MLS description above.
+Only incorporate the selected nearby highlights if the agent confirms they are accurate and if they improve specificity.
+Replace generic filler lines first. Do not add fluff. Keep the overall length similar.
+
+Selected highlights:
+- ${picked.join("\n- ")}`;
+
+        // Send as a refinement request; include selected_highlights as structured data too
+        await shell.sendExtra(instruction, { phase: "write", selected_highlights: picked }, { echoUser: true });
+      });
 
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
@@ -331,13 +389,15 @@ How to use it
           tone: mapTone($tone.value),
           length: mapLen($len.value),
           safe_mode: true,
+
+          // goal: do not force requirements; ask only if truly needed
           ask_followups: false,
 
           city: cityVal(),
           state: stateVal(),
           location: locationVal(),
 
-          // informs Worker that local context exists when it does
+          // helps worker if it uses this as a hint for local context
           local_highlights: (!!cityVal() && !!stateVal()),
 
           compelling_feature: normText($compelling.value),
@@ -361,65 +421,72 @@ How to use it
             return Object.assign({}, base, { phase: "highlights" });
           }
 
-          // Normal write: include selected highlights if any
-          const selected = getSelectedHighlightLabels();
-          if (selected.length) {
-            return Object.assign({}, base, { phase: "write", selected_highlights: selected });
-          }
           return base;
         },
 
         onResponse: (data) => {
-          // If the Worker replies with the “provide city/state or zip” prompt,
-          // do NOT show it as a highlight. Just keep highlights hidden.
           const reply = data && typeof data.reply === "string" ? data.reply : "";
-          const replyLower = reply.toLowerCase();
-          if (replyLower.includes("provide") && (replyLower.includes("city/state") || replyLower.includes("zip"))) {
-            hideLocalPanel();
-            return { skipDefault: true };
+
+          // Track last deliverable for context (best-effort)
+          if (looksLikeDeliverableText(reply)) lastDeliverableText = reply;
+
+          // If we just generated a deliverable and we were planning to offer highlights, fetch now
+          if (pendingHighlightsOffer && looksLikeDeliverableText(reply)) {
+            pendingHighlightsOffer = false;
+            // kick off background highlights fetch (do not block)
+            fetchHighlightsAfterDeliverable();
+            return; // allow shell to render deliverable
           }
 
-          const highlights = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
-          if (highlights && highlights.length){
-            showLocalPanel(highlights);
+          // Handle highlights response
+          const highlightsRaw = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
+          if (highlightsRaw && highlightsRaw.length) {
+            // Normalize and filter
+            const normalized = highlightsRaw
+              .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)), label: coerceHighlightLabel(it) }))
+              .filter(x => x.label && !isBadHighlightLabel(x.label));
+
+            // Only offer if we still have a deliverable on screen and city/state exist
+            if (normalized.length && cityVal() && stateVal()) {
+              openLocalModal(normalized);
+            }
+            return { skipDefault: true }; // do not print highlights payload into chat
+          }
+
+          // If worker replied with “provide city/state or zip” as part of highlights,
+          // do not surface it—just ignore silently.
+          const lower = reply.toLowerCase();
+          if (lower.includes("provide") && (lower.includes("city/state") || lower.includes("zip"))) {
             return { skipDefault: true };
           }
         }
       });
 
-      // Buttons
-      $localRefresh.addEventListener("click", () => fetchHighlights(true));
+      // Submit behavior: when user sends a normal message, we set a flag so that
+      // after deliverable we attempt to fetch highlights and offer the modal.
+      const origSend = shell.send;
+      shell.send = (text) => {
+        const c = cityVal(), s = stateVal();
+        // Only attempt highlight offer if location exists
+        if (c && s && shouldOfferHighlightsNow()) {
+          pendingHighlightsOffer = true;
+        } else {
+          pendingHighlightsOffer = false;
+        }
+        return origSend(text);
+      };
 
-      $localSkip.addEventListener("click", async () => {
-        hideLocalPanel();
-        const notes = normText($input.value) || "Write the MLS description.";
-        await shell.sendExtra(notes, { phase: "write", selected_highlights: [] }, { echoUser: false });
-      });
-
-      $localWrite.addEventListener("click", async () => {
-        hideLocalPanel();
-        const notes = normText($input.value) || "Write the MLS description.";
-        const selected = getSelectedHighlightLabels();
-        await shell.sendExtra(notes, { phase: "write", selected_highlights: selected }, { echoUser: false });
-      });
-
-      // KEY BEHAVIOR CHANGE:
-      // Only fetch highlights when the user is done entering location:
-      // - City blur
-      // - State change + blur
-      $city.addEventListener("blur", () => fetchHighlights(false));
-      $state.addEventListener("change", () => {}); // no-op: change alone can be noisy
-      $state.addEventListener("blur", () => fetchHighlights(false));
-
-      // On load, don't fetch until both are present AND the user has left the fields.
-      hideLocalPanel();
-
+      // Reset
       document.getElementById("reset").addEventListener("click", () => {
-        hideLocalPanel();
-        lastFetchKey = "";
+        pendingHighlightsOffer = false;
+        lastCityStateKey = "";
+        cachedHighlights = [];
+        lastDeliverableText = "";
+        closeLocalModal();
         try { $city.value = ""; $state.value = ""; } catch {}
         try { if (shell && shell.reset) shell.reset(); } catch {}
       });
+
     })();
   </script>
 </body>
