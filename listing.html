@@ -2,9 +2,191 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Listing Description Writer • ProAgent Works</title>
-  <link rel="stylesheet" href="./paw-ui.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Listing Description Writer</title>
+  <link rel="stylesheet" href="https://paw-tools.pages.dev/paw-ui.css">
+  <!--
+    HEADER CONTRACT (LOCKED):
+    - The panel top bar (.topbar-row0) MUST NEVER include a title.
+    - It only contains: subtitle (left) + Reset/Tips buttons (right).
+  -->
+</head>
+
+<body>
+  <div class="app">
+    <div class="frame">
+      <div class="panel">
+
+        <div class="panel-topbar">
+
+          <div class="topbar-row0">
+            <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
+
+            <div class="topbar-right">
+              <button id="reset" class="util-btn" type="button">Reset</button>
+              <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
+            </div>
+          </div>
+
+          <div class="topbar-row1">
+            <div class="controls-row controls-row-compact">
+
+              <div class="control">
+                <label>Type</label>
+                <select id="type">
+                  <option value="">Choose...</option>
+                  <option value="General">General</option>
+                  <option value="Starter">Starter</option>
+                  <option value="Move-Up">Move-Up</option>
+                  <option value="Luxury">Luxury</option>
+                  <option value="Investor">Investor</option>
+                  <option value="New Construction">New Construction</option>
+                  <option value="Land">Land</option>
+                  <option value="Multi-Family">Multi-Family</option>
+                  <option value="Rental">Rental</option>
+                </select>
+              </div>
+
+              <div class="control">
+                <label>Tone</label>
+                <select id="tone">
+                  <option value="">Choose...</option>
+                  <option value="General">General</option>
+                  <option value="Warm">Warm</option>
+                  <option value="Modern">Modern</option>
+                  <option value="Luxury">Luxury</option>
+                  <option value="Concise">Concise</option>
+                </select>
+              </div>
+
+              <div class="control">
+                <label>Length</label>
+                <select id="length">
+                  <option value="">Choose...</option>
+                  <option value="Short">Short</option>
+                  <option value="Standard">Standard</option>
+                  <option value="Long">Long</option>
+                </select>
+              </div>
+
+              <div class="control control-wide">
+                <label>City</label>
+                <input id="city" placeholder="City" />
+              </div>
+
+              <div class="control">
+                <label>State</label>
+                <select id="state">
+                  <option value="">ST</option>
+                  <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option>
+                  <option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option>
+                  <option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option>
+                  <option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+                  <option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option>
+                  <option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option>
+                  <option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option>
+                  <option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+                  <option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option>
+                  <option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>
+                </select>
+              </div>
+
+            </div>
+
+            <div class="controls-row controls-row-compact">
+              <div class="control">
+                <label>Beds</label>
+                <select id="beds">
+                  <option value="">—</option>
+                  <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                  <option>6</option><option>7</option><option>8+</option>
+                </select>
+              </div>
+
+              <div class="control">
+                <label>Baths</label>
+                <select id="baths">
+                  <option value="">—</option>
+                  <option>1</option><option>1.5</option><option>2</option><option>2.5</option>
+                  <option>3</option><option>3.5</option><option>4+</option>
+                </select>
+              </div>
+
+              <div class="control">
+                <label>Sqft</label>
+                <input id="sqft" placeholder="e.g. 1800" />
+              </div>
+
+              <div class="control">
+                <label>Price</label>
+                <input id="price" placeholder="for context only" />
+              </div>
+
+              <div class="control">
+                <label>Pool</label>
+                <select id="pool">
+                  <option value="">—</option>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+
+              <div class="control">
+                <label>Porch</label>
+                <select id="porch">
+                  <option value="">—</option>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="controls-row">
+              <div class="control control-full">
+                <label>Most Compelling Feature</label>
+                <input id="compelling" placeholder="Location, design, lifestyle, value, etc." />
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="panel-body">
+          <div id="toolMount"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Local highlights modal -->
+  <div id="localModal" class="paw-local-modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="paw-local-modal-card">
+      <div class="paw-local-modal-head">
+        <div class="paw-local-modal-title">Possible nearby highlights (optional)</div>
+        <button id="localModalClose" class="paw-local-modal-x" type="button" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" stroke="rgba(15,23,42,.8)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="paw-local-modal-body">
+        <div class="paw-local-modal-sub">
+          We found nearby places that <b>may or may not apply</b> to this listing. Select only what you know is accurate.
+          <b>Nothing is added unless you choose it.</b>
+        </div>
+
+        <div id="localModalListWrap"></div>
+
+        <div class="paw-local-modal-actions">
+          <button id="localModalSkip" class="paw-btn paw-btn-ghost" type="button">Keep as-is</button>
+          <button id="localModalApply" class="paw-btn" type="button">Update description</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <style>
     /* Local modal styling (kept minimal; main styles in paw-ui.css) */
     .paw-local-modal {
@@ -56,188 +238,11 @@
       background: rgba(255,255,255,.96);
     }
   </style>
-</head>
-<body>
-  <div class="paw-app">
-    <div class="paw-container">
-      <header class="paw-header">
-        <div class="paw-brand">
-          <div class="paw-brand-mark" aria-hidden="true"></div>
-          <div>
-            <div class="paw-h1">Listing Description Writer</div>
-            <div class="paw-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
-          </div>
-        </div>
-        <div class="paw-header-actions">
-          <button id="reset" class="paw-btn paw-btn-ghost" type="button">Reset</button>
-          <button id="tips" class="paw-btn paw-btn-ghost" type="button">Tips &amp; How To</button>
-        </div>
-      </header>
 
-      <main class="paw-main">
-
-        <!-- Tool form shell -->
-        <section class="paw-card">
-          <div class="paw-card-inner">
-
-            <div class="paw-grid-6">
-              <div class="paw-field">
-                <label class="paw-label">Type</label>
-                <select id="type" class="paw-input">
-                  <option value="">Choose…</option>
-                  <option value="General">General</option>
-                  <option value="Starter">Starter</option>
-                  <option value="Move-Up">Move-Up</option>
-                  <option value="Luxury">Luxury</option>
-                  <option value="Investor">Investor</option>
-                  <option value="New Construction">New Construction</option>
-                  <option value="Land">Land</option>
-                  <option value="Multi-Family">Multi-Family</option>
-                  <option value="Rental">Rental</option>
-                </select>
-              </div>
-
-              <div class="paw-field">
-                <label class="paw-label">Tone</label>
-                <select id="tone" class="paw-input">
-                  <option value="">Choose…</option>
-                  <option value="General">General</option>
-                  <option value="Warm">Warm</option>
-                  <option value="Modern">Modern</option>
-                  <option value="Luxury">Luxury</option>
-                  <option value="Concise">Concise</option>
-                </select>
-              </div>
-
-              <div class="paw-field">
-                <label class="paw-label">Length</label>
-                <select id="length" class="paw-input">
-                  <option value="">Choose…</option>
-                  <option value="Short">Short</option>
-                  <option value="Standard">Standard</option>
-                  <option value="Long">Long</option>
-                </select>
-              </div>
-
-              <div class="paw-field">
-                <label class="paw-label">City</label>
-                <input id="city" class="paw-input" placeholder="City" />
-              </div>
-
-              <div class="paw-field">
-                <label class="paw-label">State</label>
-                <select id="state" class="paw-input">
-                  <option value="">ST</option>
-                  <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option>
-                  <option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option>
-                  <option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option>
-                  <option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option>
-                  <option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option>
-                  <option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option>
-                  <option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option>
-                  <option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option>
-                  <option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option>
-                  <option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="paw-grid-6" style="margin-top:14px;">
-              <div class="paw-field">
-                <label class="paw-label">Beds</label>
-                <select id="beds" class="paw-input">
-                  <option value="">—</option>
-                  <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-                  <option>6</option><option>7</option><option>8+</option>
-                </select>
-              </div>
-
-              <div class="paw-field">
-                <label class="paw-label">Baths</label>
-                <select id="baths" class="paw-input">
-                  <option value="">—</option>
-                  <option>1</option><option>1.5</option><option>2</option><option>2.5</option>
-                  <option>3</option><option>3.5</option><option>4+</option>
-                </select>
-              </div>
-
-              <div class="paw-field">
-                <label class="paw-label">Sqft</label>
-                <input id="sqft" class="paw-input" placeholder="e.g. 1800" />
-              </div>
-
-              <div class="paw-field">
-                <label class="paw-label">Price</label>
-                <input id="price" class="paw-input" placeholder="for context only" />
-              </div>
-
-              <div class="paw-field">
-                <label class="paw-label">Pool</label>
-                <select id="pool" class="paw-input">
-                  <option value="">—</option>
-                  <option value="No">No</option>
-                  <option value="Yes">Yes</option>
-                </select>
-              </div>
-
-              <div class="paw-field">
-                <label class="paw-label">Porch</label>
-                <select id="porch" class="paw-input">
-                  <option value="">—</option>
-                  <option value="No">No</option>
-                  <option value="Yes">Yes</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="paw-field" style="margin-top:14px;">
-              <label class="paw-label">Most Compelling Feature</label>
-              <input id="compelling" class="paw-input" placeholder="Location, design, lifestyle, value, etc." />
-            </div>
-
-          </div>
-        </section>
-
-        <!-- Shared tool shell UI -->
-        <div id="toolMount"></div>
-
-      </main>
-    </div>
-  </div>
-
-  <!-- Local highlights modal -->
-  <div id="localModal" class="paw-local-modal" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="paw-local-modal-card">
-      <div class="paw-local-modal-head">
-        <div class="paw-local-modal-title">Possible nearby highlights (optional)</div>
-        <button id="localModalClose" class="paw-local-modal-x" type="button" aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M18 6L6 18M6 6l12 12" stroke="rgba(15,23,42,.8)" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-      </div>
-
-      <div class="paw-local-modal-body">
-        <div class="paw-local-modal-sub">
-          We found nearby places that <b>may or may not apply</b> to this listing. Select only what you know is accurate.
-          <b>Nothing is added unless you choose it.</b>
-        </div>
-
-        <div id="localModalListWrap"></div>
-
-        <div class="paw-local-modal-actions">
-          <button id="localModalSkip" class="paw-btn paw-btn-ghost" type="button">Keep as-is</button>
-          <button id="localModalApply" class="paw-btn" type="button">Update description</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="./tool-shell.js"></script>
+  <script src="https://paw-tools.pages.dev/tool-shell.js"></script>
 
   <script>
     (function(){
-      const API_ENDPOINT = window.PAW_API_ENDPOINT || "https://paw-tools-worker.<your-domain>.workers.dev";
       const TIPS_TEXT = `Use this to generate MLS-ready listing remarks. Add upgrades, finishes, neighborhood notes, HOA details, and any disclosures in the notes box for best results.`;
 
       const $type = document.getElementById("type");
@@ -264,7 +269,7 @@
       let pendingHighlightsOffer = false;
       let cachedHighlights = []; // {id,label}
 
-      // NEW: prevent re-prompt loops (same list, same city/state)
+      // Prevent re-prompt loops: remember the last highlight list we showed for the current city/state.
       let lastHighlightsKey = "";
       let lastCityStateKey = "";
 
@@ -303,7 +308,6 @@
       function isBadHighlightLabel(label){
         const t = String(label || "").toLowerCase();
         if (!t) return true;
-        // no distances or weird prompt artifacts
         if (/\b(minutes?|mins?|mi|miles?|km)\b/i.test(t)) return true;
         if (t.includes("json") || t.includes("{") || t.includes("}")) return true;
         return false;
@@ -320,7 +324,7 @@
       function openLocalModal(highlights){
         cachedHighlights = highlights.slice(0, 6);
 
-        // Remember what we showed so we don't re-prompt with the same list repeatedly.
+        // Remember what we showed so we don’t re-open the modal with the same list repeatedly.
         lastHighlightsKey = cachedHighlights.map(h => String(h.label || "").trim().toLowerCase()).join("|");
         lastCityStateKey = `${cityVal().toLowerCase()}|${stateVal().toLowerCase()}`;
 
@@ -388,13 +392,11 @@ Selected highlights:
       });
 
       const shell = window.PAWToolShell.init({
-        apiEndpoint: API_ENDPOINT,
         toolId: "listing_description_writer",
         tipsText: TIPS_TEXT,
         mountId: "toolMount",
 
         getPrefs: () => {
-          // "prefs" passed to Worker
           return {
             listing_type: mapType($type.value),
             tone: mapTone($tone.value),
@@ -426,13 +428,15 @@ Selected highlights:
 
           // Normal user submit: arm the offer if we have city/state.
           // The modal is never blocking the initial generation.
-          // IMPORTANT: if this submit is the *apply selected highlights* instruction, do NOT arm again.
-          if (/^Update the MLS description above\./i.test(String(text)) || /\bSelected highlights:\b/i.test(String(text))) {
+          // IMPORTANT: If this submit is the "apply selected highlights" instruction, do NOT arm again.
+          const t = String(text || "").trim();
+          if (/^Update the MLS description above\./i.test(t) || /\bSelected highlights:\b/i.test(t)) {
             pendingHighlightsOffer = false;
             return base;
           }
 
           pendingHighlightsOffer = !!(base.city && base.state);
+
           return base;
         },
 
@@ -452,10 +456,7 @@ Selected highlights:
             const currentCityStateKey = `${cityVal().toLowerCase()}|${stateVal().toLowerCase()}`;
 
             const normalized = highlightsRaw
-              .map((it, i) => ({
-                id: String((it && typeof it === "object") ? (it.id || it.key || (i+1)) : (i+1)),
-                label: coerceHighlightLabel(it)
-              }))
+              .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)), label: coerceHighlightLabel(it) }))
               .filter(x => x.label && !isBadHighlightLabel(x.label));
 
             const newKey = normalized.map(h => String(h.label || "").trim().toLowerCase()).join("|");
