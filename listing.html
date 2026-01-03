@@ -4,7 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Listing Description Writer</title>
+
+  <!-- IMPORTANT: fully-qualified so embeds on proagentworks.com still load tool assets -->
   <link rel="stylesheet" href="https://paw-tools.pages.dev/paw-ui.css">
+
   <!--
     HEADER CONTRACT (LOCKED):
     - The panel top bar (.topbar-row0) MUST NEVER include a title.
@@ -32,10 +35,9 @@
             <div class="controls-row controls-row-compact">
 
               <div class="control">
-                <label>Type</label>
-                <select id="type">
-                  <option value="">Choose...</option>
-                  <option value="General">General</option>
+                <div class="field-label">Type</div>
+                <select id="typeSel">
+                  <option value="" selected>Choose…</option>
                   <option value="Starter">Starter</option>
                   <option value="Move-Up">Move-Up</option>
                   <option value="Luxury">Luxury</option>
@@ -48,9 +50,9 @@
               </div>
 
               <div class="control">
-                <label>Tone</label>
-                <select id="tone">
-                  <option value="">Choose...</option>
+                <div class="field-label">Tone</div>
+                <select id="toneSel">
+                  <option value="" selected>Choose…</option>
                   <option value="General">General</option>
                   <option value="Warm">Warm</option>
                   <option value="Modern">Modern</option>
@@ -60,24 +62,24 @@
               </div>
 
               <div class="control">
-                <label>Length</label>
-                <select id="length">
-                  <option value="">Choose...</option>
+                <div class="field-label">Length</div>
+                <select id="lenSel">
+                  <option value="" selected>Choose…</option>
                   <option value="Short">Short</option>
                   <option value="Standard">Standard</option>
                   <option value="Long">Long</option>
                 </select>
               </div>
 
-              <div class="control control-wide">
-                <label>City</label>
-                <input id="city" placeholder="City" />
+              <div class="control">
+                <div class="field-label">City</div>
+                <input id="cityInp" type="text" placeholder="City" />
               </div>
 
               <div class="control">
-                <label>State</label>
-                <select id="state">
-                  <option value="">ST</option>
+                <div class="field-label">State</div>
+                <select id="stateSel">
+                  <option value="" selected>ST</option>
                   <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option>
                   <option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option>
                   <option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option>
@@ -95,46 +97,46 @@
 
             <div class="controls-row controls-row-compact">
               <div class="control">
-                <label>Beds</label>
-                <select id="beds">
-                  <option value="">—</option>
+                <div class="field-label">Beds</div>
+                <select id="bedsSel">
+                  <option value="" selected>—</option>
                   <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
                   <option>6</option><option>7</option><option>8+</option>
                 </select>
               </div>
 
               <div class="control">
-                <label>Baths</label>
-                <select id="baths">
-                  <option value="">—</option>
+                <div class="field-label">Baths</div>
+                <select id="bathsSel">
+                  <option value="" selected>—</option>
                   <option>1</option><option>1.5</option><option>2</option><option>2.5</option>
                   <option>3</option><option>3.5</option><option>4+</option>
                 </select>
               </div>
 
               <div class="control">
-                <label>Sqft</label>
-                <input id="sqft" placeholder="e.g. 1800" />
+                <div class="field-label">Sqft</div>
+                <input id="sqftInp" type="text" placeholder="e.g. 1800" />
               </div>
 
               <div class="control">
-                <label>Price</label>
-                <input id="price" placeholder="for context only" />
+                <div class="field-label">Price</div>
+                <input id="priceInp" type="text" placeholder="for context only" />
               </div>
 
               <div class="control">
-                <label>Pool</label>
-                <select id="pool">
-                  <option value="">—</option>
+                <div class="field-label">Pool</div>
+                <select id="poolSel">
+                  <option value="" selected>—</option>
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
                 </select>
               </div>
 
               <div class="control">
-                <label>Porch</label>
-                <select id="porch">
-                  <option value="">—</option>
+                <div class="field-label">Porch</div>
+                <select id="porchSel">
+                  <option value="" selected>—</option>
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
                 </select>
@@ -142,123 +144,80 @@
             </div>
 
             <div class="controls-row">
-              <div class="control control-full">
-                <label>Most Compelling Feature</label>
-                <input id="compelling" placeholder="Location, design, lifestyle, value, etc." />
-              </div>
+              <label class="control control-full">
+                <div class="field-label" style="font-size:12px; font-weight:700; color:rgba(15,23,42,.85); margin-bottom:8px; letter-spacing:-0.01em;">Most Compelling Feature</div>
+                <input id="compellingInp" class="big-input" type="text" placeholder="Location, design, lifestyle, value, etc." />
+              </label>
             </div>
 
           </div>
         </div>
 
-        <div class="panel-body">
-          <div id="toolMount"></div>
+        <div id="messages" class="messages"></div>
+
+        <div class="composer">
+          <textarea id="input" placeholder="Add upgrades, finishes, neighborhood notes, disclosures, HOA details, or paste listing data here"></textarea>
+          <button id="send" class="send" aria-label="Send" type="button">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8L6.4 13.4 5 12l7-7z" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
 
       </div>
     </div>
   </div>
 
-  <!-- Local highlights modal -->
-  <div id="localModal" class="paw-local-modal" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="paw-local-modal-card">
-      <div class="paw-local-modal-head">
-        <div class="paw-local-modal-title">Possible nearby highlights (optional)</div>
-        <button id="localModalClose" class="paw-local-modal-x" type="button" aria-label="Close">
+  <!-- Local Highlights Modal -->
+  <div id="localModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="localModalTitle">
+      <div class="modal-head">
+        <div id="localModalTitle" class="modal-title">Possible nearby highlights (optional)</div>
+        <button id="localModalClose" class="modal-x" type="button" aria-label="Close">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M18 6L6 18M6 6l12 12" stroke="rgba(15,23,42,.8)" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>
       </div>
 
-      <div class="paw-local-modal-body">
-        <div class="paw-local-modal-sub">
+      <div class="modal-body">
+        <div class="modal-sub">
           We found nearby places that <b>may or may not apply</b> to this listing. Select only what you know is accurate.
           <b>Nothing is added unless you choose it.</b>
         </div>
 
         <div id="localModalListWrap"></div>
 
-        <div class="paw-local-modal-actions">
-          <button id="localModalSkip" class="paw-btn paw-btn-ghost" type="button">Keep as-is</button>
-          <button id="localModalApply" class="paw-btn" type="button">Update description</button>
+        <div class="modal-actions">
+          <button id="localModalSkip" class="btn" type="button">Keep as-is</button>
+          <button id="localModalApply" class="btn primary" type="button">Update description</button>
         </div>
       </div>
     </div>
   </div>
 
-  <style>
-    /* Local modal styling (kept minimal; main styles in paw-ui.css) */
-    .paw-local-modal {
-      position: fixed; inset: 0;
-      background: rgba(15, 23, 42, .45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-      z-index: 9999;
-    }
-    .paw-local-modal.show { display: flex; }
-    .paw-local-modal-card {
-      width: min(840px, 96vw);
-      max-height: min(720px, 86vh);
-      overflow: auto;
-      background: rgba(255,255,255,.96);
-      border: 1px solid rgba(15,23,42,.10);
-      border-radius: 18px;
-      box-shadow: 0 18px 60px rgba(15,23,42,.22);
-      padding: 18px;
-    }
-    .paw-local-modal-head {
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding: 4px 6px 10px 6px;
-      border-bottom: 1px solid rgba(15,23,42,.08);
-      margin-bottom: 12px;
-    }
-    .paw-local-modal-title { font-size: 16px; font-weight: 800; color: rgba(15,23,42,.92); }
-    .paw-local-modal-x {
-      border: none; background: transparent; cursor: pointer;
-      width: 36px; height: 36px; border-radius: 10px;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .paw-local-modal-x:hover { background: rgba(15,23,42,.06); }
-    .paw-local-modal-body { padding: 8px 6px 4px 6px; }
-    .paw-local-modal-sub {
-      font-size: 14px;
-      color: rgba(15,23,42,.78);
-      line-height: 1.4;
-      margin-bottom: 12px;
-    }
-    .paw-local-modal-actions {
-      display:flex; justify-content:flex-end; gap:10px;
-      padding: 12px 6px 2px 6px;
-      border-top: 1px solid rgba(15,23,42,.08);
-      margin-top: 12px;
-      position: sticky; bottom: 0;
-      background: rgba(255,255,255,.96);
-    }
-  </style>
-
+  <!-- IMPORTANT: fully-qualified so embeds on proagentworks.com still load tool assets -->
   <script src="https://paw-tools.pages.dev/tool-shell.js"></script>
 
   <script>
     (function(){
       const TIPS_TEXT = `Use this to generate MLS-ready listing remarks. Add upgrades, finishes, neighborhood notes, HOA details, and any disclosures in the notes box for best results.`;
 
-      const $type = document.getElementById("type");
-      const $tone = document.getElementById("tone");
-      const $length = document.getElementById("length");
-      const $city = document.getElementById("city");
-      const $state = document.getElementById("state");
-      const $beds = document.getElementById("beds");
-      const $baths = document.getElementById("baths");
-      const $sqft = document.getElementById("sqft");
-      const $price = document.getElementById("price");
-      const $pool = document.getElementById("pool");
-      const $porch = document.getElementById("porch");
-      const $compelling = document.getElementById("compelling");
+      const $type = document.getElementById("typeSel");
+      const $tone = document.getElementById("toneSel");
+      const $length = document.getElementById("lenSel");
+      const $city = document.getElementById("cityInp");
+      const $state = document.getElementById("stateSel");
+      const $beds = document.getElementById("bedsSel");
+      const $baths = document.getElementById("bathsSel");
+      const $sqft = document.getElementById("sqftInp");
+      const $price = document.getElementById("priceInp");
+      const $pool = document.getElementById("poolSel");
+      const $porch = document.getElementById("porchSel");
+      const $compelling = document.getElementById("compellingInp");
 
       const $localModal = document.getElementById("localModal");
+      const $localModalTitle = document.getElementById("localModalTitle");
       const $localModalClose = document.getElementById("localModalClose");
       const $localModalSkip = document.getElementById("localModalSkip");
       const $localModalApply = document.getElementById("localModalApply");
@@ -269,7 +228,7 @@
       let pendingHighlightsOffer = false;
       let cachedHighlights = []; // {id,label}
 
-      // Prevent re-prompt loops: remember the last highlight list we showed for the current city/state.
+      // Prevent re-prompt loops: remember the last highlight list shown for the current city/state.
       let lastHighlightsKey = "";
       let lastCityStateKey = "";
 
@@ -298,27 +257,33 @@
           .replace(/'/g, "&#039;");
       }
 
-      function coerceHighlightLabel(it){
-        if (!it) return "";
-        if (typeof it === "string") return it.trim();
-        if (typeof it === "object") return String(it.label || it.name || it.title || "").trim();
-        return "";
-      }
-
-      function isBadHighlightLabel(label){
-        const t = String(label || "").toLowerCase();
-        if (!t) return true;
-        if (/\b(minutes?|mins?|mi|miles?|km)\b/i.test(t)) return true;
-        if (t.includes("json") || t.includes("{") || t.includes("}")) return true;
-        return false;
-      }
-
       function looksLikeDeliverableText(reply){
         const r = String(reply || "").trim();
         if (!r) return false;
         if ((r.match(/\?/g) || []).length >= 1) return false;
         if (/^(one|a couple|a few)\s+quick\s+(question|questions|clarifiers)\b/i.test(r)) return false;
         return r.length >= 240;
+      }
+
+      function coerceHighlightLabel(item){
+        if (item == null) return "";
+        if (typeof item === "string") return item.trim();
+        if (typeof item === "number") return String(item);
+        if (typeof item === "object") {
+          return String(item.label || item.name || item.title || item.text || item.value || "").trim();
+        }
+        return String(item).trim();
+      }
+
+      function isBadHighlightLabel(label){
+        const t = String(label || "").toLowerCase();
+        return (
+          !t ||
+          /\b(minutes?|mins?|mi|miles?|km)\b/i.test(t) ||
+          t.includes("json") ||
+          t.includes("{") ||
+          t.includes("}")
+        );
       }
 
       function openLocalModal(highlights){
@@ -328,18 +293,19 @@
         lastHighlightsKey = cachedHighlights.map(h => String(h.label || "").trim().toLowerCase()).join("|");
         lastCityStateKey = `${cityVal().toLowerCase()}|${stateVal().toLowerCase()}`;
 
-        // None selected by default
-        let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
+        $localModalTitle.textContent = "Possible nearby highlights (optional)";
+
+        let html = '<div class="modal-list">';
         cachedHighlights.forEach((h, idx) => {
           const id = `lh_pick_${idx}`;
           html += `
-            <label style="display:flex; align-items:flex-start; gap:10px; padding:12px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
-              <input id="${id}" type="checkbox" style="margin-top:2px;" />
-              <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">${escapeHtml(h.label)}</span>
+            <label class="modal-item">
+              <input id="${id}" type="checkbox" />
+              <span>${escapeHtml(h.label)}</span>
             </label>
           `;
         });
-        html += '</div>';
+        html += "</div>";
         $localModalListWrap.innerHTML = html;
 
         $localModal.classList.add("show");
@@ -374,27 +340,16 @@
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLocalModal(); });
       $localModalSkip.addEventListener("click", closeLocalModal);
 
-      $localModalApply.addEventListener("click", async () => {
-        const picked = getModalSelections();
-        closeLocalModal();
-        if (!picked.length) return;
-
-        const instruction =
-`Update the MLS description above.
-Only incorporate the selected nearby highlights if the agent confirms they are accurate and if they improve specificity.
-Replace generic filler lines first. Do not add fluff. Keep the overall length similar.
-
-Selected highlights:
-- ${picked.join("\n- ")}`;
-
-        // IMPORTANT: this call should NOT re-arm the modal offer.
-        await shell.sendExtra(instruction, { phase: "write", selected_highlights: picked }, { echoUser: true });
-      });
-
+      // Shared tool shell
       const shell = window.PAWToolShell.init({
         toolId: "listing_description_writer",
+        deliverableTitle: "Your MLS Description",
+        messagesId: "messages",
+        inputId: "input",
+        sendId: "send",
+        tipsId: "tips",
+        resetId: "reset",
         tipsText: TIPS_TEXT,
-        mountId: "toolMount",
 
         getPrefs: () => {
           return {
@@ -416,7 +371,6 @@ Selected highlights:
           };
         },
 
-        // Runs on every submit
         getExtraPayload: (text) => {
           const base = { city: cityVal(), state: stateVal(), location: locationVal() };
 
@@ -428,13 +382,12 @@ Selected highlights:
 
           // Normal user submit: arm the offer if we have city/state.
           // The modal is never blocking the initial generation.
-          // IMPORTANT: If this submit is the "apply selected highlights" instruction, do NOT arm again.
+          // IMPORTANT: if this submit is the “apply selected highlights” instruction, do NOT arm again.
           const t = String(text || "").trim();
           if (/^Update the MLS description above\./i.test(t) || /\bSelected highlights:\b/i.test(t)) {
             pendingHighlightsOffer = false;
             return base;
           }
-
           pendingHighlightsOffer = !!(base.city && base.state);
 
           return base;
@@ -453,12 +406,11 @@ Selected highlights:
           // Handle highlights response
           const highlightsRaw = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
           if (highlightsRaw && highlightsRaw.length) {
-            const currentCityStateKey = `${cityVal().toLowerCase()}|${stateVal().toLowerCase()}`;
-
             const normalized = highlightsRaw
-              .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)), label: coerceHighlightLabel(it) }))
+              .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i + 1)), label: coerceHighlightLabel(it) }))
               .filter(x => x.label && !isBadHighlightLabel(x.label));
 
+            const currentCityStateKey = `${cityVal().toLowerCase()}|${stateVal().toLowerCase()}`;
             const newKey = normalized.map(h => String(h.label || "").trim().toLowerCase()).join("|");
 
             // If we've already shown this exact list for this city/state, don't prompt again.
@@ -480,12 +432,24 @@ Selected highlights:
         }
       });
 
-      // Tips
-      document.getElementById("tips").addEventListener("click", () => {
-        try { shell.showTips(); } catch {}
+      // Apply selected highlights: send rewrite without re-triggering modal
+      $localModalApply.addEventListener("click", async () => {
+        const picked = getModalSelections();
+        closeLocalModal();
+        if (!picked.length) return;
+
+        const instruction =
+`Update the MLS description above.
+Only incorporate the selected nearby highlights if the agent confirms they are accurate and if they improve specificity.
+Replace generic filler lines first. Do not add fluff. Keep the overall length similar.
+
+Selected highlights:
+- ${picked.join("\n- ")}`;
+
+        await shell.sendExtra(instruction, { phase: "write", selected_highlights: picked }, { echoUser: true });
       });
 
-      // Reset
+      // Reset: clear modal state memory
       document.getElementById("reset").addEventListener("click", () => {
         pendingHighlightsOffer = false;
         cachedHighlights = [];
