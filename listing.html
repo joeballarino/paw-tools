@@ -4,8 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Listing Description Writer</title>
-
-  <!-- IMPORTANT: fully-qualified so embeds on proagentworks.com still load tool assets -->
   <link rel="stylesheet" href="https://paw-tools.pages.dev/paw-ui.css">
 
   <!--
@@ -196,11 +194,11 @@
     </div>
   </div>
 
-  <!-- IMPORTANT: fully-qualified so embeds on proagentworks.com still load tool assets -->
   <script src="https://paw-tools.pages.dev/tool-shell.js"></script>
 
   <script>
-    (function(){
+    (function () {
+      const API_ENDPOINT = "https://paw-tools-worker.<your-domain>.workers.dev";
       const TIPS_TEXT = `Use this to generate MLS-ready listing remarks. Add upgrades, finishes, neighborhood notes, HOA details, and any disclosures in the notes box for best results.`;
 
       const $type = document.getElementById("typeSel");
@@ -217,7 +215,6 @@
       const $compelling = document.getElementById("compellingInp");
 
       const $localModal = document.getElementById("localModal");
-      const $localModalTitle = document.getElementById("localModalTitle");
       const $localModalClose = document.getElementById("localModalClose");
       const $localModalSkip = document.getElementById("localModalSkip");
       const $localModalApply = document.getElementById("localModalApply");
@@ -293,8 +290,7 @@
         lastHighlightsKey = cachedHighlights.map(h => String(h.label || "").trim().toLowerCase()).join("|");
         lastCityStateKey = `${cityVal().toLowerCase()}|${stateVal().toLowerCase()}`;
 
-        $localModalTitle.textContent = "Possible nearby highlights (optional)";
-
+        // None selected by default
         let html = '<div class="modal-list">';
         cachedHighlights.forEach((h, idx) => {
           const id = `lh_pick_${idx}`;
@@ -305,7 +301,7 @@
             </label>
           `;
         });
-        html += "</div>";
+        html += '</div>';
         $localModalListWrap.innerHTML = html;
 
         $localModal.classList.add("show");
@@ -340,36 +336,51 @@
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLocalModal(); });
       $localModalSkip.addEventListener("click", closeLocalModal);
 
-      // Shared tool shell
+      $localModalApply.addEventListener("click", async () => {
+        const picked = getModalSelections();
+        closeLocalModal();
+        if (!picked.length) return;
+
+        const instruction =
+`Update the MLS description above.
+Only incorporate the selected nearby highlights if the agent confirms they are accurate and if they improve specificity.
+Replace generic filler lines first. Do not add fluff. Keep the overall length similar.
+
+Selected highlights:
+- ${picked.join("\n- ")}`;
+
+        await shell.sendExtra(instruction, { phase: "write", selected_highlights: picked }, { echoUser: true });
+      });
+
       const shell = window.PAWToolShell.init({
+        apiEndpoint: API_ENDPOINT,
         toolId: "listing_description_writer",
+        tipsText: TIPS_TEXT,
         deliverableTitle: "Your MLS Description",
+
         messagesId: "messages",
         inputId: "input",
         sendId: "send",
         tipsId: "tips",
         resetId: "reset",
-        tipsText: TIPS_TEXT,
 
-        getPrefs: () => {
-          return {
-            listing_type: mapType($type.value),
-            tone: mapTone($tone.value),
-            length: mapLen($length.value),
-            city: cityVal(),
-            state: stateVal(),
-            location: locationVal(),
-            compelling_feature: normText($compelling.value),
-            locked: {
-              beds: normEnum($beds.value),
-              baths: normEnum($baths.value),
-              sqft: digitsOnly($sqft.value),
-              price: digitsOnly($price.value),
-              pool: normEnum($pool.value),
-              porch: normEnum($porch.value),
-            }
-          };
-        },
+        getPrefs: () => ({
+          listing_type: mapType($type.value),
+          tone: mapTone($tone.value),
+          length: mapLen($length.value),
+          city: cityVal(),
+          state: stateVal(),
+          location: locationVal(),
+          compelling_feature: normText($compelling.value),
+          locked: {
+            beds: normEnum($beds.value),
+            baths: normEnum($baths.value),
+            sqft: digitsOnly($sqft.value),
+            price: digitsOnly($price.value),
+            pool: normEnum($pool.value),
+            porch: normEnum($porch.value),
+          }
+        }),
 
         getExtraPayload: (text) => {
           const base = { city: cityVal(), state: stateVal(), location: locationVal() };
@@ -388,8 +399,8 @@
             pendingHighlightsOffer = false;
             return base;
           }
-          pendingHighlightsOffer = !!(base.city && base.state);
 
+          pendingHighlightsOffer = !!(base.city && base.state);
           return base;
         },
 
@@ -432,24 +443,7 @@
         }
       });
 
-      // Apply selected highlights: send rewrite without re-triggering modal
-      $localModalApply.addEventListener("click", async () => {
-        const picked = getModalSelections();
-        closeLocalModal();
-        if (!picked.length) return;
-
-        const instruction =
-`Update the MLS description above.
-Only incorporate the selected nearby highlights if the agent confirms they are accurate and if they improve specificity.
-Replace generic filler lines first. Do not add fluff. Keep the overall length similar.
-
-Selected highlights:
-- ${picked.join("\n- ")}`;
-
-        await shell.sendExtra(instruction, { phase: "write", selected_highlights: picked }, { echoUser: true });
-      });
-
-      // Reset: clear modal state memory
+      // Reset
       document.getElementById("reset").addEventListener("click", () => {
         pendingHighlightsOffer = false;
         cachedHighlights = [];
