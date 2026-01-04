@@ -1,32 +1,20 @@
-/* ==========================================================================
-   PAW Tool Shell (shared)
-   --------------------------------------------------------------------------
-   Purpose:
-   - Provide consistent “app-like” behavior for all public tool pages.
-   - Keep tool pages focused on UI only.
-   - All AI prompting + protected configuration lives in the private Worker.
-
-   Required DOM IDs on each tool page:
-     #messages  (container)
-     #input     (textarea)
-     #send      (button)
-     #reset     (button)
-     #tips      (button, optional but recommended)
-
-   Embed mode:
-   - Circle embeds often create “double containers”.
-   - paw-ui.css supports embed styling via: html[data-embed="1"]
-   - This shell sets that attribute automatically when in an iframe.
-   - Force embed mode with: ?embed=1
-
-   IMPORTANT UX GUARANTEE:
-   - The composer is cleared immediately after submit so typed text never “sticks”
-     (this prevents the “hello doesn’t go away” regression permanently).
-   ========================================================================== */
+/* ProAgent Works Tool Shell
+ * Shared frontend logic for all tools.
+ *
+ * HARD CONTRACT (standard for tools):
+ * - DOM: #messages, #input, #send, #reset, #tips
+ * - API: window.PAWToolShell.init(config) -> returns { sendMessage, sendExtra, reset }
+ *
+ * Backward/forward compatibility:
+ * - Also supports #prompt + #submitBtn + #toolForm if a future tool uses those IDs.
+ *
+ * IMPORTANT:
+ * - Do NOT put prompting logic here — Worker only.
+ * - Tool pages provide hooks: getPrefs, getExtraPayload, onResponse.
+ * - listing.html relies on sendExtra() also flowing through getExtraPayload() for highlights.
+ */
 
 (function () {
-  function $(id) { return document.getElementById(id); }
-
   function escapeHtml(str) {
     return String(str || "")
       .replaceAll("&", "&amp;")
@@ -36,18 +24,24 @@
       .replaceAll("'", "&#39;");
   }
 
-  function appendMessage(messagesEl, role, text) {
+  function appendMessage($messages, role, text) {
     const wrap = document.createElement("div");
     wrap.className = "msg " + (role === "user" ? "user" : "ai");
     const bubble = document.createElement("div");
     bubble.className = "bubble";
     bubble.innerHTML = escapeHtml(text).replace(/\n/g, "<br>");
     wrap.appendChild(bubble);
-    messagesEl.appendChild(wrap);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    $messages.appendChild(wrap);
+    $messages.scrollTop = $messages.scrollHeight;
   }
 
-  function appendThinking(messagesEl) {
+  function removeNode(node) {
+    try {
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+    } catch (e) {}
+  }
+
+  function appendThinking($messages) {
     const wrap = document.createElement("div");
     wrap.className = "msg ai paw-thinking";
     const bubble = document.createElement("div");
@@ -58,83 +52,169 @@
     dots.innerHTML = '<span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span>';
     bubble.appendChild(dots);
     wrap.appendChild(bubble);
-    messagesEl.appendChild(wrap);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    $messages.appendChild(wrap);
+    $messages.scrollTop = $messages.scrollHeight;
     return wrap;
   }
 
-  function removeNode(node) {
-    try { node && node.parentNode && node.parentNode.removeChild(node); } catch (e) {}
+  function getEl(id) {
+    return document.getElementById(id);
   }
 
-  function getAuthToken() {
-    // Optional: allow a meta tag if you ever add lightweight auth.
-    const el = document.querySelector('meta[name="paw-token"]');
-    const t = el && el.getAttribute("content");
-    return t ? String(t) : "";
+  function pickFirst(...els) {
+    for (const el of els) {
+      if (el) return el;
+    }
+    return null;
+  }
+
+  function getCSRFTokenFromMeta() {
+    try {
+      const el = document.querySelector('meta[name="paw-csrf-token"]');
+      const token = el && el.getAttribute("content");
+      return token ? String(token) : "";
+    } catch (e) {
+      return "";
+    }
   }
 
   async function postJSON(url, payload, token) {
     const headers = { "Content-Type": "application/json" };
     if (token) headers.Authorization = "Bearer " + token;
 
-    const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(payload) });
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
     const text = await res.text();
     let data = null;
-    try { data = JSON.parse(text); } catch (e) { data = { reply: text }; }
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      data = { reply: text };
+    }
 
     if (!res.ok) {
-      const msg = (data && (data.error || data.message)) || ("Request failed (" + res.status + ")");
+      const msg =
+        (data && (data.error || data.message)) ||
+        "Request failed (" + res.status + ")";
       throw new Error(msg);
     }
+
     return data;
   }
 
-  function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
 
-  function detectEmbed(config) {
-    if (typeof config.embedMode === "boolean") return config.embedMode;
-
-    try {
-      const qs = new URLSearchParams(window.location.search || "");
-      const q = (qs.get("embed") || "").toLowerCase();
-      if (q === "1" || q === "true" || q === "yes") return true;
-    } catch (e) {}
-
-    try { return window.self !== window.top; } catch (e) { return true; }
+  function buildPayloadBase(toolId, history, prefs, extra) {
+    const payload = {
+      toolId,
+      history,
+      prefs,
+    };
+    if (extra && typeof extra === "object") payload.extra = extra;
+    return payload;
   }
 
   window.PAWToolShell = {
     init: function (config) {
       config = config || {};
 
-      // Embed mode: removes “double boxes” inside Circle embeds.
-      try {
-        if (detectEmbed(config)) document.documentElement.setAttribute("data-embed", "1");
-        else document.documentElement.removeAttribute("data-embed");
-      } catch (e) {}
+      // -------------------------------------------------
+      // Embed mode (Circle / iframe-safe)
+      // -------------------------------------------------
+      // WHY THIS LIVES HERE (shared shell):
+      // - Tool pages always include the same outer wrappers: .app > .frame > .panel.
+      // - In Circle (and other embeds), the host already provides padding/containers.
+      // - When both host + tool apply borders/shadows/padding, you see "double boxes".
+      //
+      // Contract:
+      // - paw-ui.css has an embed-only ruleset keyed off: html[data-embed="1"] ...
+      // - This shell is responsible for setting that attribute deterministically so
+      //   embeds stay clean and this bug doesn't keep coming back.
+      //
+      // Override:
+      // - Append ?embed=1 to force embed styling
+      // - Or pass { embedMode: true/false } in init(config)
+      (function setEmbedMode() {
+        let forced = null;
+        if (typeof config.embedMode === "boolean") forced = config.embedMode;
+
+        let isEmbed = false;
+        if (forced !== null) {
+          isEmbed = forced;
+        } else {
+          try {
+            const qs = new URLSearchParams(window.location.search || "");
+            const q = (qs.get("embed") || "").toLowerCase();
+            if (q === "1" || q === "true" || q === "yes") isEmbed = true;
+
+            // Auto-detect iframe embedding (Circle, etc.)
+            if (!isEmbed) {
+              try {
+                isEmbed = window.self !== window.top;
+              } catch (e) {
+                isEmbed = true;
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (isEmbed) {
+          try {
+            document.documentElement.setAttribute("data-embed", "1");
+          } catch (e) {}
+        } else {
+          // Allow tools site to remain styled normally.
+          try {
+            document.documentElement.removeAttribute("data-embed");
+          } catch (e) {}
+        }
+      })();
 
       const toolId = String(config.toolId || "");
-      const apiEndpoint = String(config.apiEndpoint || "").replace(/\/+$/, "");
+      const apiEndpoint = String(config.apiEndpoint || "");
       const sendHistoryItems = clamp(Number(config.sendHistoryItems || 10), 0, 50);
       const maxHistoryItems = clamp(Number(config.maxHistoryItems || 20), 0, 100);
 
-      const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : null;
-      const getExtraPayload = typeof config.getExtraPayload === "function" ? config.getExtraPayload : null;
-      const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
+      const getPrefs =
+        typeof config.getPrefs === "function" ? config.getPrefs : null;
+      const getExtraPayload =
+        typeof config.getExtraPayload === "function" ? config.getExtraPayload : null;
+      const onResponse =
+        typeof config.onResponse === "function" ? config.onResponse : null;
 
       const enableDisclaimer = !!config.enableDisclaimer;
-      const disclaimerTrigger = config.disclaimerTrigger instanceof RegExp ? config.disclaimerTrigger : null;
-      const getDisclaimerText = typeof config.getDisclaimerText === "function" ? config.getDisclaimerText : () => "";
+      const disclaimerTrigger =
+        config.disclaimerTrigger instanceof RegExp ? config.disclaimerTrigger : null;
+      const getDisclaimerText =
+        typeof config.getDisclaimerText === "function" ? config.getDisclaimerText : () => "";
 
-      const messagesEl = $("messages");
-      const inputEl = $("input");
-      const sendBtn = $("send");
-      const resetBtn = $("reset");
-      const tipsBtn = $("tips");
+      const deliverableMode = !!config.deliverableMode;
 
-      if (!messagesEl || !inputEl || !sendBtn) {
-        console.warn("[PAWToolShell] Missing required DOM IDs: #messages, #input, #send");
+      // Standard IDs
+      const $messages = getEl("messages");
+      const $input = getEl("input");
+      const $send = getEl("send");
+      const $reset = getEl("reset");
+      const $tips = getEl("tips");
+
+      // Backward/forward compat IDs (optional)
+      const $prompt = getEl("prompt");
+      const $submitBtn = getEl("submitBtn");
+      const $form = pickFirst(getEl("toolForm"), document.querySelector("form"));
+
+      const inputEl = pickFirst($input, $prompt);
+      const sendBtnEl = pickFirst($send, $submitBtn);
+
+      if (!$messages || !inputEl || !sendBtnEl) {
+        console.warn(
+          "[PAWToolShell] Missing required DOM elements. Need #messages + #input/#prompt + #send/#submitBtn."
+        );
       }
 
       const history = [];
@@ -146,64 +226,80 @@
         while (history.length > maxHistoryItems) history.shift();
       }
 
-      function historyForSend() {
+      function getHistoryForSend() {
         if (sendHistoryItems <= 0) return [];
         return history.slice(-sendHistoryItems);
       }
 
-      function clearComposer(keepFocus = true) {
+      function setPlaceholder(txt) {
+        try {
+          inputEl.setAttribute("placeholder", txt || "");
+        } catch (e) {}
+      }
+
+      if (typeof config.inputPlaceholder === "string" && config.inputPlaceholder) {
+        setPlaceholder(config.inputPlaceholder);
+      }
+
+      function clearComposer({ keepFocus = true } = {}) {
         try {
           inputEl.value = "";
+          // Keep composer height sane if a tool adds autosize behavior.
           inputEl.style.height = "";
           if (keepFocus) inputEl.focus();
         } catch (e) {}
       }
 
-      function maybeShowDisclaimerOnce() {
-        if (!enableDisclaimer || disclaimerShown) return;
-        const text = getDisclaimerText();
-        if (!text) return;
-        appendMessage(messagesEl, "ai", text);
+      function maybeAppendDisclaimerOnce() {
+        if (!enableDisclaimer) return;
+        if (disclaimerShown) return;
+        const disclaimer = getDisclaimerText();
+        if (!disclaimer) return;
+        appendMessage($messages, "ai", disclaimer);
         disclaimerShown = true;
       }
 
-      async function callWorker(payload) {
-        const token = getAuthToken();
-        const url = apiEndpoint + "/api";
+      async function postToWorker(payload) {
+        const token = getCSRFTokenFromMeta();
+        const url = apiEndpoint.replace(/\/+$/, "") + "/api";
         return await postJSON(url, payload, token);
       }
 
       async function sendMessage(text) {
         const trimmed = String(text || "").trim();
-        if (!trimmed || isSending) return;
+        if (!trimmed) return;
+        if (isSending) return;
+
         if (!apiEndpoint) {
-          appendMessage(messagesEl, "ai", "Missing API endpoint configuration.");
+          appendMessage($messages, "ai", "Missing API endpoint configuration.");
           return;
         }
 
         isSending = true;
-        let thinking = null;
+        let thinkingNode = null;
 
         try {
-          appendMessage(messagesEl, "user", trimmed);
+          appendMessage($messages, "user", trimmed);
           pushHistory("user", trimmed);
 
-          // IMPORTANT UX FIX (prevents “hello sticks” forever):
-          clearComposer(true);
+          // UX: clear input immediately after a successful submit so messages don't stick.
+          clearComposer({ keepFocus: true });
 
+          // Optional: show disclaimer if they trigger certain keywords in the ask tool
           if (enableDisclaimer && disclaimerTrigger && disclaimerTrigger.test(trimmed)) {
-            maybeShowDisclaimerOnce();
+            maybeAppendDisclaimerOnce();
           }
 
-          thinking = appendThinking(messagesEl);
+          thinkingNode = appendThinking($messages);
 
           const prefs = getPrefs ? getPrefs() : {};
-          const extra = getExtraPayload ? (getExtraPayload(trimmed) || {}) : {};
-          const payload = { toolId, history: historyForSend(), prefs, extra };
+          const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
 
-          const data = await callWorker(payload);
+          const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, extraPayload);
 
-          removeNode(thinking);
+          const data = await postToWorker(payload);
+
+          removeNode(thinkingNode);
 
           if (onResponse) {
             try {
@@ -214,48 +310,52 @@
 
           const reply = data && typeof data.reply === "string" ? data.reply : "";
           if (reply) {
-            appendMessage(messagesEl, "ai", reply);
+            appendMessage($messages, "ai", reply);
             pushHistory("assistant", reply);
-            maybeShowDisclaimerOnce();
+            maybeAppendDisclaimerOnce();
           }
         } catch (err) {
-          removeNode(thinking);
-          appendMessage(messagesEl, "ai", "Something went wrong. Please try again.");
+          removeNode(thinkingNode);
+          appendMessage($messages, "ai", "Something went wrong. Please try again.");
           console.error("[PAWToolShell] sendMessage error:", err);
         } finally {
           isSending = false;
         }
       }
 
-      async function sendExtra(instruction, extraPayload, options) {
-        options = options || {};
+      async function sendExtra(instruction, extraPayload = {}, options = {}) {
+        if (isSending) return;
+
         const msg = String(instruction || "").trim();
-        if (!msg || isSending) return;
+        if (!msg) return;
 
         if (!apiEndpoint) {
-          appendMessage(messagesEl, "ai", "Missing API endpoint configuration.");
+          appendMessage($messages, "ai", "Missing API endpoint configuration.");
           return;
         }
 
+        const echoUser = options.echoUser !== false;
+
         isSending = true;
-        let thinking = null;
+        let thinkingNode = null;
 
         try {
-          if (options.echoUser !== false) {
-            appendMessage(messagesEl, "user", msg);
+          if (echoUser) {
+            appendMessage($messages, "user", msg);
             pushHistory("user", msg);
           }
 
-          thinking = appendThinking(messagesEl);
+          thinkingNode = appendThinking($messages);
 
           const prefs = getPrefs ? getPrefs() : {};
-          const baseExtra = getExtraPayload ? (getExtraPayload(msg) || {}) : {};
-          const mergedExtra = Object.assign({}, baseExtra, extraPayload || {});
-          const payload = { toolId, history: historyForSend(), prefs, extra: mergedExtra };
+          // IMPORTANT: sendExtra MUST still flow through getExtraPayload() (listing highlights relies on it)
+          const extraFromHook = getExtraPayload ? getExtraPayload(msg) : {};
+          const mergedExtra = Object.assign({}, extraFromHook || {}, extraPayload || {});
+          const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, mergedExtra);
 
-          const data = await callWorker(payload);
+          const data = await postToWorker(payload);
 
-          removeNode(thinking);
+          removeNode(thinkingNode);
 
           if (onResponse) {
             try {
@@ -266,15 +366,15 @@
 
           const reply = data && typeof data.reply === "string" ? data.reply : "";
           if (reply) {
-            appendMessage(messagesEl, "ai", reply);
+            appendMessage($messages, "ai", reply);
             pushHistory("assistant", reply);
-            maybeShowDisclaimerOnce();
+            maybeAppendDisclaimerOnce();
           }
 
           return data;
         } catch (err) {
-          removeNode(thinking);
-          appendMessage(messagesEl, "ai", "Something went wrong. Please try again.");
+          removeNode(thinkingNode);
+          appendMessage($messages, "ai", "Something went wrong. Please try again.");
           console.error("[PAWToolShell] sendExtra error:", err);
         } finally {
           isSending = false;
@@ -282,14 +382,35 @@
       }
 
       function reset() {
-        try { messagesEl.innerHTML = ""; } catch (e) {}
+        try {
+          $messages.innerHTML = "";
+        } catch (e) {}
+
         history.length = 0;
+        clearComposer({ keepFocus: true });
         disclaimerShown = false;
-        clearComposer(true);
       }
 
-      // Wire events
-      sendBtn.addEventListener("click", function () { sendMessage(inputEl.value); });
+      // -----------------------------
+      // Wire UI events (standard)
+      // -----------------------------
+      sendBtnEl.addEventListener("click", function () {
+        sendMessage(inputEl.value);
+      });
+
+      // Optional: tools may include a <form>; prevent default submit
+      if ($form) {
+        $form.addEventListener("submit", function (e) {
+          try {
+            e.preventDefault();
+          } catch (x) {}
+          sendMessage(inputEl.value);
+        });
+      }
+
+      // Enter behavior:
+      // - Enter sends
+      // - Shift+Enter inserts newline
       inputEl.addEventListener("keydown", function (e) {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
@@ -297,13 +418,23 @@
         }
       });
 
-      if (resetBtn) resetBtn.addEventListener("click", reset);
-
-      if (tipsBtn && typeof config.tipsText === "string") {
-        tipsBtn.addEventListener("click", function () { alert(config.tipsText); });
+      if ($reset) {
+        $reset.addEventListener("click", function () {
+          reset();
+        });
       }
 
-      return { sendMessage, sendExtra, reset };
-    }
+      if ($tips && typeof config.tipsText === "string") {
+        $tips.addEventListener("click", function () {
+          alert(config.tipsText);
+        });
+      }
+
+      return {
+        sendMessage,
+        sendExtra,
+        reset,
+      };
+    },
   };
 })();

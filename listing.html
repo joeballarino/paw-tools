@@ -3,28 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Listing Writer</title>
-
-  <!--
-    PAW Tool Page: Listing Writer (MLS Remarks)
-
-    Goal:
-    - Produce MLS-ready remarks quickly, with optional revision and neighborhood highlights (POIs).
-
-    Architecture:
-    - UI only (this file + paw-ui.css)
-    - Shared chat + API wiring (tool-shell.js)
-    - Prompting + compliance logic lives ONLY in the private Worker.
-
-    Required IDs (tool-shell.js):
-      #messages, #input, #send, #reset, #tips
-
-    Listing-specific behaviors implemented here (frontend-only):
-    - Copy last generated remarks
-    - Revise last generated remarks (calls sendExtra with a revision instruction)
-    - Neighborhood Highlights modal (structured POIs) that can be applied to regenerate remarks
-  -->
+  <title>Listing Description Writer</title>
   <link rel="stylesheet" href="/paw-ui.css">
+  <!--
+    HEADER CONTRACT (LOCKED):
+    - The panel top bar (.topbar-row0) MUST NEVER include a title.
+    - It only contains: subtitle (left) + Reset/Tips buttons (right).
+  -->
 </head>
 
 <body>
@@ -33,126 +18,148 @@
       <div class="panel">
 
         <div class="panel-topbar">
+
           <div class="topbar-row0">
-            <div class="tool-head">
-              <div class="tool-title">Listing Writer</div>
-              <div class="tool-subtitle">MLS-ready remarks that sound professional and stay accurate.</div>
-            </div>
+            <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
 
             <div class="topbar-right">
-              <div class="utility-pair" role="group" aria-label="Tool utilities">
-                <button id="reset" class="util-btn" type="button">Reset</button>
-                <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
-              </div>
+              <button id="reset" class="util-btn" type="button">Reset</button>
+              <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
             </div>
           </div>
-        </div>
 
-        <!-- Listing inputs (kept simple; structured data improves output without “prompting”) -->
-        <div class="form-grid" aria-label="Listing details">
-          <div class="field span-6">
-            <div class="label">City</div>
-            <input id="cityInp" type="text" inputmode="text" autocomplete="address-level2" placeholder="e.g., Tampa" />
-          </div>
-          <div class="field span-6">
-            <div class="label">State</div>
-            <select id="stateSel" aria-label="State">
-              <option value="">Select…</option>
-              <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option><option value="AR">AR</option>
-              <option value="CA">CA</option><option value="CO">CO</option><option value="CT">CT</option><option value="DE">DE</option>
-              <option value="FL">FL</option><option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option>
-              <option value="IL">IL</option><option value="IN">IN</option><option value="IA">IA</option><option value="KS">KS</option>
-              <option value="KY">KY</option><option value="LA">LA</option><option value="ME">ME</option><option value="MD">MD</option>
-              <option value="MA">MA</option><option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
-              <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option><option value="NV">NV</option>
-              <option value="NH">NH</option><option value="NJ">NJ</option><option value="NM">NM</option><option value="NY">NY</option>
-              <option value="NC">NC</option><option value="ND">ND</option><option value="OH">OH</option><option value="OK">OK</option>
-              <option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option><option value="SC">SC</option>
-              <option value="SD">SD</option><option value="TN">TN</option><option value="TX">TX</option><option value="UT">UT</option>
-              <option value="VT">VT</option><option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option>
-              <option value="WI">WI</option><option value="WY">WY</option>
-            </select>
-          </div>
+          <div class="controls-row">
+            <div class="ctl">
+              <label for="typeSel">Type</label>
+              <span class="select-wrap">
+                <select id="typeSel">
+                  <option value="" selected>Choose…</option>
+                  <option value="general">General</option>
+                  <option value="starter">Starter</option>
+                  <option value="moveup">Move-Up</option>
+                  <option value="luxury">Luxury</option>
+                  <option value="investor">Investor</option>
+                  <option value="relocation">Relocation</option>
+                </select>
+              </span>
+            </div>
 
-          <div class="field span-4">
-            <div class="label">Price</div>
-            <input id="priceInp" type="text" inputmode="numeric" placeholder="e.g., 525000" />
-          </div>
-          <div class="field span-4">
-            <div class="label">Beds</div>
-            <select id="bedsSel">
-              <option value="">—</option>
-              <option>1</option><option>2</option><option>3</option><option>4</option><option>5+</option>
-            </select>
-          </div>
-          <div class="field span-4">
-            <div class="label">Baths</div>
-            <select id="bathsSel">
-              <option value="">—</option>
-              <option>1</option><option>1.5</option><option>2</option><option>2.5</option><option>3+</option>
-            </select>
-          </div>
+            <div class="ctl">
+              <label for="toneSel">Tone</label>
+              <span class="select-wrap">
+                <select id="toneSel">
+                  <option value="" selected>Choose…</option>
+                  <option value="general">General</option>
+                  <option value="professional">Professional</option>
+                  <option value="warm">Warm</option>
+                  <option value="elevated">Elevated</option>
+                </select>
+              </span>
+            </div>
 
-          <div class="field span-4">
-            <div class="label">Sq Ft</div>
-            <input id="sqftInp" type="text" inputmode="numeric" placeholder="e.g., 2140" />
-          </div>
-          <div class="field span-4">
-            <div class="label">Property Type</div>
-            <select id="typeSel">
-              <option value="">Select…</option>
-              <option value="Single Family">Single Family</option>
-              <option value="Condo">Condo</option>
-              <option value="Townhome">Townhome</option>
-              <option value="Multi-Family">Multi-Family</option>
-              <option value="Land">Land</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-          <div class="field span-4">
-            <div class="label">Tone</div>
-            <select id="toneSel">
-              <option value="Professional">Professional</option>
-              <option value="Warm">Warm</option>
-              <option value="Luxury">Luxury</option>
-              <option value="Punchy">Punchy</option>
-            </select>
+            <div class="ctl">
+              <label for="lenSel">Length</label>
+              <span class="select-wrap">
+                <select id="lenSel">
+                  <option value="" selected>Choose…</option>
+                  <option value="standard">Standard</option>
+                  <option value="short">Short</option>
+                  <option value="long">Long</option>
+                </select>
+              </span>
+            </div>
+
+            <div class="ctl">
+              <label for="cityInp">City</label>
+              <span class="input-wrap md">
+                <input id="cityInp" type="text" placeholder="City" autocomplete="address-level2" />
+              </span>
+            </div>
+
+            <div class="ctl">
+              <label for="stateSel">State</label>
+              <span class="select-wrap sm">
+                <select id="stateSel" autocomplete="address-level1">
+                  <option value="" selected>ST</option>
+                  <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option><option value="AR">AR</option><option value="CA">CA</option>
+                  <option value="CO">CO</option><option value="CT">CT</option><option value="DE">DE</option><option value="DC">DC</option><option value="FL">FL</option>
+                  <option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option><option value="IL">IL</option><option value="IN">IN</option>
+                  <option value="IA">IA</option><option value="KS">KS</option><option value="KY">KY</option><option value="LA">LA</option><option value="ME">ME</option>
+                  <option value="MD">MD</option><option value="MA">MA</option><option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
+                  <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option><option value="NV">NV</option><option value="NH">NH</option>
+                  <option value="NJ">NJ</option><option value="NM">NM</option><option value="NY">NY</option><option value="NC">NC</option><option value="ND">ND</option>
+                  <option value="OH">OH</option><option value="OK">OK</option><option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option>
+                  <option value="SC">SC</option><option value="SD">SD</option><option value="TN">TN</option><option value="TX">TX</option><option value="UT">UT</option>
+                  <option value="VT">VT</option><option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option><option value="WI">WI</option>
+                  <option value="WY">WY</option>
+                </select>
+              </span>
+            </div>
           </div>
 
-          <div class="field span-6">
-            <div class="label">Length</div>
-            <select id="lenSel">
-              <option value="Standard">Standard</option>
-              <option value="Short">Short</option>
-              <option value="Long">Long</option>
-            </select>
-            <div class="small-note">If your MLS has strict character limits, choose Short.</div>
-          </div>
+          <div class="topbar-row2">
 
-          <div class="field span-6">
-            <div class="label">What makes this listing compelling?</div>
-            <input id="compellingInp" type="text" placeholder="e.g., updated kitchen, big backyard, walkable to dining" />
-            <div class="small-note">Optional — helps the tool lead with the strongest hooks.</div>
-          </div>
-        </div>
+            <div class="lock-grid">
+              <div class="field">
+                <label for="bedsSel">Beds</label>
+                <select id="bedsSel">
+                  <option value="" selected>—</option>
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5+">5+</option>
+                </select>
+              </div>
 
-        <!-- Primary actions that make this tool feel like a tool (not generic chat) -->
-        <div class="actions-row" aria-label="Listing actions">
-          <div class="actions-left">
-            <button id="openPoisBtn" class="btn" type="button">Neighborhood highlights</button>
-            <span class="pill" id="poisPill" style="display:none;"></span>
-          </div>
-          <div class="actions-right">
-            <button id="copyBtn" class="btn" type="button" disabled>Copy remarks</button>
-            <button id="reviseBtn" class="btn" type="button" disabled>Revise</button>
+              <div class="field">
+                <label for="bathsSel">Baths</label>
+                <select id="bathsSel">
+                  <option value="" selected>—</option>
+                  <option value="1">1</option><option value="1.5">1.5</option><option value="2">2</option><option value="2.5">2.5</option><option value="3+">3+</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="sqftInp">Sqft</label>
+                <input id="sqftInp" type="text" inputmode="numeric" placeholder="e.g. 1800" />
+              </div>
+
+              <div class="field">
+                <label for="priceInp">Price</label>
+                <input id="priceInp" type="text" placeholder="for context only" />
+              </div>
+
+              <div class="field">
+                <label for="poolSel">Pool</label>
+                <select id="poolSel">
+                  <option value="" selected>—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="porchSel">Porch</label>
+                <select id="porchSel">
+                  <option value="" selected>—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="lock-row2">
+              <label class="field" style="width:100%;">
+                <div class="field-label" style="font-size:12px; font-weight:700; color:rgba(15,23,42,.82); margin-bottom:8px; letter-spacing:-0.01em;">Most Compelling Feature</div>
+                <input id="compellingInp" class="big-input" type="text" placeholder="Location, design, lifestyle, value, etc." />
+              </label>
+            </div>
+
           </div>
         </div>
 
         <div id="messages" class="messages"></div>
 
         <div class="composer">
-          <textarea id="input" placeholder="Paste notes/MLS data or add upgrades, finishes, and must-mention details… messy is fine."></textarea>
-          <button id="send" class="send" aria-label="Generate remarks" type="button">
+          <textarea id="input" placeholder="Add upgrades, finishes, neighborhood notes, disclosures, HOA details, or paste listing data here"></textarea>
+          <button id="send" class="send" aria-label="Send" type="button">
             <svg viewBox="0 0 24 24" fill="none">
               <path d="M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8L6.4 13.4 5 12l7-7z" fill="currentColor"/>
             </svg>
@@ -163,24 +170,23 @@
     </div>
   </div>
 
-  <!-- Neighborhood Highlights (POIs) Modal -->
+  <!-- Local Highlights Modal -->
   <div id="localModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="localModalTitle">
       <div class="modal-head">
         <div id="localModalTitle" class="modal-title">Neighborhood Highlights</div>
         <button class="modal-close" id="localModalClose" aria-label="Close" type="button">✕</button>
       </div>
-
       <div class="modal-body">
         <div style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45; margin-bottom:10px;">
-          Choose what fits this listing. We’ll only include what you select.
+          Here are some common neighborhood highlights. Choose what fits this listing, or add your own.
+          <b>Nothing is added unless you choose it.</b>
         </div>
-
         <div id="localModalListWrap"></div>
 
         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
           <button id="localModalSkip" class="btn" type="button">Keep as-is</button>
-          <button id="localModalApply" class="btn primary" type="button">Update remarks</button>
+          <button id="localModalApply" class="btn primary" type="button">Update description</button>
         </div>
       </div>
     </div>
@@ -197,193 +203,364 @@
 • Generates MLS-ready listing remarks that are accurate, motivating, and Fair Housing–safe.
 
 How to use it
-• Fill what you can above (city/state helps)
-• Paste any notes/MLS data into the big box — messy is fine
-• Click “Neighborhood highlights” to add POIs without rewriting everything
+• Add any details above and/or paste notes/MLS data — messy is fine
+• Include city & state when you can (helps local context)
+• If something is unknown, leave it blank (or type “unknown”) and the tool will write conservatively
+• You can always refine the output after it generates`;
 
-Pro tip
-• After generating, use Revise to tighten, shorten, or shift tone.`;
+      const $type = document.getElementById("typeSel");
+      const $tone = document.getElementById("toneSel");
+      const $len  = document.getElementById("lenSel");
+      const $city = document.getElementById("cityInp");
+      const $state = document.getElementById("stateSel");
 
-      const el = (id) => document.getElementById(id);
+      const $beds = document.getElementById("bedsSel");
+      const $baths = document.getElementById("bathsSel");
+      const $sqft = document.getElementById("sqftInp");
+      const $price = document.getElementById("priceInp");
+      const $pool = document.getElementById("poolSel");
+      const $porch = document.getElementById("porchSel");
+      const $compelling = document.getElementById("compellingInp");
+      const $input = document.getElementById("input");
 
-      const cityInp = el("cityInp");
-      const stateSel = el("stateSel");
-      const priceInp = el("priceInp");
-      const bedsSel = el("bedsSel");
-      const bathsSel = el("bathsSel");
-      const sqftInp = el("sqftInp");
-      const typeSel = el("typeSel");
-      const toneSel = el("toneSel");
-      const lenSel = el("lenSel");
-      const compellingInp = el("compellingInp");
+      // Local highlights modal elements
+      const $localModal = document.getElementById("localModal");
+      const $localModalClose = document.getElementById("localModalClose");
+      const $localModalSkip = document.getElementById("localModalSkip");
+      const $localModalApply = document.getElementById("localModalApply");
+      const $localModalListWrap = document.getElementById("localModalListWrap");
 
-      const copyBtn = el("copyBtn");
-      const reviseBtn = el("reviseBtn");
-      const openPoisBtn = el("openPoisBtn");
-      const poisPill = el("poisPill");
+      const HIGHLIGHTS_TOKEN = "__PAW_HIGHLIGHTS__";
 
-      const localModal = el("localModal");
-      const localModalClose = el("localModalClose");
-      const localModalSkip = el("localModalSkip");
-      const localModalApply = el("localModalApply");
-      const localModalListWrap = el("localModalListWrap");
+      let pendingHighlightsOffer = false;
+      let cachedHighlights = []; // {id,label}
+      // Prevent repeat highlights modal for same location unless city/state meaningfully changes
+      let highlightsOfferedKey = "";
+      let highlightsAppliedKey = "";
+      let suppressHighlightsOfferOnce = false;
 
-      let lastRemarks = "";
-      let selectedPois = [];
+      function normText(v){ return String(v || "").trim(); }
+      function digitsOnly(v){ return String(v || "").replace(/[^\d]/g, ""); }
+      function normEnum(v){ const t = normText(v); return t ? t : ""; }
 
-      const POI_OPTIONS = [
-        "Top-rated schools nearby",
-        "Minutes to parks & trails",
-        "Easy access to dining & shopping",
-        "Close to beaches / waterfront",
-        "Near major commuter routes",
-        "Near downtown / entertainment",
-        "Near medical centers",
-        "Golf & recreation nearby",
-        "Nearby marinas / boating",
-        "Close to airport access",
-      ];
+      function mapType(v){ return normText(v) || "general"; }
+      function mapTone(v){ return normText(v) || "general"; }
+      function mapLen(v){ return normText(v) || "standard"; }
 
-      function openModal() { localModal.setAttribute("aria-hidden", "false"); }
-      function closeModal() { localModal.setAttribute("aria-hidden", "true"); }
+      function cityVal(){ return normText($city.value); }
+      function stateVal(){ return normText($state.value).toUpperCase(); }
+      function locKey(){
+        const c = cityVal().toLowerCase();
+        const s = stateVal().toLowerCase();
+        if (!c || !s) return "";
+        return `${c}|${s}`;
+      }
+      function locationVal(){
+        const c = cityVal(), s = stateVal();
+        if (c && s) return `${c}, ${s}`;
+        if (s) return s;
+        return c;
+      }
 
-      function renderPoiList() {
+      function escapeHtml(str){
+        return String(str || "")
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;")
+          .replaceAll("'","&#39;");
+      }
+
+      function coerceHighlightLabel(item){
+        if (item == null) return "";
+        if (typeof item === "string") return item.trim();
+        if (typeof item === "number") return String(item);
+        if (typeof item === "object") {
+          return String(item.label || item.name || item.title || item.text || item.value || "").trim();
+        }
+        return String(item).trim();
+      }
+
+      function isBadHighlightLabel(label){
+        const t = String(label || "").toLowerCase();
+        return (
+          !t ||
+          t.includes("please provide") ||
+          t.includes("city/state") ||
+          t.includes("zip code") ||
+          (t.includes("zip") && t.includes("provide"))
+        );
+      }
+
+      function pickHighlightsForModal(allHighlights){
+        // Goal: 3 larger-area / widely recognizable POIs + 2 hyper-local POIs
+        const c = cityVal().toLowerCase();
+        const majorKeywords = [
+          "downtown","airport","university","college","hospital","medical","mall","museum","stadium",
+          "parkway","national","state park","lake","river","historic","convention","zoo","botanical",
+          "estate","resort","ski","mountain","trail","greenway"
+        ];
+        const localKeywords = [
+          "elementary","middle","high school","school","community","neighborhood","greenway","trail",
+          "park","playground","library","rec center","recreation","shopping","grocery","farmers"
+        ];
+
+        function score(label, keywords, base){
+          const t = String(label||"").toLowerCase();
+          let s = base || 0;
+          for (const k of keywords){
+            if (t.includes(k)) s += 3;
+          }
+          // Prefer recognizable names (slightly longer) but avoid overly wordy
+          if (t.length >= 18) s += 1;
+          if (t.length >= 40) s -= 1;
+          return s;
+        }
+
+        const items = (Array.isArray(allHighlights) ? allHighlights : []).map(h => ({
+          id: h.id,
+          label: h.label,
+          majorScore: score(h.label, majorKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? -2 : 0),
+          localScore: score(h.label, localKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? 2 : 0)
+        }));
+
+        // Dedup by label
+        const seen = new Set();
+        const deduped = [];
+        for (const it of items){
+          const key = String(it.label||"").trim().toLowerCase();
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(it);
+        }
+
+        // Pick top 3 major
+        const major = deduped
+          .slice()
+          .sort((a,b) => (b.majorScore - a.majorScore) || a.label.localeCompare(b.label))
+          .slice(0,3);
+
+        const majorSet = new Set(major.map(x => x.label.toLowerCase()));
+
+        // Pick top 2 local from remaining
+        const locals = deduped
+          .filter(x => !majorSet.has(x.label.toLowerCase()))
+          .slice()
+          .sort((a,b) => (b.localScore - a.localScore) || a.label.localeCompare(b.label))
+          .slice(0,2);
+
+        // Fill if we didn't have enough (keep stable)
+        const picked = [...major, ...locals];
+        if (picked.length < 5){
+          for (const it of deduped){
+            if (picked.length >= 5) break;
+            if (picked.some(p => p.label.toLowerCase() === it.label.toLowerCase())) continue;
+            picked.push(it);
+          }
+        }
+        return picked.slice(0,5).map(x => ({ id: x.id, label: x.label }));
+      }
+
+      function openLocalModal(highlights){
+        // If highlights are present, show up to 5 curated picks; otherwise show manual-only UI.
+        cachedHighlights = pickHighlightsForModal(highlights);
+
         let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
-        POI_OPTIONS.forEach((label, idx) => {
-          const id = "poi_" + idx;
-          const checked = selectedPois.includes(label);
-          html += `
-            <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.10); background:rgba(255,255,255,.86); border-radius:12px;">
-              <input id="${id}" type="checkbox" style="margin-top:2px;" ${checked ? "checked" : ""}/>
-              <span style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.35;">${label}</span>
-            </label>`;
-        });
 
+        // Suggested picks (optional)
+        if (cachedHighlights.length) {
+          cachedHighlights.forEach((h, idx) => {
+            const id = `lh_pick_${idx}`;
+            html += `
+              <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
+                <input id="${id}" type="checkbox" style="margin-top:2px;" />
+                <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">${escapeHtml(h.label)}</span>
+              </label>
+            `;
+          });
+        }
+
+        // Custom highlight the agent can type in (always available)
         html += `
-          <div style="margin-top:6px; padding:10px 12px; border:1px dashed rgba(15,23,42,.18); border-radius:12px;">
-            <div style="font-size:13px; color:rgba(15,23,42,.70); margin-bottom:6px;">Add your own (optional)</div>
-            <input id="poi_custom_text" type="text" placeholder="e.g., Walkable to Riverwalk & Armature Works" style="width:100%; border:1px solid rgba(15,23,42,.12); border-radius:12px; padding:10px 12px; font-size:14px;" />
-          </div>
+          <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
+            <input id="lh_custom_check" type="checkbox" style="margin-top:2px;" />
+            <span style="display:flex; flex-direction:column; gap:6px; width:100%;">
+              <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">Add your own highlight</span>
+              <input id="lh_custom_text" type="text" placeholder="Type your own (e.g., 'Walk to Riverside Park')" style="width:100%; padding:10px 12px; border:1px solid rgba(15,23,42,.12); border-radius:10px; font-size:14px;" />
+            </span>
+          </label>
         `;
 
-        html += "</div>";
-        localModalListWrap.innerHTML = html;
-      }
+        html += '</div>';
+        $localModalListWrap.innerHTML = html;
 
-      function readPoiSelection() {
-        const picks = [];
-        POI_OPTIONS.forEach((label, idx) => {
-          const box = document.getElementById("poi_" + idx);
-          if (box && box.checked) picks.push(label);
-        });
-        const custom = document.getElementById("poi_custom_text");
-        const customText = custom ? String(custom.value || "").trim() : "";
-        if (customText) picks.push(customText);
-        return picks;
-      }
-
-      function updatePoisPill() {
-        if (!selectedPois.length) {
-          poisPill.style.display = "none";
-          poisPill.textContent = "";
-          return;
+        // If agent types a custom highlight, ensure it will be included (checkbox optional)
+        const _ct = document.getElementById("lh_custom_text");
+        const _cc = document.getElementById("lh_custom_check");
+        if (_ct && _cc) {
+          _ct.addEventListener("input", () => { if (normText(_ct.value)) _cc.checked = true; });
         }
-        poisPill.style.display = "inline-flex";
-        poisPill.textContent = selectedPois.length + " selected";
+
+        $localModal.classList.add("show");
+        $localModal.setAttribute("aria-hidden", "false");
       }
 
-      function getPrefs() {
-        return { tone: toneSel.value || "Professional", length: lenSel.value || "Standard" };
+      function closeLocalModal(){
+        $localModal.classList.remove("show");
+        $localModal.setAttribute("aria-hidden", "true");
+        $localModalListWrap.innerHTML = "";
       }
 
-      function getExtraPayload(userText) {
-        return {
-          city: String(cityInp.value || "").trim(),
-          state: String(stateSel.value || "").trim(),
-          price: String(priceInp.value || "").trim(),
-          beds: String(bedsSel.value || "").trim(),
-          baths: String(bathsSel.value || "").trim(),
-          sqft: String(sqftInp.value || "").trim(),
-          propertyType: String(typeSel.value || "").trim(),
-          compelling: String(compellingInp.value || "").trim(),
-          poiHighlights: selectedPois.slice(0, 12),
-          notes: String(userText || "").trim()
-        };
+      function getModalSelections(){
+        const selected = [];
+        cachedHighlights.forEach((h, idx) => {
+          const cb = document.getElementById(`lh_pick_${idx}`);
+          if (cb && cb.checked) selected.push(h.label);
+        });
+
+        // Custom highlight (optional)
+        const customTextEl = document.getElementById("lh_custom_text");
+        const customText = customTextEl ? normText(customTextEl.value) : "";
+        if (customText) {
+          selected.push(customText);
+        }
+
+        return selected;
       }
 
-      function onResponse(data) {
-        try {
-          if (data && typeof data.reply === "string" && data.reply.trim()) {
-            lastRemarks = data.reply.trim();
-            copyBtn.disabled = false;
-            reviseBtn.disabled = false;
-          }
-        } catch (e) {}
-        return { skipDefault: false };
+      async function fetchHighlightsInBackground(){
+        const c = cityVal();
+        const s = stateVal();
+        if (!c || !s) return;
+        await shell.sendExtra(HIGHLIGHTS_TOKEN, {}, { echoUser: false });
       }
+
+      // Modal controls
+      $localModalClose.addEventListener("click", closeLocalModal);
+      $localModal.addEventListener("click", (e) => { if (e.target === $localModal) closeLocalModal(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLocalModal(); });
+      $localModalSkip.addEventListener("click", closeLocalModal);
+
+      $localModalApply.addEventListener("click", async () => {
+        const picked = getModalSelections();
+        closeLocalModal();
+        if (!picked.length) return;
+        // Agent has applied highlights for this location; do not re-offer.
+        highlightsAppliedKey = locKey();
+        suppressHighlightsOfferOnce = true;
+
+        const instruction =
+`Update the MLS description above.
+Only incorporate the selected nearby highlights if the agent confirms they are accurate and if they improve specificity.
+Replace generic filler lines first. Do not add fluff. Keep the overall length similar.
+
+Selected highlights:
+- ${picked.join("\n- ")}`;
+
+        await shell.sendExtra(instruction, { phase: "write", selected_highlights: picked }, { echoUser: true });
+      });
 
       const shell = window.PAWToolShell.init({
-        toolId: "listing",
         apiEndpoint: API_ENDPOINT,
+        toolId: "listing_description_writer",
         tipsText: TIPS_TEXT,
-        getPrefs,
-        getExtraPayload,
-        onResponse,
-        sendHistoryItems: 10,
-        maxHistoryItems: 20
-      });
+        deliverableTitle: "Your MLS Description",
 
-      copyBtn.addEventListener("click", async function () {
-        if (!lastRemarks) return;
-        try {
-          await navigator.clipboard.writeText(lastRemarks);
-          copyBtn.textContent = "Copied!";
-          setTimeout(() => (copyBtn.textContent = "Copy remarks"), 900);
-        } catch (e) {
-          alert("Copy failed. Please copy from the chat bubble.");
+        getPrefs: () => ({
+          listing_type: mapType($type.value),
+          output_use: "MLS",
+          tone: mapTone($tone.value),
+          length: mapLen($len.value),
+          safe_mode: true,
+          ask_followups: false,
+
+          city: cityVal(),
+          state: stateVal(),
+          location: locationVal(),
+
+          // allow worker to know local context exists
+          local_highlights: (!!cityVal() && !!stateVal()),
+
+          compelling_feature: normText($compelling.value),
+
+          locked: {
+            beds: normEnum($beds.value),
+            baths: normEnum($baths.value),
+            sqft: digitsOnly($sqft.value),
+            price: normText($price.value),
+            pool: normEnum($pool.value),
+            porch: normEnum($porch.value)
+          }
+        }),
+
+        // This runs on every submit, so we can arm the offer reliably.
+        getExtraPayload: (text) => {
+          const base = { city: cityVal(), state: stateVal(), location: locationVal() };
+          const key = locKey();
+
+          // Background highlights fetch token
+          if (String(text).trim() === HIGHLIGHTS_TOKEN) {
+            if (!base.city || !base.state) return base;
+            return Object.assign({}, base, { phase: "highlights" });
+          }
+
+          // Normal user submit: arm the offer if we have city/state.
+          // The modal never blocks the initial generation.
+          pendingHighlightsOffer = !!(key && key !== highlightsOfferedKey && key !== highlightsAppliedKey && !suppressHighlightsOfferOnce);
+          suppressHighlightsOfferOnce = false;
+
+          return base;
+        },
+
+        onResponse: (data) => {
+          const reply = data && typeof data.reply === "string" ? data.reply : "";
+
+          // Detect highlight responses by presence of data.local.highlights (even empty array)
+          const isHighlightsResponse = !!(data && data.local && Array.isArray(data.local.highlights));
+
+          // If this was the background highlights response, normalize + open modal (even if empty after filtering).
+          if (isHighlightsResponse) {
+            const highlightsRaw = data.local.highlights || [];
+            const normalized = highlightsRaw
+              .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)), label: coerceHighlightLabel(it) }))
+              .filter(x => x.label && !isBadHighlightLabel(x.label));
+
+            const key = locKey();
+            if (key && key === highlightsOfferedKey && key !== highlightsAppliedKey) {
+              openLocalModal(normalized);
+            }
+            // Never show any "highlights" reply text in the chat
+            return { skipDefault: true };
+          }
+
+          // Deterministic trigger: after the first normal response returns, kick off highlights fetch once.
+          if (pendingHighlightsOffer && reply) {
+            pendingHighlightsOffer = false;
+            highlightsOfferedKey = locKey();
+            fetchHighlightsInBackground(); // async, no block
+            return; // allow shell to render deliverable
+          }
+
+          // Ignore any “provide city/state or zip” prompt silently
+          const lower = reply.toLowerCase();
+          if (lower.includes("provide") && (lower.includes("city/state") || lower.includes("zip"))) {
+            return { skipDefault: true };
+          }
         }
       });
 
-      reviseBtn.addEventListener("click", async function () {
-        if (!lastRemarks) return;
-        const choice = prompt(
-          "How should I revise the remarks?\n\nExamples:\n- Make it shorter\n- Make it more luxury\n- Make it more punchy\n- Tighten and remove fluff",
-          "Make it shorter and tighter"
-        );
-        const instruction = String(choice || "").trim();
-        if (!instruction) return;
-
-        await shell.sendExtra(
-          "Revise the listing remarks. " + instruction,
-          { revision: { instruction, base: lastRemarks } }
-        );
+      // Reset
+      document.getElementById("reset").addEventListener("click", () => {
+        pendingHighlightsOffer = false;
+        cachedHighlights = [];
+        highlightsOfferedKey = "";
+        highlightsAppliedKey = "";
+        suppressHighlightsOfferOnce = false;
+        closeLocalModal();
+        try { $city.value = ""; $state.value = ""; } catch {}
+        try { if (shell && shell.reset) shell.reset(); } catch {}
       });
 
-      openPoisBtn.addEventListener("click", function () {
-        renderPoiList();
-        openModal();
-      });
-
-      localModalClose.addEventListener("click", closeModal);
-      localModalSkip.addEventListener("click", closeModal);
-      localModal.addEventListener("click", function (e) { if (e.target === localModal) closeModal(); });
-
-      localModalApply.addEventListener("click", async function () {
-        const picks = readPoiSelection();
-        selectedPois = picks;
-        updatePoisPill();
-        closeModal();
-
-        if (!picks.length) return;
-
-        if (lastRemarks) {
-          await shell.sendExtra(
-            "Update the listing remarks by incorporating these neighborhood highlights (only if accurate): " + picks.join("; "),
-            { poiHighlights: picks, revision: { kind: "add_pois" } },
-            { echoUser: false }
-          );
-        }
-      });
     })();
   </script>
 </body>
