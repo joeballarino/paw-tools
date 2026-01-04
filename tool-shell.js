@@ -1,13 +1,22 @@
 /* ProAgent Works Tool Shell
- * Shared frontend logic for all tools
- * DO NOT put prompting logic here — Worker only
+ * Shared frontend logic for all tools.
  *
- * Embed handling:
- * - If inside an iframe OR ?embed=1, sets: <html data-embed="1">
- * - paw-ui.css contains the visual embed rules.
+ * HARD CONTRACT (standard for tools):
+ * - DOM: #messages, #input, #send, #reset, #tips
+ * - API: window.PAWToolShell.init(config) -> returns { sendMessage, sendExtra, reset }
+ *
+ * Backward/forward compatibility:
+ * - Also supports #prompt + #submitBtn + #toolForm if a future tool uses those IDs.
+ *
+ * IMPORTANT:
+ * - Do NOT put prompting logic here — Worker only.
+ * - Tool pages provide hooks: getPrefs, getExtraPayload, onResponse.
+ * - listing.html relies on sendExtra() also flowing through getExtraPayload() for highlights.
  */
 
 (function () {
+  "use strict";
+
   // -----------------------------
   // Global embed detection (applies to ALL tools)
   // -----------------------------
@@ -20,7 +29,7 @@
         document.documentElement.setAttribute("data-embed", "1");
       }
     } catch (e) {
-      // Cross-origin iframe safety: assume embed
+      // Cross-origin iframe safety: assume embed.
       document.documentElement.setAttribute("data-embed", "1");
     }
   })();
@@ -28,7 +37,7 @@
   // -----------------------------
   // Helpers
   // -----------------------------
-  function $(id) {
+  function byId(id) {
     return document.getElementById(id);
   }
 
@@ -65,7 +74,7 @@
     return wrap;
   }
 
-  function removeThinking(node) {
+  function removeNode(node) {
     if (node && node.parentNode) node.parentNode.removeChild(node);
   }
 
@@ -96,243 +105,260 @@
     return data;
   }
 
+  function getAuthToken() {
+    try {
+      return localStorage.getItem("paw_token") || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
   // -----------------------------
-  // Shell factory (per-page)
+  // Public API: window.PAWToolShell.init(...)
   // -----------------------------
-  window.PAWToolShell = function initShell(config) {
-    config = config || {};
+  window.PAWToolShell = {
+    init: function init(config) {
+      config = config || {};
 
-    const toolId = config.toolId || "";
-    const apiEndpoint = config.apiEndpoint || "";
-    const sendHistoryItems = Number.isFinite(config.sendHistoryItems)
-      ? config.sendHistoryItems
-      : 12;
+      const toolId = String(config.toolId || "");
+      const apiEndpoint = String(config.apiEndpoint || "");
+      const sendHistoryItems = Number.isFinite(config.sendHistoryItems)
+        ? config.sendHistoryItems
+        : 12;
 
-    const getDisclaimerText =
-      typeof config.getDisclaimerText === "function" ? config.getDisclaimerText : () => "";
+      const getDisclaimerText =
+        typeof config.getDisclaimerText === "function" ? config.getDisclaimerText : () => "";
 
-    const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : () => ({});
-    const getExtraPayload =
-      typeof config.getExtraPayload === "function" ? config.getExtraPayload : () => ({});
-    const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
+      const getPrefs =
+        typeof config.getPrefs === "function" ? config.getPrefs : () => ({});
 
-    const $messages = $("messages");
+      const getExtraPayload =
+        typeof config.getExtraPayload === "function" ? config.getExtraPayload : () => ({});
 
-    // Support both legacy IDs (#input/#send) and newer shared IDs (#prompt/#submitBtn/#toolForm).
-    // listing.html uses #input and #send; other tools may use #prompt/#submitBtn.
-    const $form = $("toolForm");
-    const $input = $("prompt") || $("input");
-    const $send = $("submitBtn") || $("send");
-    const $reset = $("reset");
-    const $tips = $("tips");
+      const onResponse =
+        typeof config.onResponse === "function" ? config.onResponse : null;
 
-    if (!$messages || !$input || !$send) {
-      console.error(
-        "[PAWToolShell] Missing required DOM elements (#messages and one of: #input/#prompt and #send/#submitBtn)."
-      );
-      return {
-        sendMessage: async () => {},
-        sendExtra: async () => {},
-        reset: () => {},
-      };
-    }
+      // Standard IDs (ask.html, listing.html)
+      const $messages = byId("messages");
+      const $input = byId("input") || byId("prompt"); // compat
+      const $send = byId("send") || byId("submitBtn"); // compat
+      const $reset = byId("reset");
+      const $tips = byId("tips");
+      const $form = byId("toolForm"); // optional compat if a tool uses a <form>
 
-    const history = [];
-    let isSending = false;
-
-    function pushHistory(role, content) {
-      history.push({ role, content });
-    }
-
-    function getAuthToken() {
-      try {
-        return localStorage.getItem("paw_token") || "";
-      } catch (e) {
-        return "";
-      }
-    }
-
-    function clearComposer() {
-      try {
-        $input.value = "";
-      } catch (e) {}
-    }
-
-    async function postToWorker(payload) {
-      const token = getAuthToken();
-      return await postJSON(apiEndpoint, payload, token);
-    }
-
-    async function sendMessage(text) {
-      const trimmed = String(text || "").trim();
-      if (!trimmed) return;
-      if (isSending) return;
-
-      if (!apiEndpoint) {
-        appendMessage($messages, "ai", "Missing API endpoint configuration.");
-        return;
+      if (!$messages || !$input || !$send) {
+        console.error(
+          "[PAWToolShell] Missing required DOM elements. Required: #messages and (#input or #prompt) and (#send or #submitBtn)."
+        );
+        return {
+          sendMessage: async function () {},
+          sendExtra: async function () {},
+          reset: function () {},
+        };
       }
 
-      isSending = true;
-      let thinkingNode = null;
+      const history = [];
+      let isSending = false;
 
-      try {
-        appendMessage($messages, "user", trimmed);
-        pushHistory("user", trimmed);
+      function pushHistory(role, content) {
+        history.push({ role, content });
+      }
+
+      function clearComposer() {
+        try {
+          $input.value = "";
+        } catch (e) {}
+      }
+
+      async function postToWorker(payload) {
+        const token = getAuthToken();
+        return await postJSON(apiEndpoint, payload, token);
+      }
+
+      async function sendMessage(text) {
+        const trimmed = String(text || "").trim();
+        if (!trimmed) return;
+        if (isSending) return;
+
+        if (!apiEndpoint) {
+          appendMessage($messages, "ai", "Missing API endpoint configuration.");
+          return;
+        }
+
+        isSending = true;
+        let thinkingNode = null;
+
+        try {
+          appendMessage($messages, "user", trimmed);
+          pushHistory("user", trimmed);
+          clearComposer();
+
+          thinkingNode = appendThinking($messages);
+
+          const prefs = getPrefs() || {};
+          const historyToSend = history.slice(
+            Math.max(0, history.length - sendHistoryItems)
+          );
+
+          const extra = getExtraPayload(trimmed) || {};
+          const payload = Object.assign(
+            { tool: toolId, message: trimmed, prefs, history: historyToSend },
+            extra || {}
+          );
+
+          const data = await postToWorker(payload);
+
+          removeNode(thinkingNode);
+          thinkingNode = null;
+
+          if (onResponse) {
+            const handled = onResponse(data);
+            if (handled && handled.skipDefault) {
+              return;
+            }
+          }
+
+          const reply = data && typeof data.reply === "string" ? data.reply : "";
+          if (reply) {
+            appendMessage($messages, "ai", reply);
+            pushHistory("assistant", reply);
+          }
+        } catch (err) {
+          removeNode(thinkingNode);
+          appendMessage($messages, "ai", "Something went wrong. Please try again.");
+          console.error("[PAWToolShell] sendMessage error:", err);
+        } finally {
+          isSending = false;
+        }
+      }
+
+      async function sendExtra(instruction, extraPayload = {}, options = {}) {
+        if (isSending) return;
+
+        const msg = String(instruction || "").trim();
+        if (!msg) return;
+
+        if (!apiEndpoint) {
+          appendMessage($messages, "ai", "Missing API endpoint configuration.");
+          return;
+        }
+
+        const echoUser = options.echoUser === true;
+
+        isSending = true;
+        let thinkingNode = null;
+
+        try {
+          if (echoUser) {
+            appendMessage($messages, "user", msg);
+            pushHistory("user", msg);
+          }
+
+          thinkingNode = appendThinking($messages);
+
+          const prefs = getPrefs() || {};
+          const historyToSend = history.slice(
+            Math.max(0, history.length - sendHistoryItems)
+          );
+
+          // CRITICAL: allow tool pages to expand special instruction tokens via getExtraPayload()
+          // listing.html relies on this for background highlight requests that trigger the POI modal.
+          const extraFromHook = getExtraPayload(msg) || {};
+
+          const payload = Object.assign(
+            { tool: toolId, message: msg, prefs, history: historyToSend },
+            extraFromHook,
+            extraPayload || {}
+          );
+
+          const data = await postToWorker(payload);
+
+          removeNode(thinkingNode);
+          thinkingNode = null;
+
+          if (onResponse) {
+            const handled = onResponse(data);
+            if (handled && handled.skipDefault) {
+              return;
+            }
+          }
+
+          const reply = data && typeof data.reply === "string" ? data.reply : "";
+          if (reply) {
+            appendMessage($messages, "ai", reply);
+            pushHistory("assistant", reply);
+          }
+        } catch (err) {
+          removeNode(thinkingNode);
+          if (echoUser) appendMessage($messages, "ai", "Something went wrong. Please try again.");
+          console.error("[PAWToolShell] sendExtra error:", err);
+        } finally {
+          isSending = false;
+        }
+      }
+
+      function reset() {
+        try {
+          $messages.innerHTML = "";
+        } catch (e) {}
+
+        history.length = 0;
         clearComposer();
 
-        thinkingNode = appendThinking($messages);
-
-        const prefs = getPrefs() || {};
-        const historyToSend = history.slice(Math.max(0, history.length - sendHistoryItems));
-
-        const extra = getExtraPayload(trimmed) || {};
-        const payload = Object.assign(
-          { tool: toolId, message: trimmed, prefs, history: historyToSend },
-          extra || {}
-        );
-
-        const data = await postToWorker(payload);
-
-        removeThinking(thinkingNode);
-        thinkingNode = null;
-
-        if (onResponse) {
-          const handled = onResponse(data);
-          if (handled && handled.skipDefault) {
-            isSending = false;
-            return;
-          }
+        const disclaimer = getDisclaimerText();
+        if (disclaimer) {
+          appendMessage($messages, "ai", disclaimer);
         }
-
-        const reply = data && typeof data.reply === "string" ? data.reply : "";
-        if (reply) {
-          appendMessage($messages, "ai", reply);
-          pushHistory("assistant", reply);
-        }
-      } catch (err) {
-        removeThinking(thinkingNode);
-        appendMessage($messages, "ai", "Something went wrong. Please try again.");
-      } finally {
-        isSending = false;
-      }
-    }
-
-    async function sendExtra(instruction, extraPayload = {}, options = {}) {
-      if (isSending) return;
-      const msg = String(instruction || "").trim();
-      if (!msg) return;
-
-      if (!apiEndpoint) {
-        appendMessage($messages, "ai", "Missing API endpoint configuration.");
-        return;
       }
 
-      const echoUser = options.echoUser === true;
+      // -----------------------------
+      // Wire UI events (standard)
+      // -----------------------------
+      $send.addEventListener("click", function () {
+        sendMessage($input.value);
+      });
 
-      isSending = true;
-      let thinkingNode = null;
-
-      try {
-        if (echoUser) appendMessage($messages, "user", msg);
-        if (echoUser) pushHistory("user", msg);
-
-        thinkingNode = appendThinking($messages);
-
-        const prefs = getPrefs() || {};
-        const historyToSend = history.slice(Math.max(0, history.length - sendHistoryItems));
-
-        // IMPORTANT: allow tool pages to expand special instructions via getExtraPayload()
-        // listing.html relies on this for background highlight requests that trigger the POI modal.
-        const extraFromHook = getExtraPayload(msg) || {};
-        const payload = Object.assign(
-          { tool: toolId, message: msg, prefs, history: historyToSend },
-          extraFromHook,
-          extraPayload || {}
-        );
-
-        const data = await postToWorker(payload);
-
-        removeThinking(thinkingNode);
-        thinkingNode = null;
-
-        if (onResponse) {
-          const handled = onResponse(data);
-          if (handled && handled.skipDefault) {
-            isSending = false;
-            return;
-          }
-        }
-
-        const reply = data && typeof data.reply === "string" ? data.reply : "";
-        if (reply) {
-          appendMessage($messages, "ai", reply);
-          pushHistory("assistant", reply);
-        }
-      } catch (err) {
-        removeThinking(thinkingNode);
-        if (echoUser) appendMessage($messages, "ai", "Something went wrong. Please try again.");
-      } finally {
-        isSending = false;
+      // Prefer form submit if present (some tools might wrap input in a form)
+      if ($form) {
+        $form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          sendMessage($input.value);
+        });
       }
-    }
 
-    function reset() {
-      try {
-        $messages.innerHTML = "";
-      } catch (e) {}
-      history.length = 0;
-      clearComposer();
+      // Standard behavior:
+      // - Enter sends
+      // - Shift+Enter inserts newline
+      $input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage($input.value);
+        }
+      });
+
+      if ($reset) {
+        $reset.addEventListener("click", function () {
+          reset();
+        });
+      }
+
+      if ($tips) {
+        $tips.addEventListener("click", function () {
+          if (typeof config.onTips === "function") config.onTips();
+        });
+      }
+
+      // Prime disclaimer, if any
       const disclaimer = getDisclaimerText();
       if (disclaimer) {
         appendMessage($messages, "ai", disclaimer);
       }
-    }
 
-    // -----------------------------
-    // Wire UI events
-    // -----------------------------
-
-    // Send actions
-    $send.addEventListener("click", () => sendMessage($input.value));
-
-    // If a tool uses a <form id="toolForm">, prefer submit behavior (e.g., desktop Enter key in inputs).
-    if ($form) {
-      $form.addEventListener("submit", (e) => {
-        e.preventDefault();
-        sendMessage($input.value);
-      });
-    }
-
-    // Textarea-style composer (listing.html): Enter sends, Shift+Enter newline.
-    $input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage($input.value);
-      }
-    });
-
-    if ($reset) {
-      $reset.addEventListener("click", () => reset());
-    }
-
-    if ($tips) {
-      $tips.addEventListener("click", () => {
-        // optional tips panel behavior (page-specific)
-        if (typeof config.onTips === "function") config.onTips();
-      });
-    }
-
-    // Prime disclaimer, if any
-    const disclaimer = getDisclaimerText();
-    if (disclaimer) {
-      appendMessage($messages, "ai", disclaimer);
-    }
-
-    return {
-      sendMessage,
-      sendExtra,
-      reset,
-    };
+      return {
+        sendMessage,
+        sendExtra,
+        reset,
+      };
+    },
   };
 })();
