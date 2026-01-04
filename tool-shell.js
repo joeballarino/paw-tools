@@ -17,6 +17,12 @@
  *      deliverableMode?, deliverableTitle?,
  *      enableDisclaimer?, disclaimerTrigger?, getDisclaimerText?
  *    })
+ *
+ * Thinking indicator:
+ * - CSS lives in paw-ui.css
+ * - JS must add/remove a message bubble using:
+ *   .msg.ai.paw-thinking
+ *   .paw-dots > .paw-dot (x3)
  */
 
 (function () {
@@ -46,7 +52,6 @@
     const bubble = document.createElement("div");
     bubble.className = "bubble";
 
-    // Preserve line breaks (CSS uses pre-wrap already)
     const p = document.createElement("p");
     p.textContent = String(text || "");
 
@@ -55,6 +60,46 @@
     $messages.appendChild(wrap);
     scrollToBottom($messages);
   }
+
+  // ==========================
+  // Thinking indicator (markup only; CSS is in paw-ui.css)
+  // ==========================
+  function appendThinking($messages) {
+    const wrap = document.createElement("div");
+    wrap.className = "msg ai paw-thinking";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    const p = document.createElement("p");
+    p.textContent = "Thinking";
+
+    const dots = document.createElement("span");
+    dots.className = "paw-dots";
+    dots.setAttribute("aria-hidden", "true");
+
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement("span");
+      dot.className = "paw-dot";
+      dots.appendChild(dot);
+    }
+
+    p.appendChild(dots);
+    bubble.appendChild(p);
+    wrap.appendChild(bubble);
+
+    $messages.appendChild(wrap);
+    scrollToBottom($messages);
+
+    return wrap;
+  }
+
+  function removeThinking(node) {
+    try {
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+    } catch {}
+  }
+  // ==========================
 
   function ensureTipsModal() {
     let modal = $("pawTipsModal");
@@ -115,9 +160,7 @@
     const enableDisclaimer = !!(config && config.enableDisclaimer);
     const disclaimerTrigger = config && config.disclaimerTrigger instanceof RegExp ? config.disclaimerTrigger : null;
     const getDisclaimerText =
-      typeof config.getDisclaimerText === "function"
-        ? config.getDisclaimerText
-        : () => "";
+      typeof config.getDisclaimerText === "function" ? config.getDisclaimerText : () => "";
 
     const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : () => ({});
     const getExtraPayload =
@@ -176,6 +219,7 @@
       const echoUser = options.echoUser !== false;
 
       isSending = true;
+      let thinkingNode = null;
 
       try {
         if (echoUser) appendMessage($messages, "user", trimmed);
@@ -189,6 +233,9 @@
             pushHistory("assistant", d);
           }
         }
+
+        // Show thinking indicator while waiting
+        thinkingNode = appendThinking($messages);
 
         // Payload assembly
         const prefs = getPrefs() || {};
@@ -206,6 +253,10 @@
         );
 
         const data = await postToWorker(payload);
+
+        // Remove thinking once we have a response
+        removeThinking(thinkingNode);
+        thinkingNode = null;
 
         // Allow tool page to intercept/override rendering
         if (onResponse) {
@@ -225,6 +276,7 @@
           pushHistory("assistant", "No response received.");
         }
       } catch (err) {
+        removeThinking(thinkingNode);
         appendMessage($messages, "ai", "Something went wrong. Please try again.");
         pushHistory("assistant", "Something went wrong. Please try again.");
       } finally {
@@ -249,9 +301,14 @@
       const echoUser = options.echoUser === true;
 
       isSending = true;
+      let thinkingNode = null;
+
       try {
         if (echoUser) appendMessage($messages, "user", msg);
         if (echoUser) pushHistory("user", msg);
+
+        // Show thinking indicator while waiting
+        thinkingNode = appendThinking($messages);
 
         const prefs = getPrefs() || {};
         const historyToSend = history.slice(Math.max(0, history.length - sendHistoryItems));
@@ -268,6 +325,9 @@
 
         const data = await postToWorker(payload);
 
+        removeThinking(thinkingNode);
+        thinkingNode = null;
+
         if (onResponse) {
           const handled = onResponse(data);
           if (handled && handled.skipDefault) {
@@ -282,7 +342,7 @@
           pushHistory("assistant", reply);
         }
       } catch (err) {
-        // For background calls, keep errors quiet unless echoUser
+        removeThinking(thinkingNode);
         if (echoUser) appendMessage($messages, "ai", "Something went wrong. Please try again.");
       } finally {
         isSending = false;
