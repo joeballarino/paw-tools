@@ -1,529 +1,533 @@
-/* tool-shell.js
- * Shared UI + API contract for ALL PAW tools
- *
- * Contract sent to worker:
- * {
- *   tool: "tool_id" | "" (omit for generic assistant),
- *   message: "user text only",
- *   history: [{ role:"user"|"assistant", content:"..." }, ...],
- *   prefs: { ... },              // tool-specific
- *   ...extraPayload              // optional, tool-specific (merged at top-level)
- * }
+// paw-api Worker (OpenAI Responses API)
+//
+// What it does
+// - Single endpoint for all tools (assistant + tool-specific routes)
+// - Uses OpenAI Responses API
+// - Enforces guardrails + Fair Housing safety
+// - Returns JSON: { reply: "...", ...optional tool payloads... }
+//
+// Notes
+// - This file is intentionally PRIVATE (not in GitHub)
+// - Frontend sends: { tool, message, prefs, history, phase?, selected_highlights? }
+
+export default {
+  async fetch(request, env, ctx) {
+    return handleRequest(request, env, ctx);
+  },
+};
+
+const OPENAI_API_BASE = "https://api.openai.com/v1/responses";
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+const DEFAULT_MODEL = "gpt-4.1-mini"; // adjust if you’ve standardized elsewhere
+const MAX_HISTORY_ITEMS = 20;
+const MAX_HISTORY_ITEM_CHARS = 1200;
+
+// ─────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────
+
+function jsonResponse(obj, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      ...CORS_HEADERS,
+      ...extraHeaders,
+    },
+  });
+}
+
+function safeJsonParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function toInputMessage(role, content) {
+  return { role, content };
+}
+
+function roleTagLine(role, content) {
+  const r = String(role || "").toLowerCase();
+  const label = r === "assistant" ? "Assistant" : "User";
+  return `${label}: ${String(content || "")}`;
+}
+
+function clampHistory(history) {
+  const arr = Array.isArray(history) ? history : [];
+  return arr.slice(-MAX_HISTORY_ITEMS).map((h) => ({
+    role: (h && h.role) || "user",
+    content: (h && h.content) || "",
+  }));
+}
+
+function normEnum(v) {
+  const s = String(v ?? "").trim();
+  return (!s || /^unknown$/i.test(s) || /^choose/i.test(s)) ? "" : s;
+}
+
+function normText(v) {
+  const s = String(v ?? "").trim();
+  return (!s || /^unknown$/i.test(s)) ? "" : s;
+}
+
+function uniq(arr) {
+  const out = [];
+  const seen = new Set();
+  for (const x of arr) {
+    const k = String(x || "").trim();
+    if (!k) continue;
+    const key = k.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(k);
+  }
+  return out;
+}
+
+function truncate(s, n) {
+  const t = String(s || "");
+  return t.length > n ? t.slice(0, n) : t;
+}
+
+// Detect “agent-provided anchors” we can treat as authoritative references.
+// We DO NOT invent these; we only mirror what the agent typed.
+function extractAgentAnchors(text) {
+  const src = String(text || "");
+  if (!src) return [];
+
+  // Capture phrases after common proximity signals.
+  // Examples:
+  // - "near Lincoln Elementary"
+  // - "across the street from Central Park"
+  // - "adjacent to Pisgah National Forest"
+  // - "next to the greenway"
+  const patterns = [
+    /\b(across the street from)\s+([^.,;!\n]{3,80})/gi,
+    /\b(next to)\s+([^.,;!\n]{3,80})/gi,
+    /\b(adjacent to)\s+([^.,;!\n]{3,80})/gi,
+    /\b(near)\s+([^.,;!\n]{3,80})/gi,
+    /\b(close to)\s+([^.,;!\n]{3,80})/gi,
+    /\b(nearby)\s+([^.,;!\n]{3,80})/gi,
+  ];
+
+  const anchors = [];
+  for (const re of patterns) {
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      const phrase = `${m[1]} ${m[2]}`.trim();
+      // Avoid capturing trailing filler
+      const cleaned = phrase
+        .replace(/\s+(and|with|plus)\s*$/i, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      if (cleaned.length >= 6) anchors.push(cleaned);
+    }
+  }
+
+  // If agent provides explicit time/distance, we can echo it (never invent).
+  // Example: "5 minutes to downtown"
+  const distanceRe = /\b(\d{1,2})\s*(minutes?|mins?|mi|miles?|km)\b[^.\n]{0,80}/gi;
+  let dm;
+  while ((dm = distanceRe.exec(src)) !== null) {
+    const snippet = dm[0].trim();
+    if (snippet.length >= 6) anchors.push(snippet);
+  }
+
+  return uniq(anchors).slice(0, 8);
+}
+
+function hasZip(prefs) {
+  const p = prefs || {};
+  const z = normText(p.zip) || normText((p.locked && p.locked.zip) || "");
+  // Basic ZIP check (US 5-digit or ZIP+4)
+  return /\b\d{5}(-\d{4})?\b/.test(z);
+}
+
+// ─────────────────────────────────────────────
+// Guardrails & system prompts
+// ─────────────────────────────────────────────
+
+function baseSystemPrompt() {
+  return [
+    "You are ProAgent Works, an AI copilot for real estate agents.",
+    "Write in a professional, MLS-safe way.",
+    "Never include discriminatory language. Be Fair Housing safe.",
+    "Avoid unverifiable claims. If something is unknown, write conservatively.",
+    "If asked for legal advice, encourage consulting appropriate professionals.",
+  ].join("\n");
+}
+
+/**
+ * Listing writer prompt with POI/Highlights discipline:
+ * - Only mention selected highlights OR agent-provided anchors
+ * - Never invent POIs
+ * - Never invent distances; only echo distance/time if agent provided it verbatim
+ * - Do not escalate proximity language beyond what agent wrote
  */
+function listingWriterSystemPrompt({
+  prefs,
+  location,
+  selectedHighlights,
+  agentAnchors,
+  zipPresent,
+}) {
+  const p = prefs || {};
+  const tone = normEnum(p.tone) || "general";
+  const length = normEnum(p.length) || "standard";
+  const listingType = normEnum(p.listing_type) || "general";
 
-(function () {
-  // ==========================================================
-  // EMBED MODE (LOCKED)
-  // ----------------------------------------------------------
-  // When a tool is rendered inside another page (iframe),
-  // the tool must NOT draw an additional outer shell.
-  // We set <html data-embed="1"> automatically when embedded
-  // (or when the URL includes ?embed=1).
-  // ==========================================================
-  (function setEmbedMode() {
-    try {
-      const p = new URLSearchParams(location.search);
-      if (p.get("embed") === "1") {
-        document.documentElement.dataset.embed = "1";
-        return;
-      }
-    } catch {}
+  const locked = (p && p.locked) || {};
+  const beds = normText(locked.beds || p.beds || "");
+  const baths = normText(locked.baths || p.baths || "");
+  const sqft = normText(locked.sqft || p.sqft || "");
+  const price = normText(locked.price || p.price || "");
+  const pool = normText(locked.pool || p.pool || "");
+  const porch = normText(locked.porch || p.porch || "");
+  const compelling = normText(p.compelling_feature || "");
+  const loc = normText(location || "");
 
-    try {
-      if (window.self !== window.top) {
-        document.documentElement.dataset.embed = "1";
-      }
-    } catch {
-      // Cross-origin iframe access throws; assume embedded
-      document.documentElement.dataset.embed = "1";
-    }
-  })();
+  const highlights = Array.isArray(selectedHighlights) ? selectedHighlights : [];
+  const anchors = Array.isArray(agentAnchors) ? agentAnchors : [];
 
-  const _instances = Object.create(null);
+  return [
+    baseSystemPrompt(),
+    "",
+    "You are generating MLS-ready listing remarks for a real estate listing.",
+    "Output should be a single polished paragraph unless the user explicitly asks for bullets.",
+    "Do NOT mention Fair Housing or compliance in the output.",
+    "",
+    `Style preferences: tone=${tone}, length=${length}, listing_type=${listingType}`,
+    loc ? `Location context: ${loc}` : "Location context: (unknown)",
+    compelling ? `Most compelling feature: ${compelling}` : "",
+    "",
+    "Known facts (use only if provided; do not invent):",
+    beds ? `- Beds: ${beds}` : "",
+    baths ? `- Baths: ${baths}` : "",
+    sqft ? `- Sqft: ${sqft}` : "",
+    price ? `- Price: ${price} (context only; do not overemphasize)` : "",
+    pool ? `- Pool: ${pool}` : "",
+    porch ? `- Porch: ${porch}` : "",
+    "",
+    "Nearby highlights & location claims rules (very important):",
+    "- You may mention ONLY:",
+    "  (A) items the agent explicitly selected from the 'highlights' list, AND/OR",
+    "  (B) explicit anchor phrases the agent typed (e.g., 'near X', 'across the street from Y').",
+    "- If an anchor phrase is provided by the agent, you may reuse it, but do NOT strengthen it.",
+    "  Example: if agent wrote 'near X', do not change to 'steps from X' or 'walkable to X'.",
+    "- Do NOT invent or add new named places, schools, parks, or neighborhoods beyond (A) and (B).",
+    "- Do NOT claim distances, drive times, or walkability. Never write 'minutes to' unless the agent already provided the time/distance in their input.",
+    zipPresent
+      ? "- ZIP is present: you still must NOT invent distances; you may only echo distance/time if the agent provided it verbatim."
+      : "- ZIP not present: do not use any time/distance phrasing at all (no 'minutes', no miles).",
+    "",
+    highlights.length
+      ? `Agent-selected highlights (allowed to include as general 'nearby' / 'area attractions' wording): ${highlights
+          .map((x) => `"${x}"`)
+          .join(", ")}`
+      : "Agent-selected highlights: (none)",
+    anchors.length
+      ? `Agent-provided anchors (allowed; mirror phrasing): ${anchors
+          .map((x) => `"${x}"`)
+          .join(", ")}`
+      : "Agent-provided anchors: (none)",
+    "",
+    "General writing rules:",
+    "- Avoid exaggerations like 'best', 'rare', 'unmatched' unless supported by the agent’s notes.",
+    "- Avoid 'minutes to' unless agent provided the exact time/distance.",
+    "- Keep it motivating but accurate and MLS-appropriate.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
-  function clampStr(s, max) {
-    s = String(s || "");
-    return s.length > max ? s.slice(0, max) : s;
+/**
+ * Highlights suggestion prompt (NO WHITELISTS):
+ * - Return candidate highlights (named POIs + categories) that *might* apply given the location context
+ * - No distances/time
+ * - These are OPTIONS for the agent to confirm via UI
+ */
+function highlightsSystemPrompt() {
+  return [
+    baseSystemPrompt(),
+    "",
+    "Task: Suggest possible nearby highlights for a real estate listing given the location context.",
+    "Return ONLY JSON with the shape: {\"metro\":\"...\",\"highlights\":[\"...\"]}. (\"metro\" may be empty if unknown.)",
+    "",
+    "Rules (strict):",
+    "- First infer the nearest major city/metro area for this location and set it as the \"metro\" string (e.g., \"Asheville\", \"Raleigh-Durham\").",
+    "- The highlights should use BOTH contexts: regional anchors from the metro/region + truly nearby local conveniences.",
+    "- Return EXACTLY 5 highlights when city+state are provided. (If you truly cannot, return fewer.)",
+    "- Order matters: first 3 = larger-area / widely recognizable anchors (major attractions, downtowns, airports, universities, major parks).",
+    "- Next 2 = hyper-local conveniences (parks, greenways, schools, shopping areas) that could plausibly be nearby.",
+    "- If the city is small, include regional anchors from the nearest major city/metro area in the same region/state.",
+    "- These are optional suggestions ONLY; do not assert they are definitely true.",
+    "- You MAY include named POIs (landmarks, parks, downtown areas) and also generic categories.",
+    "- Do NOT include any distances, drive times, or walk times (no 'minutes to', no miles, no 'walkable').",
+    "- Keep each highlight short (2–6 words ideally).",
+    "- Avoid protected-class targeting or demographic-coded items.",
+    "- Avoid tiny businesses unless they are truly iconic/regionally known.",
+    "- If location is missing/ambiguous, return an empty list.",
+    "",
+    "Output JSON only.",
+  ].join("\n");
+}
+
+// ─────────────────────────────────────────────
+// OpenAI call
+// ─────────────────────────────────────────────
+
+async function callOpenAI(env, payload) {
+  const apiKey = env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
+
+  const res = await fetch(OPENAI_API_BASE, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await res.text();
+  let json = null;
+  try {
+    json = JSON.parse(text);
+  } catch {}
+  if (!res.ok) {
+    const msg =
+      json && json.error && json.error.message ? json.error.message : text;
+    throw new Error(msg || "OpenAI API error");
   }
+  return json;
+}
 
-  function qs(sel) { return document.querySelector(sel); }
-  function el(tag, cls) { const d = document.createElement(tag); if (cls) d.className = cls; return d; }
-
-  function escapeHtml(s) {
-    return String(s || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-  }
-
-  function nowMs() { return (typeof performance !== "undefined" ? performance.now() : Date.now()); }
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-  function defaultKey(toolId) {
-    return "paw_history_" + (toolId ? toolId : "assistant");
-  }
-
-  function loadHistory(key) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return [];
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function saveHistory(key, history, maxItems) {
-    try {
-      const trimmed = Array.isArray(history) ? history.slice(-maxItems) : [];
-      localStorage.setItem(key, JSON.stringify(trimmed));
-    } catch {}
-  }
-
-  function normalizeText(t) {
-    return String(t || "").replace(/\r\n/g, "\n");
-  }
-
-  function pushHistory(history, role, content, maxItems) {
-    history.push({ role, content: String(content || "") });
-    if (history.length > maxItems) history.splice(0, history.length - maxItems);
-  }
-
-  function renderHistory($messages, history, addMsg) {
-    for (const h of (history || [])) {
-      if (!h || !h.role) continue;
-      addMsg(h.role === "user" ? "user" : "bot", h.content, { behavior: "auto" });
-    }
-  }
-
-  function addThinking($messages) {
-    const msg = el("div", "msg assistant");
-    msg.innerHTML = '<div class="bubble"><p>Thinking…</p></div>';
-    $messages.appendChild(msg);
-    try { $messages.scrollTo({ top: $messages.scrollHeight, behavior: "auto" }); } catch {}
-    return msg;
-  }
-
-  function addMsgFactory($messages) {
-    return function addMsg(who, text, opts = {}) {
-      const msg = el("div", "msg " + (who === "user" ? "user" : "assistant"));
-      const bubble = el("div", "bubble");
-      const p = el("p");
-      p.textContent = String(text || "");
-      bubble.appendChild(p);
-      msg.appendChild(bubble);
-      $messages.appendChild(msg);
-      try { $messages.scrollTo({ top: $messages.scrollHeight, behavior: opts.behavior || "smooth" }); } catch {}
-    };
-  }
-
-  // ─────────────────────────────────────────────
-  // Deliverable output (copy-first result card)
-  // ─────────────────────────────────────────────
-
-  function defaultIsDeliverableReply(reply, ctx) {
-    const r = String(reply || "").trim();
-    if (!r) return false;
-
-    if (!ctx || !ctx.toolId) return false;
-
-    if (/^Error reaching the assistant\b/i.test(r)) return false;
-    if (/^Upstream error\b/i.test(r)) return false;
-
-    if (/^(one|a couple|a few)\s+quick\s+(question|questions|clarifiers)\b/i.test(r)) return false;
-    if (/^(to write|before i write|to draft|to generate)\b/i.test(r)) return false;
-    if (/\b(i need|i'll need|need a few|need some|please provide|please share)\b/i.test(r)) return false;
-
-    if (/[?]\s*$/.test(r)) return false;
-    if (/\b(what|which|when|where|who|why|how)\b[^.\n]{0,120}\?/i.test(r)) return false;
-    if (/\b(can you|could you|would you|do you|are you)\b[^.\n]{0,120}\?/i.test(r)) return false;
-
-    const qMarks = (r.match(/\?/g) || []).length;
-    if (qMarks >= 1) return false;
-
-    return r.length >= 240;
-  }
-
-  function makeDeliverableUI($messages) {
-    const wrap = el("div", "deliverable");
-    wrap.style.display = "none";
-
-    const card = el("div", "deliverable-card");
-
-    const head = el("div", "deliverable-head");
-    const title = el("div", "deliverable-title");
-    title.textContent = "Your MLS Description";
-
-    const actions = el("div", "deliverable-actions");
-
-    const copyBtn = el("button", "btn primary");
-    copyBtn.type = "button";
-    copyBtn.textContent = "Copy";
-
-    const refineBtn = el("button", "btn");
-    refineBtn.type = "button";
-    refineBtn.textContent = "Refine";
-
-    actions.appendChild(copyBtn);
-    actions.appendChild(refineBtn);
-
-    head.appendChild(title);
-    head.appendChild(actions);
-
-    const body = el("div", "deliverable-body");
-    const text = el("div", "deliverable-text"); // IMPORTANT: div for readable body text
-    text.setAttribute("tabindex", "0");
-    body.appendChild(text);
-
-    card.appendChild(head);
-    card.appendChild(body);
-
-    wrap.appendChild(card);
-
-    $messages.parentNode.insertBefore(wrap, $messages);
-
-    async function copyToClipboard(v) {
-      const t = String(v || "");
-      if (!t) return false;
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        try { await navigator.clipboard.writeText(t); return true; } catch {}
-      }
-
-      try {
-        const ta = el("textarea");
-        ta.value = t;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        ta.style.top = "-9999px";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        const ok = document.execCommand("copy");
-        document.body.removeChild(ta);
-        return !!ok;
-      } catch {
-        return false;
+function extractReply(openaiJson) {
+  if (!openaiJson) return "";
+  if (typeof openaiJson.output_text === "string") return openaiJson.output_text;
+  if (Array.isArray(openaiJson.output)) {
+    for (const item of openaiJson.output) {
+      if (item && item.type === "message" && Array.isArray(item.content)) {
+        const parts = item.content
+          .filter(
+            (p) => p && p.type === "output_text" && typeof p.text === "string"
+          )
+          .map((p) => p.text);
+        if (parts.length) return parts.join("");
       }
     }
+  }
+  return "";
+}
 
-    function ensureToast(){
-      let t = qs("#pawToast");
-      if (t) return t;
-      t = el("div", "toast");
-      t.id = "pawToast";
-      t.setAttribute("role", "status");
-      t.setAttribute("aria-live", "polite");
-      document.body.appendChild(t);
-      return t;
-    }
-    function showToast(msg){
-      const t = ensureToast();
-      t.textContent = String(msg || "");
-      t.classList.add("show");
-      clearTimeout(showToast._t);
-      showToast._t = setTimeout(() => t.classList.remove("show"), 950);
-    }
+// ─────────────────────────────────────────────
+// Main handler
+// ─────────────────────────────────────────────
 
-    copyBtn.addEventListener("click", async () => {
-      const ok = await copyToClipboard(text.textContent);
-      if (ok) showToast("Copied to clipboard");
-    });
-
-    refineBtn.addEventListener("click", () => {
-      const input = qs("#input");
-      if (!input) return;
-      input.focus();
-      const starter = "Revise the MLS description above: ";
-      if (!String(input.value || "").trim()) {
-        input.value = starter;
-        try { input.setSelectionRange(input.value.length, input.value.length); } catch {}
-      }
-      try { input.dispatchEvent(new Event("input")); } catch {}
-    });
-
-    return { wrap, text };
+async function handleRequest(request, env, ctx) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+  if (request.method !== "POST") {
+    return jsonResponse({ reply: "Not found." }, 404);
   }
 
-  function buildPayload(cfg, message, history, extraPayload) {
-    const prefs = cfg.getPrefs ? cfg.getPrefs() : {};
-    const tool = String(cfg.toolId || "").trim();
+  try {
+    const bodyText = await request.text();
+    const body = safeJsonParse(bodyText) || {};
+    const tool = String(body.tool || "");
+    const message = String(body.message || "").trim();
+    const prefs =
+      body && typeof body.prefs === "object" && body.prefs ? body.prefs : {};
+    const history = clampHistory(body.history);
 
-    const payload = {
-      tool: tool || "",
-      message: String(message || ""),
-      history: Array.isArray(history) ? history : [],
-      prefs: prefs || {},
+    // Tool-specific phases
+    const phase = String(body.phase || "").trim();
+    const selectedHighlights = Array.isArray(body.selected_highlights)
+      ? body.selected_highlights
+      : null;
 
-      tool_id: tool || "",
-      text: String(message || "")
-    };
+    // Normalize location
+    const p = prefs || {};
+    const city = normText(p.city);
+    const state = normText(p.state).toUpperCase();
+    const zip = normText(p.zip) || normText((p.locked && p.locked.zip) || "");
+    const location =
+      normText(p.location) ||
+      ((city && state) ? `${city}, ${state}` : "") ||
+      zip ||
+      "";
 
-    const extra = (extraPayload && typeof extraPayload === "object") ? extraPayload : {};
-    for (const k of Object.keys(extra)) {
-      if (k === "tool" || k === "tool_id" || k === "message" || k === "text" || k === "prefs" || k === "history") continue;
-      payload[k] = extra[k];
-    }
+    // Agent-provided anchors (authoritative if present)
+    const agentAnchors = extractAgentAnchors(message);
 
-    return payload;
-  }
+    // Distance gating: ZIP only “unlocks” the ability to echo agent-provided time/distance,
+    // but we still never invent any distances.
+    const zipPresent = hasZip({ ...p, zip });
 
-  // ─────────────────────────────────────────────
-  // Tips modal (shared)
-  // ─────────────────────────────────────────────
-  // LOCKED UX PATTERN:
-  // Tips must open in a clean, closeable MODAL (not inline text, not chat messages).
-  // This is now the standard across all tools.
-  // ─────────────────────────────────────────────
-  function ensureTipsModal() {
-    let modal = qs("#pawTipsModal");
-    if (modal) return modal;
-
-    modal = el("div", "modal");
-    modal.id = "pawTipsModal";
-    modal.setAttribute("aria-hidden", "true");
-
-    const card = el("div", "modal-card");
-    card.setAttribute("role", "dialog");
-    card.setAttribute("aria-modal", "true");
-    card.setAttribute("aria-labelledby", "pawTipsTitle");
-
-    const head = el("div", "modal-head");
-    const title = el("div", "modal-title");
-    title.id = "pawTipsTitle";
-    title.textContent = "Tips & How To";
-
-    const close = el("button", "modal-close");
-    close.type = "button";
-    close.setAttribute("aria-label", "Close");
-    close.textContent = "✕";
-
-    head.appendChild(title);
-    head.appendChild(close);
-
-    const body = el("div", "modal-body");
-    body.id = "pawTipsBody";
-
-    card.appendChild(head);
-    card.appendChild(body);
-    modal.appendChild(card);
-    document.body.appendChild(modal);
-
-    function closeModal(){
-      modal.classList.remove("show");
-      modal.setAttribute("aria-hidden", "true");
-    }
-
-    close.addEventListener("click", closeModal);
-    modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
-
-    return modal;
-  }
-
-  function renderTipsHTML(tipsText) {
-    const raw = String(tipsText || "").trim();
-    if (!raw) return "<p style=\"margin:0;\">No tips available.</p>";
-
-    let parts = [];
-    if (raw.includes("•")) {
-      parts = raw.split("•").map(s => s.trim()).filter(Boolean);
-    } else {
-      parts = raw.split("\n").map(s => s.trim()).filter(Boolean);
-    }
-
-    let html = "<ul class=\"tips-list\">";
-    for (const p of parts) {
-      html += "<li>" + escapeHtml(p) + "</li>";
-    }
-    html += "</ul>";
-    return html;
-  }
-
-  function init(config) {
-    const cfg = Object.assign({
-      apiEndpoint: "",
-      toolId: "",
-      historyKey: null,
-      maxHistoryItems: 16,
-      sendHistoryItems: 8,
-      minThinkMs: 500,
-      maxMessageChars: 8000,
-
-      deliverableTitle: "",
-      deliverableAckText: "",
-      isDeliverableReply: defaultIsDeliverableReply,
-
-      inputPlaceholder: "",
-      tipsText: "",
-      enableDisclaimer: false,
-      disclaimerTrigger: null,
-      getDisclaimerText: null,
-      getPrefs: null,
-      getExtraPayload: null,
-      onResponse: null,
-    }, config || {});
-
-    const key = cfg.historyKey || defaultKey(cfg.toolId);
-    const history = loadHistory(key);
-
-    const $messages = qs("#messages");
-    const $input = qs("#input");
-    const $send = qs("#send");
-    const $tips = qs("#tips");
-
-    if (!$messages || !$input || !$send || !$tips) {
-      console.log("PAW shell: missing required DOM nodes.");
-      return;
-    }
-
-    if (cfg.inputPlaceholder) $input.placeholder = cfg.inputPlaceholder;
-
-    function autoGrow() {
-      $input.style.height = "auto";
-      $input.style.height = Math.min($input.scrollHeight, 520) + "px";
-    }
-    $input.addEventListener("input", autoGrow);
-    autoGrow();
-
-    const addMsg = addMsgFactory($messages);
-
-    const deliverable = makeDeliverableUI($messages);
-    if (cfg.deliverableTitle) {
-      deliverable.wrap.querySelector(".deliverable-title").textContent = String(cfg.deliverableTitle);
-    }
-
-    function showDeliverable(text) {
-      deliverable.text.textContent = String(text || "").trim();
-      deliverable.wrap.style.display = "block";
-      try { deliverable.wrap.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch {}
-    }
-
-    function clearDeliverable() {
-      deliverable.text.textContent = "";
-      deliverable.wrap.style.display = "none";
-    }
-
-    function push(role, content) {
-      pushHistory(history, role, content, cfg.maxHistoryItems);
-      saveHistory(key, history, cfg.maxHistoryItems);
-    }
-
-    function reset() {
-      history.length = 0;
-      saveHistory(key, history, cfg.maxHistoryItems);
-      clearDeliverable();
-      try { $messages.innerHTML = ""; } catch {}
-      autoGrow($input);
-      try { $messages.scrollTo({ top: 0, behavior: "auto" }); } catch {}
-    }
-
-    if (cfg.tipsText) {
-      const tipsModal = ensureTipsModal();
-      $tips.addEventListener("click", () => {
-        const body = qs("#pawTipsBody");
-        if (body) body.innerHTML = renderTipsHTML(cfg.tipsText);
-        tipsModal.classList.add("show");
-        tipsModal.setAttribute("aria-hidden", "false");
-      });
-    }
-
-    if (history.length) renderHistory($messages, history, addMsg);
-
-    $send.addEventListener("click", () => { sendFromInput(); });
-    $input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendFromInput();
-      }
-    });
-
-    function sendFromInput() {
-      const raw = String($input.value || "");
-      if (!raw.trim()) return;
-      $input.value = "";
-      autoGrow();
-      sendMessage(raw);
-    }
-
-    async function sendMessage(text, extraPayload = {}, options = {}) {
-      const opts = Object.assign({
-        echoUser: true,
-        behavior: "auto",
-      }, options || {});
-
-      const safeText = clampStr(normalizeText(text).trim(), cfg.maxMessageChars);
-      if (!safeText) return;
-
-      if (opts.echoUser) {
-        addMsg("user", safeText, { behavior: opts.behavior });
-        push("user", safeText);
-      }
-
-      const thinking = addThinking($messages);
-      const t0 = nowMs();
-
-      const ctx = { toolId: cfg.toolId, prefs: (cfg.getPrefs ? cfg.getPrefs() : {}) };
-
-      const extra = (cfg.getExtraPayload ? (cfg.getExtraPayload(safeText, ctx) || {}) : (extraPayload || {}));
-      const outboundHistory = history.slice(-cfg.sendHistoryItems);
-
-      const payload = buildPayload(cfg, safeText, outboundHistory, extra);
-
-      let data = null;
-      let reply = "";
-
-      try {
-        const res = await fetch(cfg.apiEndpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        data = await res.json().catch(() => null);
-        reply = (data && typeof data.reply === "string") ? data.reply : "";
-      } catch {
-        reply = "Error reaching the assistant. Please try again.";
-      }
-
-      const dt = nowMs() - t0;
-      if (dt < cfg.minThinkMs) await sleep(cfg.minThinkMs - dt);
-
-      thinking.remove();
-
-      let skipDefault = false;
-      if (typeof cfg.onResponse === "function") {
-        try {
-          const r = cfg.onResponse(data, Object.assign({}, ctx, { lastUserText: safeText })) || {};
-          if (r && r.skipDefault === true) skipDefault = true;
-        } catch {}
-      }
-
-      if (!skipDefault) {
-        const useDeliverable = (cfg.isDeliverableReply || defaultIsDeliverableReply)(reply, ctx);
-
-        if (useDeliverable) {
-          showDeliverable(reply);
-          push("assistant", String(reply || "").trim());
-        } else {
-          addMsg("bot", reply, { behavior: "smooth" });
-          push("assistant", String(reply || "").trim());
+    // ─────────────────────────────────────────────
+    // LISTING DESCRIPTION WRITER
+    // ─────────────────────────────────────────────
+    if (tool === "listing_description_writer") {
+      // (A) Background highlights fetch
+      if (phase === "highlights") {
+        // If location is empty/ambiguous, return empty list (no questions).
+        if (!location || location.length < 3) {
+          return jsonResponse({ reply: "", local: { highlights: [] } }, 200);
         }
+
+        const input = [
+          toInputMessage("system", highlightsSystemPrompt()),
+          toInputMessage(
+            "user",
+            [
+              "Location context:",
+              location,
+              "",
+              "Property notes (may help suggest relevant highlights):",
+              truncate(message, 600),
+              "",
+              'Return only JSON like: {"metro":"...","highlights":["..."]}',
+            ].join("\n")
+          ),
+        ];
+
+        const payload = {
+          model: DEFAULT_MODEL,
+          input,
+          // JSON mode for Responses API
+          text: { format: { type: "json_object" } },
+        };
+
+        const openai = await callOpenAI(env, payload);
+        const rawText = extractReply(openai);
+
+        let parsed = null;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch {
+          parsed = null;
+        }
+
+        const highlightsRaw =
+          parsed && Array.isArray(parsed.highlights)
+            ? parsed.highlights
+                .map((x) => String(x || "").trim())
+                .filter(Boolean)
+                .slice(0, 12)
+            : [];
+
+        // Extra cleanup: remove any accidental time/distance phrasing, dedupe, and cap to 5.
+        const seen = new Set();
+        const cleaned = [];
+        for (const h of highlightsRaw) {
+          if (/\b(minutes?|mins?|mi|miles?|km)\b/i.test(h)) continue;
+          const key = h.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          cleaned.push(h);
+          if (cleaned.length >= 5) break;
+        }
+
+        return jsonResponse({ reply: "", local: { highlights: cleaned } }, 200);
       }
+
+      // (B) Apply selected highlights (rewrite / second pass)
+      if (phase === "write" && selectedHighlights && selectedHighlights.length) {
+        const userMessage = message || "";
+
+        const input = [
+          toInputMessage(
+            "system",
+            listingWriterSystemPrompt({
+              prefs,
+              location,
+              selectedHighlights,
+              agentAnchors,
+              zipPresent,
+            })
+          ),
+          ...history.map((h) =>
+            toInputMessage(
+              "user",
+              roleTagLine(h.role, h.content).slice(0, MAX_HISTORY_ITEM_CHARS)
+            )
+          ),
+          toInputMessage("user", userMessage),
+        ];
+
+        const payload = { model: DEFAULT_MODEL, input };
+        const openai = await callOpenAI(env, payload);
+        const reply = extractReply(openai).trim();
+
+        return jsonResponse({ reply }, 200);
+      }
+
+      // (C) Default first-pass generation (no selected highlights yet)
+      const userMessage = message || "";
+
+      const input = [
+        toInputMessage(
+          "system",
+          listingWriterSystemPrompt({
+            prefs,
+            location,
+            selectedHighlights: [],
+            agentAnchors,
+            zipPresent,
+          })
+        ),
+        ...history.map((h) =>
+          toInputMessage(
+            "user",
+            roleTagLine(h.role, h.content).slice(0, MAX_HISTORY_ITEM_CHARS)
+          )
+        ),
+        toInputMessage("user", userMessage),
+      ];
+
+      const payload = { model: DEFAULT_MODEL, input };
+      const openai = await callOpenAI(env, payload);
+      const reply =
+        extractReply(openai).trim() ||
+        "Add a few property details and I’ll write the MLS description.";
+
+      return jsonResponse({ reply }, 200);
     }
 
-    const instance = {
-      reset,
-      send: (text) => sendMessage(text),
-      sendExtra: (text, extra, options) => sendMessage(text, extra || {}, options || {}),
-      clearDeliverable,
-    };
+    // ─────────────────────────────────────────────
+    // DEFAULT / ASSISTANT TOOL
+    // ─────────────────────────────────────────────
 
-    _instances[cfg.toolId || "assistant"] = instance;
-    return instance;
+    const userMessage = message || "";
+
+    const input = [
+      toInputMessage("system", baseSystemPrompt()),
+      ...history.map((h) =>
+        toInputMessage(
+          "user",
+          roleTagLine(h.role, h.content).slice(0, MAX_HISTORY_ITEM_CHARS)
+        )
+      ),
+      toInputMessage("user", userMessage),
+    ];
+
+    const payload = { model: DEFAULT_MODEL, input };
+    const openai = await callOpenAI(env, payload);
+    const reply = extractReply(openai).trim() || "Type a question and I’ll help.";
+    return jsonResponse({ reply }, 200);
+  } catch (err) {
+    return jsonResponse(
+      { reply: `Upstream error: ${String(err?.message || err)}` },
+      200
+    );
   }
-
-  window.PAWToolShell = { init };
-})();
+}
