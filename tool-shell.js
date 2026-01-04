@@ -2,41 +2,31 @@
  * Shared frontend logic for all tools
  * DO NOT put prompting logic here — Worker only
  *
- * Contract:
- * - Tool pages include:
- *    #messages (container)
- *    #input (textarea)
- *    #send (button)
- *    #reset (button)
- *    #tips (button)
- * - Tool pages call:
- *    window.PAWToolShell.init({
- *      apiEndpoint, toolId, tipsText,
- *      getPrefs?, getExtraPayload?, onResponse?,
- *      sendHistoryItems?, maxHistoryItems?,
- *      deliverableMode?, deliverableTitle?,
- *      enableDisclaimer?, disclaimerTrigger?, getDisclaimerText?
- *    })
- *
- * Thinking indicator:
- * - CSS lives in paw-ui.css
- * - JS must add/remove a message bubble using:
- *   .msg.ai.paw-thinking
- *   .paw-dots > .paw-dot (x3)
+ * Embed handling:
+ * - If inside an iframe OR ?embed=1, sets: <html data-embed="1">
+ * - paw-ui.css contains the visual embed rules.
  */
 
 (function () {
+  // -----------------------------
+  // Global embed detection (applies to ALL tools)
+  // -----------------------------
+  (function setEmbedMode() {
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      const wantsEmbed = qs.get("embed") === "1";
+      const inIframe = window.self !== window.top;
+      if (wantsEmbed || inIframe) {
+        document.documentElement.setAttribute("data-embed", "1");
+      }
+    } catch (e) {
+      // Cross-origin iframe safety: assume embed
+      document.documentElement.setAttribute("data-embed", "1");
+    }
+  })();
+
   function $(id) {
     return document.getElementById(id);
-  }
-
-  function escapeHtml(str) {
-    return String(str || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
   }
 
   function scrollToBottom(el) {
@@ -61,9 +51,7 @@
     scrollToBottom($messages);
   }
 
-  // ==========================
-  // Thinking indicator (markup only; CSS is in paw-ui.css)
-  // ==========================
+  // Thinking indicator markup only (CSS lives in paw-ui.css)
   function appendThinking($messages) {
     const wrap = document.createElement("div");
     wrap.className = "msg ai paw-thinking";
@@ -99,7 +87,6 @@
       if (node && node.parentNode) node.parentNode.removeChild(node);
     } catch {}
   }
-  // ==========================
 
   function ensureTipsModal() {
     let modal = $("pawTipsModal");
@@ -148,10 +135,87 @@
     modal.setAttribute("aria-hidden", "false");
   }
 
+  // -------------------------------------------------------
+  // Legacy init support (old pages passing DOM refs directly)
+  // -------------------------------------------------------
+  function initLegacy(config) {
+    const { input, sendBtn, output, endpoint, getExtraPayload, onResponse, beforeSend } = config;
+
+    let isSending = false;
+
+    async function sendMessage(text) {
+      if (isSending) return;
+      const trimmed = String(text || "").trim();
+      if (!trimmed) return;
+
+      isSending = true;
+      let thinkingNode = null;
+
+      try {
+        if (typeof beforeSend === "function") beforeSend(trimmed);
+
+        appendMessage(output, "user", trimmed);
+        thinkingNode = appendThinking(output);
+
+        const extra = typeof getExtraPayload === "function" ? (getExtraPayload(trimmed) || {}) : {};
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(Object.assign({ message: trimmed }, extra)),
+        });
+
+        const data = await res.json();
+        removeThinking(thinkingNode);
+
+        if (typeof onResponse === "function") {
+          const handled = onResponse(data);
+          if (handled && handled.skipDefault) return;
+        }
+
+        if (data && typeof data.reply === "string") {
+          appendMessage(output, "ai", data.reply);
+        } else {
+          appendMessage(output, "ai", "No response received.");
+        }
+
+        input.value = "";
+        input.focus();
+      } catch (err) {
+        removeThinking(thinkingNode);
+        appendMessage(output, "ai", "Something went wrong. Please try again.");
+      } finally {
+        isSending = false;
+      }
+    }
+
+    sendBtn.addEventListener("click", () => sendMessage(input.value));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(input.value);
+      }
+    });
+
+    return {
+      sendMessage,
+      reset() {
+        output.innerHTML = "";
+        input.value = "";
+      },
+    };
+  }
+
+  // -----------------------------------
+  // Current init (used by ask/listing)
+  // -----------------------------------
   function init(config) {
+    // If an older tool passes DOM refs, use legacy path
+    if (config && config.input && config.sendBtn && config.output) {
+      return initLegacy(config);
+    }
+
     const apiEndpoint = String(config && config.apiEndpoint ? config.apiEndpoint : "").trim();
     const toolId = String(config && config.toolId ? config.toolId : "").trim();
-
     const tipsText = String(config && config.tipsText ? config.tipsText : "").trim();
 
     const sendHistoryItems = Number.isFinite(config.sendHistoryItems) ? config.sendHistoryItems : 10;
@@ -163,11 +227,9 @@
       typeof config.getDisclaimerText === "function" ? config.getDisclaimerText : () => "";
 
     const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : () => ({});
-    const getExtraPayload =
-      typeof config.getExtraPayload === "function" ? config.getExtraPayload : () => ({});
+    const getExtraPayload = typeof config.getExtraPayload === "function" ? config.getExtraPayload : () => ({});
     const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
 
-    // DOM (by contract)
     const $messages = $("messages");
     const $input = $("input");
     const $send = $("send");
@@ -187,7 +249,6 @@
       $input.setAttribute("placeholder", config.inputPlaceholder.trim());
     }
 
-    // Conversation history: [{ role: "user"|"assistant", content: "..." }]
     let history = [];
     let isSending = false;
 
@@ -211,6 +272,7 @@
       if (isSending) return;
       const trimmed = String(text || "").trim();
       if (!trimmed) return;
+
       if (!apiEndpoint) {
         appendMessage($messages, "ai", "Missing API endpoint configuration.");
         return;
@@ -225,7 +287,6 @@
         if (echoUser) appendMessage($messages, "user", trimmed);
         if (echoUser) pushHistory("user", trimmed);
 
-        // Optional disclaimer (triggered by user message)
         if (enableDisclaimer && disclaimerTrigger && disclaimerTrigger.test(trimmed)) {
           const d = String(getDisclaimerText() || "").trim();
           if (d) {
@@ -234,37 +295,25 @@
           }
         }
 
-        // Show thinking indicator while waiting
         thinkingNode = appendThinking($messages);
 
-        // Payload assembly
         const prefs = getPrefs() || {};
         const extra = getExtraPayload(trimmed) || {};
         const historyToSend = history.slice(Math.max(0, history.length - sendHistoryItems));
 
         const payload = Object.assign(
-          {
-            tool: toolId,
-            message: trimmed,
-            prefs,
-            history: historyToSend,
-          },
+          { tool: toolId, message: trimmed, prefs, history: historyToSend },
           extra
         );
 
         const data = await postToWorker(payload);
 
-        // Remove thinking once we have a response
         removeThinking(thinkingNode);
         thinkingNode = null;
 
-        // Allow tool page to intercept/override rendering
         if (onResponse) {
           const handled = onResponse(data);
-          if (handled && handled.skipDefault) {
-            isSending = false;
-            return;
-          }
+          if (handled && handled.skipDefault) return;
         }
 
         const reply = data && typeof data.reply === "string" ? data.reply : "";
@@ -288,11 +337,11 @@
       }
     }
 
-    // Used by listing tool for background phases / follow-on writes
     async function sendExtra(instruction, extraPayload = {}, options = {}) {
       if (isSending) return;
       const msg = String(instruction || "").trim();
       if (!msg) return;
+
       if (!apiEndpoint) {
         appendMessage($messages, "ai", "Missing API endpoint configuration.");
         return;
@@ -307,19 +356,13 @@
         if (echoUser) appendMessage($messages, "user", msg);
         if (echoUser) pushHistory("user", msg);
 
-        // Show thinking indicator while waiting
         thinkingNode = appendThinking($messages);
 
         const prefs = getPrefs() || {};
         const historyToSend = history.slice(Math.max(0, history.length - sendHistoryItems));
 
         const payload = Object.assign(
-          {
-            tool: toolId,
-            message: msg,
-            prefs,
-            history: historyToSend,
-          },
+          { tool: toolId, message: msg, prefs, history: historyToSend },
           extraPayload || {}
         );
 
@@ -330,10 +373,7 @@
 
         if (onResponse) {
           const handled = onResponse(data);
-          if (handled && handled.skipDefault) {
-            isSending = false;
-            return;
-          }
+          if (handled && handled.skipDefault) return;
         }
 
         const reply = data && typeof data.reply === "string" ? data.reply : "";
@@ -349,7 +389,6 @@
       }
     }
 
-    // Wire send button + Enter key
     $send.addEventListener("click", () => sendMessage($input.value));
     $input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -358,7 +397,6 @@
       }
     });
 
-    // Reset
     if ($reset) {
       $reset.addEventListener("click", () => {
         try {
@@ -369,7 +407,6 @@
       });
     }
 
-    // Tips
     if ($tips) {
       $tips.addEventListener("click", () => {
         showTips(tipsText || "No tips configured for this tool.");
