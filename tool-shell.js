@@ -15,19 +15,13 @@
  */
 
 (function () {
-  "use strict";
-
-  function byId(id) {
-    return document.getElementById(id);
-  }
-
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  function escapeHtml(str) {
+    return String(str || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
   }
 
   function appendMessage($messages, role, text) {
@@ -47,9 +41,36 @@
     } catch (e) {}
   }
 
-  function getAuthToken() {
+  function appendThinking($messages) {
+    const wrap = document.createElement("div");
+    wrap.className = "msg ai paw-thinking";
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = "Thinking";
+    const dots = document.createElement("span");
+    dots.className = "paw-dots";
+    dots.innerHTML = '<span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span>';
+    bubble.appendChild(dots);
+    wrap.appendChild(bubble);
+    $messages.appendChild(wrap);
+    $messages.scrollTop = $messages.scrollHeight;
+    return wrap;
+  }
+
+  function getEl(id) {
+    return document.getElementById(id);
+  }
+
+  function pickFirst(...els) {
+    for (const el of els) {
+      if (el) return el;
+    }
+    return null;
+  }
+
+  function getCSRFTokenFromMeta() {
     try {
-      const el = document.querySelector('meta[name="paw-auth-token"]');
+      const el = document.querySelector('meta[name="paw-csrf-token"]');
       const token = el && el.getAttribute("content");
       return token ? String(token) : "";
     } catch (e) {
@@ -67,82 +88,133 @@
       body: JSON.stringify(payload),
     });
 
+    const text = await res.text();
     let data = null;
     try {
-      data = await res.json();
-    } catch (e) {}
+      data = JSON.parse(text);
+    } catch (e) {
+      data = { reply: text };
+    }
 
     if (!res.ok) {
       const msg =
-        (data && (data.error || data.message)) || "Request failed (" + res.status + ")";
-      const err = new Error(msg);
-      err.status = res.status;
-      err.data = data;
-      throw err;
+        (data && (data.error || data.message)) ||
+        "Request failed (" + res.status + ")";
+      throw new Error(msg);
     }
 
     return data;
   }
 
-  function buildPayloadBase(toolId, history, prefs, extraPayload) {
-    return {
-      toolId,
-      history: history.slice(),
-      prefs: prefs || {},
-      ...(extraPayload || {}),
-    };
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
   }
 
-  function makeThinkingNode($messages) {
-    const wrap = document.createElement("div");
-    wrap.className = "msg ai";
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.textContent = "Thinking...";
-    wrap.appendChild(bubble);
-    $messages.appendChild(wrap);
-    $messages.scrollTop = $messages.scrollHeight;
-    return wrap;
+  function buildPayloadBase(toolId, history, prefs, extra) {
+    const payload = {
+      toolId,
+      history,
+      prefs,
+    };
+    if (extra && typeof extra === "object") payload.extra = extra;
+    return payload;
   }
 
   window.PAWToolShell = {
     init: function (config) {
       config = config || {};
 
+      // -------------------------------------------------
+      // Embed mode (Circle / iframe-safe)
+      // -------------------------------------------------
+      // WHY THIS LIVES HERE (shared shell):
+      // - Tool pages always include the same outer wrappers: .app > .frame > .panel.
+      // - In Circle (and other embeds), the host already provides padding/containers.
+      // - When both host + tool apply borders/shadows/padding, you see "double boxes".
+      //
+      // Contract:
+      // - paw-ui.css has an embed-only ruleset keyed off: html[data-embed="1"] ...
+      // - This shell is responsible for setting that attribute deterministically so
+      //   embeds stay clean and this bug doesn't keep coming back.
+      //
+      // Override:
+      // - Append ?embed=1 to force embed styling
+      // - Or pass { embedMode: true/false } in init(config)
+      (function setEmbedMode() {
+        let forced = null;
+        if (typeof config.embedMode === "boolean") forced = config.embedMode;
+
+        let isEmbed = false;
+        if (forced !== null) {
+          isEmbed = forced;
+        } else {
+          try {
+            const qs = new URLSearchParams(window.location.search || "");
+            const q = (qs.get("embed") || "").toLowerCase();
+            if (q === "1" || q === "true" || q === "yes") isEmbed = true;
+
+            // Auto-detect iframe embedding (Circle, etc.)
+            if (!isEmbed) {
+              try {
+                isEmbed = window.self !== window.top;
+              } catch (e) {
+                isEmbed = true;
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (isEmbed) {
+          try {
+            document.documentElement.setAttribute("data-embed", "1");
+          } catch (e) {}
+        } else {
+          // Allow tools site to remain styled normally.
+          try {
+            document.documentElement.removeAttribute("data-embed");
+          } catch (e) {}
+        }
+      })();
+
       const toolId = String(config.toolId || "");
       const apiEndpoint = String(config.apiEndpoint || "");
-      const sendHistoryItems = Number.isFinite(config.sendHistoryItems)
-        ? config.sendHistoryItems
-        : 12;
+      const sendHistoryItems = clamp(Number(config.sendHistoryItems || 10), 0, 50);
+      const maxHistoryItems = clamp(Number(config.maxHistoryItems || 20), 0, 100);
 
+      const getPrefs =
+        typeof config.getPrefs === "function" ? config.getPrefs : null;
+      const getExtraPayload =
+        typeof config.getExtraPayload === "function" ? config.getExtraPayload : null;
+      const onResponse =
+        typeof config.onResponse === "function" ? config.onResponse : null;
+
+      const enableDisclaimer = !!config.enableDisclaimer;
+      const disclaimerTrigger =
+        config.disclaimerTrigger instanceof RegExp ? config.disclaimerTrigger : null;
       const getDisclaimerText =
         typeof config.getDisclaimerText === "function" ? config.getDisclaimerText : () => "";
 
-      const getPrefs =
-        typeof config.getPrefs === "function" ? config.getPrefs : () => ({});
+      const deliverableMode = !!config.deliverableMode;
 
-      const getExtraPayload =
-        typeof config.getExtraPayload === "function" ? config.getExtraPayload : () => ({});
+      // Standard IDs
+      const $messages = getEl("messages");
+      const $input = getEl("input");
+      const $send = getEl("send");
+      const $reset = getEl("reset");
+      const $tips = getEl("tips");
 
-      const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
+      // Backward/forward compat IDs (optional)
+      const $prompt = getEl("prompt");
+      const $submitBtn = getEl("submitBtn");
+      const $form = pickFirst(getEl("toolForm"), document.querySelector("form"));
 
-      // Standard IDs (ask.html, listing.html)
-      const $messages = byId("messages");
-      const $input = byId("input") || byId("prompt"); // compat
-      const $send = byId("send") || byId("submitBtn"); // compat
-      const $reset = byId("reset");
-      const $tips = byId("tips");
-      const $form = byId("toolForm"); // optional compat if a tool uses a <form>
+      const inputEl = pickFirst($input, $prompt);
+      const sendBtnEl = pickFirst($send, $submitBtn);
 
-      if (!$messages || !$input || !$send) {
-        console.error(
-          "[PAWToolShell] Missing required DOM elements. Required: #messages and (#input or #prompt) and (#send or #submitBtn)."
+      if (!$messages || !inputEl || !sendBtnEl) {
+        console.warn(
+          "[PAWToolShell] Missing required DOM elements. Need #messages + #input/#prompt + #send/#submitBtn."
         );
-        return {
-          sendMessage: async function () {},
-          sendExtra: async function () {},
-          reset: function () {},
-        };
       }
 
       const history = [];
@@ -150,30 +222,36 @@
       let disclaimerShown = false;
 
       function pushHistory(role, content) {
-        history.push({ role, content: String(content || "") });
-        while (history.length > 50) history.shift();
+        history.push({ role, content });
+        while (history.length > maxHistoryItems) history.shift();
       }
 
       function getHistoryForSend() {
-        const sliceStart = Math.max(0, history.length - sendHistoryItems);
-        return history.slice(sliceStart);
+        if (sendHistoryItems <= 0) return [];
+        return history.slice(-sendHistoryItems);
       }
 
-      function setPlaceholder(text) {
+      function setPlaceholder(txt) {
         try {
-          if (text) $input.placeholder = String(text);
+          inputEl.setAttribute("placeholder", txt || "");
         } catch (e) {}
       }
 
-      if (config.inputPlaceholder) setPlaceholder(config.inputPlaceholder);
+      if (typeof config.inputPlaceholder === "string" && config.inputPlaceholder) {
+        setPlaceholder(config.inputPlaceholder);
+      }
 
-      function clearComposer() {
+      function clearComposer({ keepFocus = true } = {}) {
         try {
-          $input.value = "";
+          inputEl.value = "";
+          // Keep composer height sane if a tool adds autosize behavior.
+          inputEl.style.height = "";
+          if (keepFocus) inputEl.focus();
         } catch (e) {}
       }
 
       function maybeAppendDisclaimerOnce() {
+        if (!enableDisclaimer) return;
         if (disclaimerShown) return;
         const disclaimer = getDisclaimerText();
         if (!disclaimer) return;
@@ -182,8 +260,9 @@
       }
 
       async function postToWorker(payload) {
-        const token = getAuthToken();
-        return await postJSON(apiEndpoint, payload, token);
+        const token = getCSRFTokenFromMeta();
+        const url = apiEndpoint.replace(/\/+$/, "") + "/api";
+        return await postJSON(url, payload, token);
       }
 
       async function sendMessage(text) {
@@ -203,10 +282,18 @@
           appendMessage($messages, "user", trimmed);
           pushHistory("user", trimmed);
 
-          thinkingNode = makeThinkingNode($messages);
+          // UX: clear input immediately after a successful submit so messages don't stick.
+          clearComposer({ keepFocus: true });
 
-          const prefs = getPrefs();
-          const extraPayload = getExtraPayload();
+          // Optional: show disclaimer if they trigger certain keywords in the ask tool
+          if (enableDisclaimer && disclaimerTrigger && disclaimerTrigger.test(trimmed)) {
+            maybeAppendDisclaimerOnce();
+          }
+
+          thinkingNode = appendThinking($messages);
+
+          const prefs = getPrefs ? getPrefs() : {};
+          const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
 
           const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, extraPayload);
 
@@ -216,7 +303,8 @@
 
           if (onResponse) {
             try {
-              onResponse(data);
+              const result = onResponse(data);
+              if (result && result.skipDefault) return;
             } catch (e) {}
           }
 
@@ -246,7 +334,7 @@
           return;
         }
 
-        const echoUser = options.echoUser === true;
+        const echoUser = options.echoUser !== false;
 
         isSending = true;
         let thinkingNode = null;
@@ -257,16 +345,13 @@
             pushHistory("user", msg);
           }
 
-          thinkingNode = makeThinkingNode($messages);
+          thinkingNode = appendThinking($messages);
 
-          const prefs = getPrefs();
-          const baseExtra = getExtraPayload();
-
-          const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, {
-            ...baseExtra,
-            ...extraPayload,
-            instruction: msg,
-          });
+          const prefs = getPrefs ? getPrefs() : {};
+          // IMPORTANT: sendExtra MUST still flow through getExtraPayload() (listing highlights relies on it)
+          const extraFromHook = getExtraPayload ? getExtraPayload(msg) : {};
+          const mergedExtra = Object.assign({}, extraFromHook || {}, extraPayload || {});
+          const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, mergedExtra);
 
           const data = await postToWorker(payload);
 
@@ -274,7 +359,8 @@
 
           if (onResponse) {
             try {
-              onResponse(data);
+              const result = onResponse(data);
+              if (result && result.skipDefault) return data;
             } catch (e) {}
           }
 
@@ -284,9 +370,11 @@
             pushHistory("assistant", reply);
             maybeAppendDisclaimerOnce();
           }
+
+          return data;
         } catch (err) {
           removeNode(thinkingNode);
-          if (echoUser) appendMessage($messages, "ai", "Something went wrong. Please try again.");
+          appendMessage($messages, "ai", "Something went wrong. Please try again.");
           console.error("[PAWToolShell] sendExtra error:", err);
         } finally {
           isSending = false;
@@ -299,33 +387,34 @@
         } catch (e) {}
 
         history.length = 0;
-        clearComposer();
-
+        clearComposer({ keepFocus: true });
         disclaimerShown = false;
       }
 
       // -----------------------------
       // Wire UI events (standard)
       // -----------------------------
-      $send.addEventListener("click", function () {
-        sendMessage($input.value);
+      sendBtnEl.addEventListener("click", function () {
+        sendMessage(inputEl.value);
       });
 
       // Optional: tools may include a <form>; prevent default submit
       if ($form) {
         $form.addEventListener("submit", function (e) {
-          e.preventDefault();
-          sendMessage($input.value);
+          try {
+            e.preventDefault();
+          } catch (x) {}
+          sendMessage(inputEl.value);
         });
       }
 
       // Enter behavior:
       // - Enter sends
       // - Shift+Enter inserts newline
-      $input.addEventListener("keydown", function (e) {
+      inputEl.addEventListener("keydown", function (e) {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          sendMessage($input.value);
+          sendMessage(inputEl.value);
         }
       });
 
