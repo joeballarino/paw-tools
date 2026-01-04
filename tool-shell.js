@@ -1,13 +1,36 @@
 /* ProAgent Works Tool Shell
  * Shared frontend logic for all tools
  * DO NOT put prompting logic here — Worker only
+ *
+ * Contract:
+ * - Tool pages include:
+ *    #messages (container)
+ *    #input (textarea)
+ *    #send (button)
+ *    #reset (button)
+ *    #tips (button)
+ * - Tool pages call:
+ *    window.PAWToolShell.init({
+ *      apiEndpoint, toolId, tipsText,
+ *      getPrefs?, getExtraPayload?, onResponse?,
+ *      sendHistoryItems?, maxHistoryItems?,
+ *      deliverableMode?, deliverableTitle?,
+ *      enableDisclaimer?, disclaimerTrigger?, getDisclaimerText?
+ *    })
  */
 
 (function () {
-  const DEFAULT_ENDPOINT = "/api/ask";
-
   function $(id) {
     return document.getElementById(id);
+  }
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
   }
 
   function scrollToBottom(el) {
@@ -16,62 +39,175 @@
     } catch {}
   }
 
-  function escapeHtml(str) {
-    return String(str || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+  function appendMessage($messages, role, text) {
+    const wrap = document.createElement("div");
+    wrap.className = "msg " + (role === "user" ? "user" : "ai");
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    // Preserve line breaks (CSS uses pre-wrap already)
+    const p = document.createElement("p");
+    p.textContent = String(text || "");
+
+    bubble.appendChild(p);
+    wrap.appendChild(bubble);
+    $messages.appendChild(wrap);
+    scrollToBottom($messages);
   }
 
-  function appendMessage(container, role, text) {
-    const div = document.createElement("div");
-    div.className = role === "user" ? "paw-msg paw-user" : "paw-msg paw-ai";
-    div.innerHTML = escapeHtml(text).replace(/\n/g, "<br>");
-    container.appendChild(div);
-    scrollToBottom(container);
+  function ensureTipsModal() {
+    let modal = $("pawTipsModal");
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = "pawTipsModal";
+    modal.className = "modal";
+    modal.setAttribute("aria-hidden", "true");
+
+    modal.innerHTML = `
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawTipsTitle">
+        <div class="modal-head">
+          <div id="pawTipsTitle" class="modal-title">Tips &amp; How To</div>
+          <button class="modal-close" id="pawTipsClose" aria-label="Close" type="button">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="pawTipsBody" style="white-space:pre-wrap;"></div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => {
+      modal.classList.remove("show");
+      modal.setAttribute("aria-hidden", "true");
+    };
+
+    $("pawTipsClose").addEventListener("click", close);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) close();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") close();
+    });
+
+    return modal;
+  }
+
+  function showTips(text) {
+    const modal = ensureTipsModal();
+    const body = $("pawTipsBody");
+    if (body) body.textContent = String(text || "");
+    modal.classList.add("show");
+    modal.setAttribute("aria-hidden", "false");
   }
 
   function init(config) {
-    const {
-      input,
-      sendBtn,
-      output,
-      endpoint = DEFAULT_ENDPOINT,
-      getExtraPayload,
-      onResponse,
-      beforeSend,
-    } = config;
+    const apiEndpoint = String(config && config.apiEndpoint ? config.apiEndpoint : "").trim();
+    const toolId = String(config && config.toolId ? config.toolId : "").trim();
 
+    const tipsText = String(config && config.tipsText ? config.tipsText : "").trim();
+
+    const sendHistoryItems = Number.isFinite(config.sendHistoryItems) ? config.sendHistoryItems : 10;
+    const maxHistoryItems = Number.isFinite(config.maxHistoryItems) ? config.maxHistoryItems : 20;
+
+    const enableDisclaimer = !!(config && config.enableDisclaimer);
+    const disclaimerTrigger = config && config.disclaimerTrigger instanceof RegExp ? config.disclaimerTrigger : null;
+    const getDisclaimerText =
+      typeof config.getDisclaimerText === "function"
+        ? config.getDisclaimerText
+        : () => "";
+
+    const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : () => ({});
+    const getExtraPayload =
+      typeof config.getExtraPayload === "function" ? config.getExtraPayload : () => ({});
+    const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
+
+    // DOM (by contract)
+    const $messages = $("messages");
+    const $input = $("input");
+    const $send = $("send");
+    const $reset = $("reset");
+    const $tips = $("tips");
+
+    if (!$messages || !$input || !$send) {
+      console.error("[PAWToolShell] Missing required DOM elements (#messages, #input, #send).");
+      return {
+        sendMessage: async () => {},
+        sendExtra: async () => {},
+        reset: () => {},
+      };
+    }
+
+    if (config && typeof config.inputPlaceholder === "string" && config.inputPlaceholder.trim()) {
+      $input.setAttribute("placeholder", config.inputPlaceholder.trim());
+    }
+
+    // Conversation history: [{ role: "user"|"assistant", content: "..." }]
+    let history = [];
     let isSending = false;
 
-    async function sendMessage(text) {
+    function pushHistory(role, content) {
+      history.push({ role, content: String(content || "") });
+      if (history.length > maxHistoryItems) {
+        history = history.slice(history.length - maxHistoryItems);
+      }
+    }
+
+    async function postToWorker(payload) {
+      const res = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return await res.json();
+    }
+
+    async function sendMessage(text, options = {}) {
       if (isSending) return;
       const trimmed = String(text || "").trim();
       if (!trimmed) return;
-
-      isSending = true;
-      if (beforeSend) beforeSend(trimmed);
-
-      appendMessage(output, "user", trimmed);
-      input.value = "";
-
-      const payload = {
-        message: trimmed,
-      };
-
-      if (getExtraPayload) {
-        Object.assign(payload, getExtraPayload(trimmed) || {});
+      if (!apiEndpoint) {
+        appendMessage($messages, "ai", "Missing API endpoint configuration.");
+        return;
       }
 
+      const echoUser = options.echoUser !== false;
+
+      isSending = true;
+
       try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        if (echoUser) appendMessage($messages, "user", trimmed);
+        if (echoUser) pushHistory("user", trimmed);
 
-        const data = await res.json();
+        // Optional disclaimer (triggered by user message)
+        if (enableDisclaimer && disclaimerTrigger && disclaimerTrigger.test(trimmed)) {
+          const d = String(getDisclaimerText() || "").trim();
+          if (d) {
+            appendMessage($messages, "ai", d);
+            pushHistory("assistant", d);
+          }
+        }
 
+        // Payload assembly
+        const prefs = getPrefs() || {};
+        const extra = getExtraPayload(trimmed) || {};
+        const historyToSend = history.slice(Math.max(0, history.length - sendHistoryItems));
+
+        const payload = Object.assign(
+          {
+            tool: toolId,
+            message: trimmed,
+            prefs,
+            history: historyToSend,
+          },
+          extra
+        );
+
+        const data = await postToWorker(payload);
+
+        // Allow tool page to intercept/override rendering
         if (onResponse) {
           const handled = onResponse(data);
           if (handled && handled.skipDefault) {
@@ -80,37 +216,57 @@
           }
         }
 
-        if (data && typeof data.reply === "string") {
-          appendMessage(output, "ai", data.reply);
+        const reply = data && typeof data.reply === "string" ? data.reply : "";
+        if (reply) {
+          appendMessage($messages, "ai", reply);
+          pushHistory("assistant", reply);
+        } else {
+          appendMessage($messages, "ai", "No response received.");
+          pushHistory("assistant", "No response received.");
         }
       } catch (err) {
-        appendMessage(output, "ai", "Something went wrong. Please try again.");
+        appendMessage($messages, "ai", "Something went wrong. Please try again.");
+        pushHistory("assistant", "Something went wrong. Please try again.");
       } finally {
         isSending = false;
+        try {
+          $input.value = "";
+          $input.focus();
+        } catch {}
       }
     }
 
+    // Used by listing tool for background phases / follow-on writes
     async function sendExtra(instruction, extraPayload = {}, options = {}) {
       if (isSending) return;
+      const msg = String(instruction || "").trim();
+      if (!msg) return;
+      if (!apiEndpoint) {
+        appendMessage($messages, "ai", "Missing API endpoint configuration.");
+        return;
+      }
+
+      const echoUser = options.echoUser === true;
 
       isSending = true;
-      if (options.beforeSend) options.beforeSend(instruction);
-
-      const payload = Object.assign(
-        {
-          message: instruction,
-        },
-        extraPayload
-      );
-
       try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        if (echoUser) appendMessage($messages, "user", msg);
+        if (echoUser) pushHistory("user", msg);
 
-        const data = await res.json();
+        const prefs = getPrefs() || {};
+        const historyToSend = history.slice(Math.max(0, history.length - sendHistoryItems));
+
+        const payload = Object.assign(
+          {
+            tool: toolId,
+            message: msg,
+            prefs,
+            history: historyToSend,
+          },
+          extraPayload || {}
+        );
+
+        const data = await postToWorker(payload);
 
         if (onResponse) {
           const handled = onResponse(data);
@@ -120,33 +276,55 @@
           }
         }
 
-        if (data && typeof data.reply === "string") {
-          appendMessage(output, "ai", data.reply);
+        const reply = data && typeof data.reply === "string" ? data.reply : "";
+        if (reply) {
+          appendMessage($messages, "ai", reply);
+          pushHistory("assistant", reply);
         }
       } catch (err) {
-        appendMessage(output, "ai", "Something went wrong. Please try again.");
+        // For background calls, keep errors quiet unless echoUser
+        if (echoUser) appendMessage($messages, "ai", "Something went wrong. Please try again.");
       } finally {
         isSending = false;
       }
     }
 
-    sendBtn.addEventListener("click", () => {
-      sendMessage(input.value);
-    });
-
-    input.addEventListener("keydown", (e) => {
+    // Wire send button + Enter key
+    $send.addEventListener("click", () => sendMessage($input.value));
+    $input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        sendMessage(input.value);
+        sendMessage($input.value);
       }
     });
+
+    // Reset
+    if ($reset) {
+      $reset.addEventListener("click", () => {
+        try {
+          $messages.innerHTML = "";
+          $input.value = "";
+          history = [];
+        } catch {}
+      });
+    }
+
+    // Tips
+    if ($tips) {
+      $tips.addEventListener("click", () => {
+        showTips(tipsText || "No tips configured for this tool.");
+      });
+    }
 
     return {
       sendMessage,
       sendExtra,
       reset() {
-        output.innerHTML = "";
-        input.value = "";
+        try {
+          $messages.innerHTML = "";
+          $input.value = "";
+          history = [];
+        } catch {}
       },
     };
   }
