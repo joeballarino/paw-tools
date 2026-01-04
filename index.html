@@ -1,48 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ProAgent Works – AI Tools</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Primary UI styles -->
-  <link rel="stylesheet" href="./paw-ui.css" />
-
-  <!-- Favicons -->
-  <link rel="icon" type="image/png" sizes="32x32" href="./Icon32x32.png" />
-
-  <!-- Social / OG -->
-  <meta property="og:title" content="ProAgent Works AI Tools" />
-  <meta property="og:description" content="AI tools built specifically for real estate agents." />
-  <meta property="og:image" content="./OG1200x630.png" />
+  <title>PAW Tools</title>
+  <link rel="stylesheet" href="/paw-ui.css">
 </head>
 <body>
+  <!--
+    PAW Tools Home (minimal)
+    - Intentionally simple landing for the tools subdomain.
+    - Individual tools live at:
+      /ask.html (Assistant)
+      /listing.html (Listing Writer)
+  -->
+  <div class="app">
+    <div class="frame">
+      <div class="panel">
+        <div class="panel-topbar">
+          <div class="topbar-row0">
+            <div class="tool-head">
+              <div class="tool-title">PAW Tools</div>
+              <div class="tool-subtitle">Select a tool to get started.</div>
+            </div>
+          </div>
+        </div>
 
-  <header class="paw-header">
-    <div class="paw-header-inner">
-      <img src="./Logo240x60.png" alt="ProAgent Works" class="paw-logo" />
+        <div class="messages" style="padding:16px;">
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <a class="btn primary" href="/ask.html">Assistant</a>
+            <a class="btn" href="/listing.html">Listing Writer</a>
+          </div>
+          <div style="margin-top:12px; opacity:.75; font-size:14px;">
+            Tip: for Circle embeds, append <code>?embed=1</code> if your embed host blocks iframe detection.
+          </div>
+        </div>
+      </div>
     </div>
-  </header>
-
-  <main class="paw-container">
-    <section class="paw-tool-grid">
-
-      <a href="./listing.html" class="paw-tool-card">
-        <h2>Listing Description Writer</h2>
-        <p>Create polished, MLS-safe listing descriptions in seconds.</p>
-      </a>
-
-      <a href="./ask.html" class="paw-tool-card">
-        <h2>Ask ProAgent</h2>
-        <p>Get fast, practical answers to real estate questions.</p>
-      </a>
-
-    </section>
-  </main>
-
-  <footer class="paw-footer">
-    <p>© ProAgent Works</p>
-  </footer>
-
+  </div>
 </body>
 </html>

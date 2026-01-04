@@ -6,10 +6,13 @@
   <title>Assistant</title>
 
   <!--
-    NOTE: paw-ui.css is SHARED across tools.
-    Keep header markup consistent:
-    panel-topbar > topbar-row0 > tool-head + topbar-right (utility-pair).
-    Changing shared classes affects multiple tools.
+    PAW Tool Page: Assistant
+
+    UI contract:
+    - Shared layout classes come from paw-ui.css.
+    - Shared behavior lives in tool-shell.js (Worker prompting is NOT in public files).
+    - Required IDs for tool-shell.js:
+        #messages, #input, #send, #reset, #tips
   -->
   <link rel="stylesheet" href="/paw-ui.css">
 </head>
@@ -54,13 +57,16 @@
 
   <script>
     (function () {
+      // Public tools call the private Worker. Do NOT inline prompts here.
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
 
       const DISCLAIMER_TEXT =
-        "Important: This assistant provides guidance intended to support your work. It is not brokerage policy guidance, legal advice, and compliance cannot be guaranteed.";
+        "Important: This assistant provides general guidance intended to help real estate agents communicate clearly and professionally. " +
+        "It is not legal advice. Local MLS rules, Fair Housing guidance, and compliance requirements vary by market — use your brokerage " +
+        "and local resources for final review.";
 
       const DISCLAIMER_TRIGGER =
-        /(fair housing|mls|compliance|legal|law|attorney|contract|offer|addendum|inspection|lien|title|short sale|agency|disclosure)/i;
+        /(fair housing|mls|compliance|legal|law|attorney|contract|offer|escrow|earnest|addendum|inspection|lien|title|short sale|agency|disclosure)/i;
 
       const TIPS_TEXT =
 `How to use this assistant
@@ -72,8 +78,9 @@ Compliance note
 ${DISCLAIMER_TEXT}`;
 
       window.PAWToolShell.init({
+        toolId: "ask",
         apiEndpoint: API_ENDPOINT,
-        toolId: "",
+
         inputPlaceholder: "How can I assist you today?",
         tipsText: TIPS_TEXT,
 
@@ -81,9 +88,9 @@ ${DISCLAIMER_TEXT}`;
         disclaimerTrigger: DISCLAIMER_TRIGGER,
         getDisclaimerText: () => DISCLAIMER_TEXT,
 
+        // Keep the assistant focused, but allow enough context for follow-ups.
         sendHistoryItems: 10,
-        maxHistoryItems: 20,
-        deliverableMode: false
+        maxHistoryItems: 20
       });
     })();
   </script>
