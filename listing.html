@@ -300,8 +300,78 @@ How to use it
         return r.length >= 240;
       }
 
-      function openLocalModal(highlights){
-        cachedHighlights = highlights.slice(0, 5);
+      
+      function pickHighlightsForModal(allHighlights){
+        // Goal: 3 larger-area / widely recognizable POIs + 2 hyper-local POIs
+        const c = cityVal().toLowerCase();
+        const majorKeywords = [
+          "downtown","airport","university","college","hospital","medical","mall","museum","stadium",
+          "parkway","national","state park","lake","river","historic","convention","zoo","botanical",
+          "estate","resort","ski","mountain","trail","greenway"
+        ];
+        const localKeywords = [
+          "elementary","middle","high school","school","community","neighborhood","greenway","trail",
+          "park","playground","library","rec center","recreation","shopping","grocery","farmers"
+        ];
+
+        function score(label, keywords, base){
+          const t = String(label||"").toLowerCase();
+          let s = base || 0;
+          for (const k of keywords){
+            if (t.includes(k)) s += 3;
+          }
+          // Prefer recognizable names (slightly longer) but avoid overly wordy
+          if (t.length >= 18) s += 1;
+          if (t.length >= 40) s -= 1;
+          return s;
+        }
+
+        const items = (Array.isArray(allHighlights) ? allHighlights : []).map(h => ({
+          id: h.id,
+          label: h.label,
+          majorScore: score(h.label, majorKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? -2 : 0),
+          localScore: score(h.label, localKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? 2 : 0)
+        }));
+
+        // Dedup by label
+        const seen = new Set();
+        const deduped = [];
+        for (const it of items){
+          const key = String(it.label||"").trim().toLowerCase();
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(it);
+        }
+
+        // Pick top 3 major
+        const major = deduped
+          .slice()
+          .sort((a,b) => (b.majorScore - a.majorScore) || a.label.localeCompare(b.label))
+          .slice(0,3);
+
+        const majorSet = new Set(major.map(x => x.label.toLowerCase()));
+
+        // Pick top 2 local from remaining
+        const locals = deduped
+          .filter(x => !majorSet.has(x.label.toLowerCase()))
+          .slice()
+          .sort((a,b) => (b.localScore - a.localScore) || a.label.localeCompare(b.label))
+          .slice(0,2);
+
+        // Fill if we didn't have enough (keep stable)
+        const picked = [...major, ...locals];
+        if (picked.length < 5){
+          for (const it of deduped){
+            if (picked.length >= 5) break;
+            if (picked.some(p => p.label.toLowerCase() === it.label.toLowerCase())) continue;
+            picked.push(it);
+          }
+        }
+        return picked.slice(0,5).map(x => ({ id: x.id, label: x.label }));
+      }
+
+function openLocalModal(highlights){
+        cachedHighlights = pickHighlightsForModal(highlights);
 
         // None selected by default
         let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
@@ -329,6 +399,13 @@ How to use it
         html += '</div>';
         $localModalListWrap.innerHTML = html;
 
+        // If agent types a custom highlight, ensure it will be included (checkbox optional)
+        const _ct = document.getElementById("lh_custom_text");
+        const _cc = document.getElementById("lh_custom_check");
+        if (_ct && _cc) {
+          _ct.addEventListener("input", () => { if (normText(_ct.value)) _cc.checked = true; });
+        }
+
         $localModal.classList.add("show");
         $localModal.setAttribute("aria-hidden", "false");
       }
@@ -350,7 +427,7 @@ How to use it
         const customCheck = document.getElementById("lh_custom_check");
         const customTextEl = document.getElementById("lh_custom_text");
         const customText = customTextEl ? normText(customTextEl.value) : "";
-        if (customCheck && customCheck.checked && customText) {
+        if (customText) {
           selected.push(customText);
         }
 

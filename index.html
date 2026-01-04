@@ -237,6 +237,7 @@ How to use it
       // Prevent repeat highlights modal for same location unless city/state meaningfully changes
       let highlightsOfferedKey = "";
       let highlightsAppliedKey = "";
+      let suppressHighlightsOfferOnce = false;
 
       function normText(v){ return String(v || "").trim(); }
       function digitsOnly(v){ return String(v || "").replace(/[^\d]/g, ""); }
@@ -300,7 +301,7 @@ How to use it
       }
 
       function openLocalModal(highlights){
-        cachedHighlights = highlights.slice(0, 6);
+        cachedHighlights = highlights.slice(0, 5);
 
         // None selected by default
         let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
@@ -313,6 +314,18 @@ How to use it
             </label>
           `;
         });
+
+        // 6th option: custom highlight the agent can type in
+        html += `
+          <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
+            <input id="lh_custom_check" type="checkbox" style="margin-top:2px;" />
+            <span style="display:flex; flex-direction:column; gap:6px; width:100%;">
+              <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">Custom highlight</span>
+              <input id="lh_custom_text" type="text" placeholder="Type your own (e.g., 'Walk to Riverside Park')" style="width:100%; padding:10px 12px; border:1px solid rgba(15,23,42,.12); border-radius:10px; font-size:14px;" />
+            </span>
+          </label>
+        `;
+
         html += '</div>';
         $localModalListWrap.innerHTML = html;
 
@@ -332,6 +345,15 @@ How to use it
           const cb = document.getElementById(`lh_pick_${idx}`);
           if (cb && cb.checked) selected.push(h.label);
         });
+
+        // Custom highlight (optional)
+        const customCheck = document.getElementById("lh_custom_check");
+        const customTextEl = document.getElementById("lh_custom_text");
+        const customText = customTextEl ? normText(customTextEl.value) : "";
+        if (customCheck && customCheck.checked && customText) {
+          selected.push(customText);
+        }
+
         return selected;
       }
 
@@ -354,6 +376,7 @@ How to use it
         if (!picked.length) return;
         // Agent has applied highlights for this location; do not re-offer.
         highlightsAppliedKey = locKey();
+        suppressHighlightsOfferOnce = true;
 
         const instruction =
 `Update the MLS description above.
@@ -412,7 +435,8 @@ Selected highlights:
 
           // Normal user submit: arm the offer if we have city/state.
           // The modal is never blocking the initial generation.
-          pendingHighlightsOffer = !!(key && key !== highlightsOfferedKey && key !== highlightsAppliedKey);
+          pendingHighlightsOffer = !!(key && key !== highlightsOfferedKey && key !== highlightsAppliedKey && !suppressHighlightsOfferOnce);
+          suppressHighlightsOfferOnce = false;
 
           return base;
         },
@@ -456,6 +480,7 @@ Selected highlights:
         cachedHighlights = [];
         highlightsOfferedKey = "";
         highlightsAppliedKey = "";
+        suppressHighlightsOfferOnce = false;
         closeLocalModal();
         try { $city.value = ""; $state.value = ""; } catch {}
         try { if (shell && shell.reset) shell.reset(); } catch {}
