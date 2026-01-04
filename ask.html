@@ -54,17 +54,6 @@
 
   <script>
     (function () {
-      // ------------------------------------------------------------
-      // EMBED MODE (LOCKED):
-      // When this page is loaded in Circle as an iframe, we pass ?embed=1.
-      // We MUST set html[data-embed="1"] so paw-ui.css flattens the UI
-      // (removes nested "card" styling). Otherwise you get double containers.
-      // ------------------------------------------------------------
-      try {
-        const p = new URLSearchParams(location.search);
-        if (p.get("embed") === "1") document.documentElement.dataset.embed = "1";
-      } catch {}
-
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
 
       const DISCLAIMER_TEXT =
