@@ -174,12 +174,12 @@
   <div id="localModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="localModalTitle">
       <div class="modal-head">
-        <div id="localModalTitle" class="modal-title">Possible nearby highlights (optional)</div>
+        <div id="localModalTitle" class="modal-title">Neighborhood Highlights</div>
         <button class="modal-close" id="localModalClose" aria-label="Close" type="button">✕</button>
       </div>
       <div class="modal-body">
         <div style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45; margin-bottom:10px;">
-          We found nearby places that <b>may or may not apply</b> to this listing. Select only what you know is accurate.
+          Here are some common neighborhood highlights. Choose what fits this listing, or add your own.
           <b>Nothing is added unless you choose it.</b>
         </div>
         <div id="localModalListWrap"></div>
@@ -292,15 +292,6 @@ How to use it
         );
       }
 
-      function looksLikeDeliverableText(reply){
-        const r = String(reply || "").trim();
-        if (!r) return false;
-        if ((r.match(/\?/g) || []).length >= 1) return false;
-        if (/^(one|a couple|a few)\s+quick\s+(question|questions|clarifiers)\b/i.test(r)) return false;
-        return r.length >= 240;
-      }
-
-      
       function pickHighlightsForModal(allHighlights){
         // Goal: 3 larger-area / widely recognizable POIs + 2 hyper-local POIs
         const c = cityVal().toLowerCase();
@@ -370,27 +361,31 @@ How to use it
         return picked.slice(0,5).map(x => ({ id: x.id, label: x.label }));
       }
 
-function openLocalModal(highlights){
+      function openLocalModal(highlights){
+        // If highlights are present, show up to 5 curated picks; otherwise show manual-only UI.
         cachedHighlights = pickHighlightsForModal(highlights);
 
-        // None selected by default
         let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
-        cachedHighlights.forEach((h, idx) => {
-          const id = `lh_pick_${idx}`;
-          html += `
-            <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
-              <input id="${id}" type="checkbox" style="margin-top:2px;" />
-              <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">${escapeHtml(h.label)}</span>
-            </label>
-          `;
-        });
 
-        // 6th option: custom highlight the agent can type in
+        // Suggested picks (optional)
+        if (cachedHighlights.length) {
+          cachedHighlights.forEach((h, idx) => {
+            const id = `lh_pick_${idx}`;
+            html += `
+              <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
+                <input id="${id}" type="checkbox" style="margin-top:2px;" />
+                <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">${escapeHtml(h.label)}</span>
+              </label>
+            `;
+          });
+        }
+
+        // Custom highlight the agent can type in (always available)
         html += `
           <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
             <input id="lh_custom_check" type="checkbox" style="margin-top:2px;" />
             <span style="display:flex; flex-direction:column; gap:6px; width:100%;">
-              <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">Custom highlight</span>
+              <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">Add your own highlight</span>
               <input id="lh_custom_text" type="text" placeholder="Type your own (e.g., 'Walk to Riverside Park')" style="width:100%; padding:10px 12px; border:1px solid rgba(15,23,42,.12); border-radius:10px; font-size:14px;" />
             </span>
           </label>
@@ -424,7 +419,6 @@ function openLocalModal(highlights){
         });
 
         // Custom highlight (optional)
-        const customCheck = document.getElementById("lh_custom_check");
         const customTextEl = document.getElementById("lh_custom_text");
         const customText = customTextEl ? normText(customTextEl.value) : "";
         if (customText) {
@@ -499,7 +493,7 @@ Selected highlights:
           }
         }),
 
-        // ✅ KEY FIX: this runs on every submit, so we can arm the offer reliably.
+        // This runs on every submit, so we can arm the offer reliably.
         getExtraPayload: (text) => {
           const base = { city: cityVal(), state: stateVal(), location: locationVal() };
           const key = locKey();
@@ -511,7 +505,7 @@ Selected highlights:
           }
 
           // Normal user submit: arm the offer if we have city/state.
-          // The modal is never blocking the initial generation.
+          // The modal never blocks the initial generation.
           pendingHighlightsOffer = !!(key && key !== highlightsOfferedKey && key !== highlightsAppliedKey && !suppressHighlightsOfferOnce);
           suppressHighlightsOfferOnce = false;
 
@@ -521,26 +515,30 @@ Selected highlights:
         onResponse: (data) => {
           const reply = data && typeof data.reply === "string" ? data.reply : "";
 
-          // After the deliverable is produced, kick off background highlights fetch
-          if (pendingHighlightsOffer && looksLikeDeliverableText(reply)) {
-            pendingHighlightsOffer = false;
-            highlightsOfferedKey = locKey();
-            fetchHighlightsInBackground(); // async, no block
-            return; // allow shell to render deliverable
-          }
+          // Detect highlight responses by presence of data.local.highlights (even empty array)
+          const isHighlightsResponse = !!(data && data.local && Array.isArray(data.local.highlights));
 
-          // Handle highlights response
-          const highlightsRaw = data && data.local && Array.isArray(data.local.highlights) ? data.local.highlights : null;
-          if (highlightsRaw && highlightsRaw.length) {
+          // If this was the background highlights response, normalize + open modal (even if empty after filtering).
+          if (isHighlightsResponse) {
+            const highlightsRaw = data.local.highlights || [];
             const normalized = highlightsRaw
               .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)), label: coerceHighlightLabel(it) }))
               .filter(x => x.label && !isBadHighlightLabel(x.label));
 
             const key = locKey();
-            if (normalized.length && key && key === highlightsOfferedKey && key !== highlightsAppliedKey) {
+            if (key && key === highlightsOfferedKey && key !== highlightsAppliedKey) {
               openLocalModal(normalized);
             }
+            // Never show any "highlights" reply text in the chat
             return { skipDefault: true };
+          }
+
+          // Deterministic trigger: after the first normal response returns, kick off highlights fetch once.
+          if (pendingHighlightsOffer && reply) {
+            pendingHighlightsOffer = false;
+            highlightsOfferedKey = locKey();
+            fetchHighlightsInBackground(); // async, no block
+            return; // allow shell to render deliverable
           }
 
           // Ignore any “provide city/state or zip” prompt silently

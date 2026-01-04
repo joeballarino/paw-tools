@@ -17,32 +17,12 @@
 (function () {
   "use strict";
 
-  // -----------------------------
-  // Global embed detection (applies to ALL tools)
-  // -----------------------------
-  (function setEmbedMode() {
-    try {
-      const qs = new URLSearchParams(window.location.search);
-      const wantsEmbed = qs.get("embed") === "1";
-      const inIframe = window.self !== window.top;
-      if (wantsEmbed || inIframe) {
-        document.documentElement.setAttribute("data-embed", "1");
-      }
-    } catch (e) {
-      // Cross-origin iframe safety: assume embed.
-      document.documentElement.setAttribute("data-embed", "1");
-    }
-  })();
-
-  // -----------------------------
-  // Helpers
-  // -----------------------------
   function byId(id) {
     return document.getElementById(id);
   }
 
-  function escapeHtml(str) {
-    return String(str || "")
+  function escapeHtml(s) {
+    return String(s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -59,65 +39,74 @@
     wrap.appendChild(bubble);
     $messages.appendChild(wrap);
     $messages.scrollTop = $messages.scrollHeight;
-    return wrap;
   }
 
-  function appendThinking($messages) {
+  function removeNode(node) {
+    try {
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+    } catch (e) {}
+  }
+
+  function getAuthToken() {
+    try {
+      const el = document.querySelector('meta[name="paw-auth-token"]');
+      const token = el && el.getAttribute("content");
+      return token ? String(token) : "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  async function postJSON(url, payload, token) {
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = "Bearer " + token;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (e) {}
+
+    if (!res.ok) {
+      const msg =
+        (data && (data.error || data.message)) || "Request failed (" + res.status + ")";
+      const err = new Error(msg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+
+    return data;
+  }
+
+  function buildPayloadBase(toolId, history, prefs, extraPayload) {
+    return {
+      toolId,
+      history: history.slice(),
+      prefs: prefs || {},
+      ...(extraPayload || {}),
+    };
+  }
+
+  function makeThinkingNode($messages) {
     const wrap = document.createElement("div");
     wrap.className = "msg ai";
     const bubble = document.createElement("div");
-    bubble.className = "bubble thinking";
-    bubble.textContent = "Thinking…";
+    bubble.className = "bubble";
+    bubble.textContent = "Thinking...";
     wrap.appendChild(bubble);
     $messages.appendChild(wrap);
     $messages.scrollTop = $messages.scrollHeight;
     return wrap;
   }
 
-  function removeNode(node) {
-    if (node && node.parentNode) node.parentNode.removeChild(node);
-  }
-
-  async function postJSON(url, payload, token) {
-    const headers = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload || {}),
-    });
-
-    const contentType = res.headers.get("content-type") || "";
-    const isJson = contentType.includes("application/json");
-    const data = isJson ? await res.json() : await res.text();
-
-    if (!res.ok) {
-      const msg =
-        (data && data.error) ||
-        (typeof data === "string" ? data : "") ||
-        `Request failed (${res.status})`;
-      const err = new Error(msg);
-      err.status = res.status;
-      err.data = data;
-      throw err;
-    }
-    return data;
-  }
-
-  function getAuthToken() {
-    try {
-      return localStorage.getItem("paw_token") || "";
-    } catch (e) {
-      return "";
-    }
-  }
-
-  // -----------------------------
-  // Public API: window.PAWToolShell.init(...)
-  // -----------------------------
   window.PAWToolShell = {
-    init: function init(config) {
+    init: function (config) {
       config = config || {};
 
       const toolId = String(config.toolId || "");
@@ -135,8 +124,7 @@
       const getExtraPayload =
         typeof config.getExtraPayload === "function" ? config.getExtraPayload : () => ({});
 
-      const onResponse =
-        typeof config.onResponse === "function" ? config.onResponse : null;
+      const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
 
       // Standard IDs (ask.html, listing.html)
       const $messages = byId("messages");
@@ -159,15 +147,38 @@
 
       const history = [];
       let isSending = false;
+      let disclaimerShown = false;
 
       function pushHistory(role, content) {
-        history.push({ role, content });
+        history.push({ role, content: String(content || "") });
+        while (history.length > 50) history.shift();
       }
+
+      function getHistoryForSend() {
+        const sliceStart = Math.max(0, history.length - sendHistoryItems);
+        return history.slice(sliceStart);
+      }
+
+      function setPlaceholder(text) {
+        try {
+          if (text) $input.placeholder = String(text);
+        } catch (e) {}
+      }
+
+      if (config.inputPlaceholder) setPlaceholder(config.inputPlaceholder);
 
       function clearComposer() {
         try {
           $input.value = "";
         } catch (e) {}
+      }
+
+      function maybeAppendDisclaimerOnce() {
+        if (disclaimerShown) return;
+        const disclaimer = getDisclaimerText();
+        if (!disclaimer) return;
+        appendMessage($messages, "ai", disclaimer);
+        disclaimerShown = true;
       }
 
       async function postToWorker(payload) {
@@ -191,37 +202,29 @@
         try {
           appendMessage($messages, "user", trimmed);
           pushHistory("user", trimmed);
-          clearComposer();
 
-          thinkingNode = appendThinking($messages);
+          thinkingNode = makeThinkingNode($messages);
 
-          const prefs = getPrefs() || {};
-          const historyToSend = history.slice(
-            Math.max(0, history.length - sendHistoryItems)
-          );
+          const prefs = getPrefs();
+          const extraPayload = getExtraPayload();
 
-          const extra = getExtraPayload(trimmed) || {};
-          const payload = Object.assign(
-            { tool: toolId, message: trimmed, prefs, history: historyToSend },
-            extra || {}
-          );
+          const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, extraPayload);
 
           const data = await postToWorker(payload);
 
           removeNode(thinkingNode);
-          thinkingNode = null;
 
           if (onResponse) {
-            const handled = onResponse(data);
-            if (handled && handled.skipDefault) {
-              return;
-            }
+            try {
+              onResponse(data);
+            } catch (e) {}
           }
 
           const reply = data && typeof data.reply === "string" ? data.reply : "";
           if (reply) {
             appendMessage($messages, "ai", reply);
             pushHistory("assistant", reply);
+            maybeAppendDisclaimerOnce();
           }
         } catch (err) {
           removeNode(thinkingNode);
@@ -254,39 +257,32 @@
             pushHistory("user", msg);
           }
 
-          thinkingNode = appendThinking($messages);
+          thinkingNode = makeThinkingNode($messages);
 
-          const prefs = getPrefs() || {};
-          const historyToSend = history.slice(
-            Math.max(0, history.length - sendHistoryItems)
-          );
+          const prefs = getPrefs();
+          const baseExtra = getExtraPayload();
 
-          // CRITICAL: allow tool pages to expand special instruction tokens via getExtraPayload()
-          // listing.html relies on this for background highlight requests that trigger the POI modal.
-          const extraFromHook = getExtraPayload(msg) || {};
-
-          const payload = Object.assign(
-            { tool: toolId, message: msg, prefs, history: historyToSend },
-            extraFromHook,
-            extraPayload || {}
-          );
+          const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, {
+            ...baseExtra,
+            ...extraPayload,
+            instruction: msg,
+          });
 
           const data = await postToWorker(payload);
 
           removeNode(thinkingNode);
-          thinkingNode = null;
 
           if (onResponse) {
-            const handled = onResponse(data);
-            if (handled && handled.skipDefault) {
-              return;
-            }
+            try {
+              onResponse(data);
+            } catch (e) {}
           }
 
           const reply = data && typeof data.reply === "string" ? data.reply : "";
           if (reply) {
             appendMessage($messages, "ai", reply);
             pushHistory("assistant", reply);
+            maybeAppendDisclaimerOnce();
           }
         } catch (err) {
           removeNode(thinkingNode);
@@ -305,10 +301,7 @@
         history.length = 0;
         clearComposer();
 
-        const disclaimer = getDisclaimerText();
-        if (disclaimer) {
-          appendMessage($messages, "ai", disclaimer);
-        }
+        disclaimerShown = false;
       }
 
       // -----------------------------
@@ -318,7 +311,7 @@
         sendMessage($input.value);
       });
 
-      // Prefer form submit if present (some tools might wrap input in a form)
+      // Optional: tools may include a <form>; prevent default submit
       if ($form) {
         $form.addEventListener("submit", function (e) {
           e.preventDefault();
@@ -326,7 +319,7 @@
         });
       }
 
-      // Standard behavior:
+      // Enter behavior:
       // - Enter sends
       // - Shift+Enter inserts newline
       $input.addEventListener("keydown", function (e) {
@@ -342,16 +335,10 @@
         });
       }
 
-      if ($tips) {
+      if ($tips && typeof config.tipsText === "string") {
         $tips.addEventListener("click", function () {
-          if (typeof config.onTips === "function") config.onTips();
+          alert(config.tipsText);
         });
-      }
-
-      // Prime disclaimer, if any
-      const disclaimer = getDisclaimerText();
-      if (disclaimer) {
-        appendMessage($messages, "ai", disclaimer);
       }
 
       return {
