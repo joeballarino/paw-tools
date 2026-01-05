@@ -74,109 +74,13 @@
     return el ? String(el.getAttribute("content") || "").trim() : "";
   }
 
-  
-  // Tips modal (shared)
-  // We intentionally use an in-page modal instead of window.alert()
-  // so Circle embeds feel native and consistent across tools.
-  function ensureTipsModal() {
-    let modal = document.getElementById("pawTipsModal");
-    if (modal) return modal;
-
-    modal = document.createElement("div");
-    modal.id = "pawTipsModal";
-    modal.className = "modal";
-    modal.setAttribute("aria-hidden", "true");
-
-    modal.innerHTML =
-      '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawTipsTitle">' +
-        '<div class="modal-head">' +
-          '<div id="pawTipsTitle" class="modal-title">Tips &amp; How To</div>' +
-          '<button class="modal-close" type="button" aria-label="Close">✕</button>' +
-        '</div>' +
-        '<div class="modal-body"><div class="paw-tips-text"></div></div>' +
-      '</div>';
-
-    document.body.appendChild(modal);
-
-    const closeBtn = modal.querySelector(".modal-close");
-    if (closeBtn) closeBtn.addEventListener("click", () => hideTipsModal());
-    modal.addEventListener("click", (e) => { if (e.target === modal) hideTipsModal(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideTipsModal(); });
-
-    return modal;
-  }
-
-  function showTipsModal(text) {
-    const modal = ensureTipsModal();
-    const body = modal.querySelector(".paw-tips-text");
-    if (body) body.textContent = String(text || "");
-    modal.classList.add("show");
-    modal.setAttribute("aria-hidden", "false");
-  }
-
-  function hideTipsModal() {
-    const modal = document.getElementById("pawTipsModal");
-    if (!modal) return;
-    modal.classList.remove("show");
-    modal.setAttribute("aria-hidden", "true");
-  }
-
-  // Compliance note (optional): show once per session, only when trigger words appear.
-  function shouldShowComplianceNote(cfg, userText, toolKey) {
-    try {
-      if (!cfg || !cfg.complianceNoteText) return false;
-      if (!cfg.complianceTrigger) return false;
-
-      const key = "paw_compliance_shown_" + String(toolKey || "default");
-      if (sessionStorage.getItem(key) === "1") return false;
-
-      const re = cfg.complianceTrigger;
-      if (re && re.test && re.test(String(userText || ""))) return true;
-    } catch (_) {}
-    return false;
-  }
-
-  function markComplianceShown(toolKey) {
-    try {
-      const key = "paw_compliance_shown_" + String(toolKey || "default");
-      sessionStorage.setItem(key, "1");
-    } catch (_) {}
-  }
-
-  function showComplianceNoteOnce($messages, cfg, toolKey) {
-    try {
-      if (!cfg || !cfg.complianceNoteText) return;
-      appendMessage($messages, "ai", String(cfg.complianceNoteText));
-      markComplianceShown(toolKey);
-    } catch (_) {}
-  }
-
-function coerceEmbedMode(config) {
+  function coerceEmbedMode() {
     try {
       const qp = new URLSearchParams(location.search);
       const embed = qp.get("embed");
       const inFrame = window.self !== window.top;
-
-      // Embed mode styling:
-      // - If we're framed OR ?embed=1 is present, remove outer padding/borders
       if (embed === "1" || inFrame) {
         document.documentElement.setAttribute("data-embed", "1");
-      }
-
-      // Light public gating (per product requirement):
-      // - These tool pages are intended to be embedded inside Circle.
-      // - If opened directly (top-level) without ?embed=1 and without a Circle referrer,
-      //   redirect to the marketing site.
-      //
-      // NOTE: Referrer can be blank in some privacy contexts. We DO NOT block iframe embeds.
-      const allowDirect =
-        embed === "1" ||
-        inFrame ||
-        (document.referrer && /circle\.so/i.test(document.referrer));
-
-      if (!allowDirect) {
-        // Keep it lightweight and immediate.
-        window.location.replace("https://www.proagentworks.com");
       }
     } catch (_) {}
   }
@@ -229,7 +133,7 @@ function coerceEmbedMode(config) {
       config = config || {};
 
       // Ensure embed mode when framed (fixes “double container” look)
-      coerceEmbedMode(config);
+      coerceEmbedMode();
 
       const apiEndpoint = safeText(config.apiEndpoint);
       const toolId = safeText(config.toolId);
@@ -263,8 +167,6 @@ function coerceEmbedMode(config) {
 
       let history = [];
       let isSending = false;
-      // Tracks the most recent user text sent to the Worker (used for one-time compliance note triggers)
-      let lastUserText = "";
 
       function pushHistory(role, content) {
         const item = {
@@ -299,53 +201,121 @@ function coerceEmbedMode(config) {
         return await postJSON(url, payload, token);
       }
 
-      function renderDeliverable(replyText) {
-        if (!deliverableMode) {
-          appendMessage($messages, "ai", replyText);
-          return;
-        }
+      
+      // Render Worker reply.
+      // Listing tool uses "deliverableMode" and should keep the chat flow linear:
+      // - Always render the deliverable as a normal assistant message in the thread.
+      // - Also open a modal with Copy / Revise actions (every time).
+      // Assistant tool sets deliverableMode=false, so it will only render in-flow.
+      function ensureDeliverableModal() {
+        let modal = document.getElementById("pawDeliverableModal");
+        if (modal) return modal;
 
-        let card = document.querySelector(".deliverable");
-        if (!card) {
-          card = document.createElement("div");
-          card.className = "deliverable";
-          card.innerHTML =
-            '<div class="deliverable-card">' +
-            '  <div class="deliverable-head">' +
-            '    <div class="deliverable-title"></div>' +
-            '    <div class="deliverable-actions">' +
-            '      <button class="btn" type="button" data-action="copy">Copy</button>' +
-            "    </div>" +
-            "  </div>" +
-            '  <div class="deliverable-body">' +
-            '    <div class="deliverable-text"></div>' +
-            "  </div>" +
-            "</div>";
-          $messages.appendChild(card);
+        modal = document.createElement("div");
+        modal.id = "pawDeliverableModal";
+        modal.className = "modal";
+        modal.setAttribute("aria-hidden", "true");
 
-          const copyBtn = card.querySelector('[data-action="copy"]');
-          if (copyBtn) {
-            copyBtn.addEventListener("click", async function () {
-              const txt = card.querySelector(".deliverable-text")?.textContent || "";
-              try {
-                await navigator.clipboard.writeText(txt);
-                showToast("Copied");
-              } catch (_) {
-                showToast("Copy failed");
-              }
-            });
+        // IMPORTANT: We reuse the shared .modal styling in paw-ui.css.
+        // This keeps UI consistent and avoids tool-specific CSS regressions.
+        modal.innerHTML =
+          '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawDeliverableTitle">' +
+          '  <div class="modal-head">' +
+          '    <div id="pawDeliverableTitle" class="modal-title"></div>' +
+          '    <button class="modal-close" data-action="close" aria-label="Close" type="button">✕</button>' +
+          '  </div>' +
+          '  <div class="modal-body">' +
+          '    <div class="paw-deliverable-text" style="white-space:pre-wrap; word-break:break-word;"></div>' +
+          '    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">' +
+          '      <button class="btn" type="button" data-action="copy">Copy</button>' +
+          '      <button class="btn primary" type="button" data-action="revise">Revise</button>' +
+          '    </div>' +
+          '  </div>' +
+          '</div>';
+
+        document.body.appendChild(modal);
+
+        // Click handlers (delegated)
+        modal.addEventListener("click", function (e) {
+          const t = e.target;
+          if (!t) return;
+
+          // Click outside card closes
+          if (t === modal) {
+            hideDeliverableModal();
+            return;
           }
-        }
 
-        const titleEl = card.querySelector(".deliverable-title");
-        const bodyEl = card.querySelector(".deliverable-text");
-        if (titleEl) titleEl.textContent = deliverableTitle;
-        if (bodyEl) bodyEl.textContent = replyText;
+          const action = t.getAttribute("data-action");
+          if (!action) return;
+
+          if (action === "close") {
+            hideDeliverableModal();
+            return;
+          }
+
+          if (action === "copy") {
+            const textEl = modal.querySelector(".paw-deliverable-text");
+            const txt = textEl ? textEl.textContent : "";
+            copyToClipboard(txt);
+            showToast("Copied");
+            return;
+          }
+
+          if (action === "revise") {
+            hideDeliverableModal();
+
+            // UX: focus the composer and prompt for the revision request.
+            try {
+              if ($input) {
+                $input.focus();
+                // Encourage a revision request without auto-sending anything.
+                $input.placeholder =
+                  "Tell me what to change (tone, length, highlights, wording, what to emphasize, etc.)";
+              }
+            } catch (_) {}
+            return;
+          }
+        });
+
+        // Escape closes
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") hideDeliverableModal();
+        });
+
+        return modal;
+      }
+
+      function showDeliverableModal(title, bodyText) {
+        const modal = ensureDeliverableModal();
+        const titleEl = modal.querySelector("#pawDeliverableTitle");
+        const bodyEl = modal.querySelector(".paw-deliverable-text");
+        if (titleEl) titleEl.textContent = String(title || "Your Deliverable");
+        if (bodyEl) bodyEl.textContent = String(bodyText || "");
+
+        modal.classList.add("show");
+        modal.setAttribute("aria-hidden", "false");
+      }
+
+      function hideDeliverableModal() {
+        const modal = document.getElementById("pawDeliverableModal");
+        if (!modal) return;
+        modal.classList.remove("show");
+        modal.setAttribute("aria-hidden", "true");
+      }
+
+      function renderDeliverable(replyText) {
+        // Always render in-flow for a clean chat experience.
+        appendMessage($messages, "ai", replyText);
+
+        if (!deliverableMode) return;
+
+        // Also open a modal with Copy / Revise every time for deliverables.
+        showDeliverableModal(deliverableTitle, replyText);
 
         $messages.scrollTop = $messages.scrollHeight;
       }
-
-      async function sendExtra(instruction, extraPayload = {}, options = {}) {
+async function sendExtra(instruction, extraPayload = {}, options = {}) {
         if (isSending) return;
 
         const msg = safeText(instruction);
@@ -369,9 +339,6 @@ function coerceEmbedMode(config) {
 
           thinkingNode = appendThinking($messages);
 
-          lastUserText = trimmed;
-
-
           const prefs = getPrefs ? getPrefs() : {};
           const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
           const mergedExtra = Object.assign({}, baseExtra, extraPayload || {});
@@ -392,11 +359,6 @@ function coerceEmbedMode(config) {
 
           const reply = safeText(data && data.reply);
           if (reply) {
-            // Show compliance note only once per session (per tool), only when trigger words appear.
-            // This is intentionally non-blocking: it does not change the Worker prompt or output.
-            if (shouldShowComplianceNote(config, lastUserText, toolId || "tool")) {
-              showComplianceNoteOnce($messages, config, toolId || "tool");
-            }
             renderDeliverable(reply);
             pushHistory("assistant", reply);
           }
@@ -440,9 +402,6 @@ function coerceEmbedMode(config) {
           clearComposer({ keepFocus: true });
 
           thinkingNode = appendThinking($messages);
-
-          lastUserText = trimmed;
-
 
           const prefs = getPrefs ? getPrefs() : {};
           const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
@@ -503,7 +462,7 @@ function coerceEmbedMode(config) {
 
       if ($tips && typeof config.tipsText === "string") {
         $tips.addEventListener("click", function () {
-          showTipsModal(config.tipsText);
+          alert(config.tipsText);
         });
       }
 
