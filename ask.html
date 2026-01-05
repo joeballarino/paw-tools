@@ -66,19 +66,17 @@
 • Ask questions in plain English
 • Paste an email, text, or draft and tell me what you want it to sound like
 • Use it to think through next steps, messaging, objections, or client situations
-
-Compliance note
-${DISCLAIMER_TEXT}`;
+• Use this as a thinking partner — final judgment always stays with you`;
 
       window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
-        toolId: "",
+        toolId: "assistant",
         inputPlaceholder: "How can I assist you today?",
         tipsText: TIPS_TEXT,
 
-        enableDisclaimer: true,
-        disclaimerTrigger: DISCLAIMER_TRIGGER,
-        getDisclaimerText: () => DISCLAIMER_TEXT,
+        // One-time compliance note (shown only when trigger words appear in the user message)
+        complianceNoteText: DISCLAIMER_TEXT,
+        complianceTrigger: DISCLAIMER_TRIGGER,
 
         sendHistoryItems: 10,
         maxHistoryItems: 20,

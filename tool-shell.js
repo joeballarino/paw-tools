@@ -74,13 +74,109 @@
     return el ? String(el.getAttribute("content") || "").trim() : "";
   }
 
-  function coerceEmbedMode() {
+  
+  // Tips modal (shared)
+  // We intentionally use an in-page modal instead of window.alert()
+  // so Circle embeds feel native and consistent across tools.
+  function ensureTipsModal() {
+    let modal = document.getElementById("pawTipsModal");
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = "pawTipsModal";
+    modal.className = "modal";
+    modal.setAttribute("aria-hidden", "true");
+
+    modal.innerHTML =
+      '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawTipsTitle">' +
+        '<div class="modal-head">' +
+          '<div id="pawTipsTitle" class="modal-title">Tips &amp; How To</div>' +
+          '<button class="modal-close" type="button" aria-label="Close">✕</button>' +
+        '</div>' +
+        '<div class="modal-body"><div class="paw-tips-text"></div></div>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    const closeBtn = modal.querySelector(".modal-close");
+    if (closeBtn) closeBtn.addEventListener("click", () => hideTipsModal());
+    modal.addEventListener("click", (e) => { if (e.target === modal) hideTipsModal(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideTipsModal(); });
+
+    return modal;
+  }
+
+  function showTipsModal(text) {
+    const modal = ensureTipsModal();
+    const body = modal.querySelector(".paw-tips-text");
+    if (body) body.textContent = String(text || "");
+    modal.classList.add("show");
+    modal.setAttribute("aria-hidden", "false");
+  }
+
+  function hideTipsModal() {
+    const modal = document.getElementById("pawTipsModal");
+    if (!modal) return;
+    modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  // Compliance note (optional): show once per session, only when trigger words appear.
+  function shouldShowComplianceNote(cfg, userText, toolKey) {
+    try {
+      if (!cfg || !cfg.complianceNoteText) return false;
+      if (!cfg.complianceTrigger) return false;
+
+      const key = "paw_compliance_shown_" + String(toolKey || "default");
+      if (sessionStorage.getItem(key) === "1") return false;
+
+      const re = cfg.complianceTrigger;
+      if (re && re.test && re.test(String(userText || ""))) return true;
+    } catch (_) {}
+    return false;
+  }
+
+  function markComplianceShown(toolKey) {
+    try {
+      const key = "paw_compliance_shown_" + String(toolKey || "default");
+      sessionStorage.setItem(key, "1");
+    } catch (_) {}
+  }
+
+  function showComplianceNoteOnce($messages, cfg, toolKey) {
+    try {
+      if (!cfg || !cfg.complianceNoteText) return;
+      appendMessage($messages, "ai", String(cfg.complianceNoteText));
+      markComplianceShown(toolKey);
+    } catch (_) {}
+  }
+
+function coerceEmbedMode(config) {
     try {
       const qp = new URLSearchParams(location.search);
       const embed = qp.get("embed");
       const inFrame = window.self !== window.top;
+
+      // Embed mode styling:
+      // - If we're framed OR ?embed=1 is present, remove outer padding/borders
       if (embed === "1" || inFrame) {
         document.documentElement.setAttribute("data-embed", "1");
+      }
+
+      // Light public gating (per product requirement):
+      // - These tool pages are intended to be embedded inside Circle.
+      // - If opened directly (top-level) without ?embed=1 and without a Circle referrer,
+      //   redirect to the marketing site.
+      //
+      // NOTE: Referrer can be blank in some privacy contexts. We DO NOT block iframe embeds.
+      const allowDirect =
+        embed === "1" ||
+        inFrame ||
+        (document.referrer && /circle\.so/i.test(document.referrer));
+
+      if (!allowDirect) {
+        // Keep it lightweight and immediate.
+        window.location.replace("https://www.proagentworks.com");
       }
     } catch (_) {}
   }
@@ -133,7 +229,7 @@
       config = config || {};
 
       // Ensure embed mode when framed (fixes “double container” look)
-      coerceEmbedMode();
+      coerceEmbedMode(config);
 
       const apiEndpoint = safeText(config.apiEndpoint);
       const toolId = safeText(config.toolId);
@@ -167,6 +263,8 @@
 
       let history = [];
       let isSending = false;
+      // Tracks the most recent user text sent to the Worker (used for one-time compliance note triggers)
+      let lastUserText = "";
 
       function pushHistory(role, content) {
         const item = {
@@ -271,6 +369,10 @@
 
           thinkingNode = appendThinking($messages);
 
+          lastUserText = trimmed;
+
+           lastUserText = msg;
+
           const prefs = getPrefs ? getPrefs() : {};
           const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
           const mergedExtra = Object.assign({}, baseExtra, extraPayload || {});
@@ -291,6 +393,11 @@
 
           const reply = safeText(data && data.reply);
           if (reply) {
+            // Show compliance note only once per session (per tool), only when trigger words appear.
+            // This is intentionally non-blocking: it does not change the Worker prompt or output.
+            if (shouldShowComplianceNote(config, lastUserText, toolId || "tool")) {
+              showComplianceNoteOnce($messages, config, toolId || "tool");
+            }
             renderDeliverable(reply);
             pushHistory("assistant", reply);
           }
@@ -334,6 +441,10 @@
           clearComposer({ keepFocus: true });
 
           thinkingNode = appendThinking($messages);
+
+          lastUserText = trimmed;
+
+           lastUserText = msg;
 
           const prefs = getPrefs ? getPrefs() : {};
           const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
@@ -394,7 +505,7 @@
 
       if ($tips && typeof config.tipsText === "string") {
         $tips.addEventListener("click", function () {
-          alert(config.tipsText);
+          showTipsModal(config.tipsText);
         });
       }
 
