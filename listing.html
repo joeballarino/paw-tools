@@ -23,12 +23,15 @@
             <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
 
             <div class="topbar-right">
-              <button id="reset" class="util-btn" type="button">Reset</button>
-              <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
+              <div class="utility-pair" role="group" aria-label="Tool utilities">
+                <button id="reset" class="util-btn" type="button">Reset</button>
+                <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
+              </div>
             </div>
           </div>
 
           <div class="controls-row">
+
             <div class="ctl">
               <label for="typeSel">Type</label>
               <span class="select-wrap">
@@ -221,8 +224,9 @@ How to use it
       const $pool = document.getElementById("poolSel");
       const $porch = document.getElementById("porchSel");
       const $compelling = document.getElementById("compellingInp");
+      const $input = document.getElementById("input");
 
-      // Modal elements
+      // Local highlights modal elements
       const $localModal = document.getElementById("localModal");
       const $localModalClose = document.getElementById("localModalClose");
       const $localModalSkip = document.getElementById("localModalSkip");
@@ -264,7 +268,6 @@ How to use it
       function coerceHighlightLabel(item){
         if (item == null) return "";
         if (typeof item === "string") return item.trim();
-        if (typeof item === "number") return String(item);
         if (typeof item === "object") {
           return String(item.label || item.name || item.title || item.text || item.value || "").trim();
         }
@@ -273,17 +276,11 @@ How to use it
 
       function isBadHighlightLabel(label){
         const t = String(label || "").toLowerCase();
-        return (
-          !t ||
-          t.includes("please provide") ||
-          t.includes("city/state") ||
-          t.includes("zip code") ||
-          (t.includes("zip") && t.includes("provide"))
-        );
+        return (!t || t.includes("minute") || t.includes("miles") || t.includes("km"));
       }
 
+      // Keep your existing curated selection logic (unchanged)
       function pickHighlightsForModal(allHighlights){
-        // keep your existing curated selection logic (already in your file)
         const c = cityVal().toLowerCase();
         const majorKeywords = [
           "downtown","airport","university","college","hospital","medical","mall","museum","stadium",
@@ -303,14 +300,15 @@ How to use it
           }
           if (t.length >= 18) s += 1;
           if (t.length >= 40) s -= 1;
+          if (c && t.includes(c)) s += 1;
           return s;
         }
 
-        const items = (Array.isArray(allHighlights) ? allHighlights : []).map(h => ({
-          id: h.id,
+        const items = (Array.isArray(allHighlights) ? allHighlights : []).map((h, idx) => ({
+          id: h.id || String(idx+1),
           label: h.label,
-          majorScore: score(h.label, majorKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? -2 : 0),
-          localScore: score(h.label, localKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? 2 : 0)
+          majorScore: score(h.label, majorKeywords, 0),
+          localScore: score(h.label, localKeywords, 0)
         }));
 
         const seen = new Set();
@@ -351,7 +349,6 @@ How to use it
 
         let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
 
-        // Suggested picks (optional)
         if (cachedHighlights.length) {
           cachedHighlights.forEach((h, idx) => {
             const id = `lh_pick_${idx}`;
@@ -396,6 +393,7 @@ How to use it
 
       function getModalSelections(){
         const selected = [];
+
         cachedHighlights.forEach((h, idx) => {
           const cb = document.getElementById(`lh_pick_${idx}`);
           if (cb && cb.checked) selected.push(h.label);
@@ -446,7 +444,6 @@ How to use it
         getExtraPayload: (text) => {
           const base = { city: cityVal(), state: stateVal(), location: locationVal() };
 
-          // highlights fetch token
           if (String(text).trim() === HIGHLIGHTS_TOKEN) {
             if (!base.city || !base.state) return base;
             return Object.assign({}, base, { phase: "highlights" });
@@ -460,36 +457,30 @@ How to use it
           const t = normText(text);
           if (!t) return null;
 
-          // If we’re already waiting for a POI choice, don’t send anything else.
           if (awaitingPoiDecision) return { cancel: true };
 
           pendingUserText = t;
           awaitingPoiDecision = true;
 
-          // Clear input immediately for responsiveness.
+          // Clear input immediately for responsiveness
           if (helpers && helpers.clearComposer) helpers.clearComposer({ keepFocus: true });
 
-          // If we have city/state, fetch suggested highlights first. Otherwise open manual-only modal.
+          // If city/state, fetch suggestions first; else show custom-only modal
           if (cityVal() && stateVal()) {
             await helpers.sendExtra(HIGHLIGHTS_TOKEN, {}, { echoUser: false });
           } else {
             openLocalModal([]);
           }
 
-          // Cancel the default send; we’ll send phase:"write" after modal.
           return { cancel: true };
         },
 
         onResponse: (data) => {
-          // Highlights response: open modal (then user decides).
           const isHighlightsResponse = !!(data && data.local && Array.isArray(data.local.highlights));
           if (isHighlightsResponse) {
             const highlightsRaw = data.local.highlights || [];
             const normalized = highlightsRaw
-              .map((it, i) => ({
-                id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)),
-                label: coerceHighlightLabel(it)
-              }))
+              .map((it, i) => ({ id: String(i+1), label: coerceHighlightLabel(it) }))
               .filter(x => x.label && !isBadHighlightLabel(x.label));
 
             openLocalModal(normalized);
@@ -498,7 +489,7 @@ How to use it
         }
       });
 
-      // Proceed with NO POIs
+      // Continue with NO POIs
       $localModalSkip.addEventListener("click", async () => {
         closeLocalModal();
         const text = pendingUserText;
@@ -508,7 +499,7 @@ How to use it
         await shell.sendExtra(text, { phase: "write", selected_highlights: [] }, { echoUser: true });
       });
 
-      // Proceed WITH POIs (may be empty; still proceed)
+      // Continue WITH POIs (can be empty; still proceed)
       $localModalApply.addEventListener("click", async () => {
         const picked = getModalSelections();
         closeLocalModal();
@@ -519,14 +510,12 @@ How to use it
         await shell.sendExtra(text, { phase: "write", selected_highlights: picked }, { echoUser: true });
       });
 
-      // Reset
       document.getElementById("reset").addEventListener("click", () => {
         cachedHighlights = [];
         pendingUserText = "";
         awaitingPoiDecision = false;
         closeLocalModal();
-        try { $city.value = ""; $state.value = ""; } catch {}
-        try { if (shell && shell.reset) shell.reset(); } catch {}
+        try { if (shell && shell.reset) shell.reset(); } catch (_) {}
       });
 
     })();

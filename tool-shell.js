@@ -1,13 +1,9 @@
 /* ProAgent Works Tool Shell
  * Shared frontend logic for all tools.
  *
- * HARD CONTRACT (standard for tools):
- * - DOM: #messages, #input, #send, #reset, #tips
- * - API: window.PAWToolShell.init(config) -> returns { sendMessage, sendExtra, reset }
- *
  * IMPORTANT:
- * - Do NOT put prompting logic here — Worker only.
- * - Tool pages provide hooks: getPrefs, getExtraPayload, onResponse, beforeSend(optional).
+ * - Prompting stays in the Worker.
+ * - This file only handles UI wiring + API calls.
  */
 
 (function () {
@@ -78,6 +74,17 @@
     return el ? String(el.getAttribute("content") || "").trim() : "";
   }
 
+  function coerceEmbedMode() {
+    try {
+      const qp = new URLSearchParams(location.search);
+      const embed = qp.get("embed");
+      const inFrame = window.self !== window.top;
+      if (embed === "1" || inFrame) {
+        document.documentElement.setAttribute("data-embed", "1");
+      }
+    } catch (_) {}
+  }
+
   async function postJSON(url, payload, csrfToken) {
     const headers = { "Content-Type": "application/json" };
     if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
@@ -125,6 +132,9 @@
     init: function (config) {
       config = config || {};
 
+      // Ensure embed mode when framed (fixes “double container” look)
+      coerceEmbedMode();
+
       const apiEndpoint = safeText(config.apiEndpoint);
       const toolId = safeText(config.toolId);
 
@@ -140,8 +150,9 @@
         typeof config.getExtraPayload === "function" ? config.getExtraPayload : null;
       const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
 
-      // NEW: optional pre-send hook (used by listing.html to gate POIs before writing)
-      const beforeSend = typeof config.beforeSend === "function" ? config.beforeSend : null;
+      // NEW: tool can gate sending (listing uses this for POI modal before write)
+      const beforeSend =
+        typeof config.beforeSend === "function" ? config.beforeSend : null;
 
       const deliverableMode = config.deliverableMode !== false; // default true
       const deliverableTitle = safeText(config.deliverableTitle || "Deliverable");
@@ -154,12 +165,6 @@
       const maxHistoryItems =
         typeof config.maxHistoryItems === "number" ? config.maxHistoryItems : 20;
 
-      const enableDisclaimer = !!config.enableDisclaimer;
-      const disclaimerTrigger = config.disclaimerTrigger || null;
-      const getDisclaimerText =
-        typeof config.getDisclaimerText === "function" ? config.getDisclaimerText : null;
-
-      let disclaimerShown = false;
       let history = [];
       let isSending = false;
 
@@ -181,26 +186,12 @@
         opts = opts || {};
         if ($input) $input.value = "";
         if ($input && opts.keepFocus) {
-          try {
-            $input.focus();
-          } catch (_) {}
+          try { $input.focus(); } catch (_) {}
         }
       }
 
-      function maybeAppendDisclaimerOnce() {
-        if (disclaimerShown) return;
-        if (!getDisclaimerText) return;
-        const txt = safeText(getDisclaimerText());
-        if (!txt) return;
-        disclaimerShown = true;
-        appendMessage($messages, "ai", txt);
-      }
-
       function getPostUrl() {
-        // IMPORTANT FIX:
-        // Your Worker is deployed at the root:
-        //   https://paw-api.joe-b40.workers.dev
-        // So do NOT append "/api".
+        // IMPORTANT FIX: Worker is at the root, NOT /api
         return apiEndpoint.replace(/\/+$/, "");
       }
 
@@ -250,7 +241,6 @@
 
         const titleEl = card.querySelector(".deliverable-title");
         const bodyEl = card.querySelector(".deliverable-text");
-
         if (titleEl) titleEl.textContent = deliverableTitle;
         if (bodyEl) bodyEl.textContent = replyText;
 
@@ -281,7 +271,6 @@
 
           thinkingNode = appendThinking($messages);
 
-          // Allow tool to inject extra payload
           const prefs = getPrefs ? getPrefs() : {};
           const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
           const mergedExtra = Object.assign({}, baseExtra, extraPayload || {});
@@ -327,14 +316,12 @@
           return;
         }
 
-        // NEW: allow tools to intercept submits (e.g., POI modal gating)
+        // NEW: allow tool to gate sending
         if (beforeSend) {
           try {
             const res = await beforeSend(trimmed, { sendExtra, clearComposer });
             if (res && res.cancel === true) return;
-          } catch (_) {
-            // If hook fails, continue normal send.
-          }
+          } catch (_) {}
         }
 
         isSending = true;
@@ -345,10 +332,6 @@
           pushHistory("user", trimmed);
 
           clearComposer({ keepFocus: true });
-
-          if (enableDisclaimer && disclaimerTrigger && disclaimerTrigger.test(trimmed)) {
-            maybeAppendDisclaimerOnce();
-          }
 
           thinkingNode = appendThinking($messages);
 
@@ -384,13 +367,12 @@
       function reset() {
         try {
           history = [];
-          disclaimerShown = false;
           if ($messages) $messages.innerHTML = "";
           if ($input) $input.value = "";
         } catch (_) {}
       }
 
-      // Wire UI events
+      // Wire events
       if ($send) $send.addEventListener("click", sendMessage);
       if ($toolForm) {
         $toolForm.addEventListener("submit", function (e) {
@@ -408,11 +390,7 @@
         });
       }
 
-      if ($reset) {
-        $reset.addEventListener("click", function () {
-          reset();
-        });
-      }
+      if ($reset) $reset.addEventListener("click", reset);
 
       if ($tips && typeof config.tipsText === "string") {
         $tips.addEventListener("click", function () {
@@ -420,11 +398,7 @@
         });
       }
 
-      return {
-        sendMessage,
-        sendExtra,
-        reset,
-      };
+      return { sendMessage, sendExtra, reset };
     },
   };
 })();
