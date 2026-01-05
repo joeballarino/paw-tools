@@ -426,11 +426,7 @@ How to use it
         `;
 
         html += '</div>';
-        $localModalListWrap.innerHTML = `
-  <div class="poi-loading">
-    <div class="paw-thinking" style="font-size:14px; color:rgba(15,23,42,.72);">Finding nearby highlights<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>
-  </div>
-`;
+        $localModalListWrap.innerHTML = `<div class="poi-body" style="min-height:220px;">${html}</div>`;
 
         // If agent types a custom highlight, ensure it will be included
         const _ct = document.getElementById("lh_custom_text");
@@ -451,8 +447,10 @@ How to use it
         try { $localModalApply.disabled = true; } catch {}
 
         $localModalListWrap.innerHTML = `
-  <div class="poi-loading">
-    <div class="paw-thinking" style="font-size:14px; color:rgba(15,23,42,.72);">Finding nearby highlights<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>
+  <div class="poi-body" style="min-height:220px;">
+    <div class="poi-loading">
+      <div class="paw-thinking" style="font-size:14px; color:rgba(15,23,42,.72);">Finding nearby highlights<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>
+    </div>
   </div>
 `;
 
@@ -574,6 +572,12 @@ const shell = window.PAWToolShell.init({
             // Ask the Worker for nearby highlights (no user echo).
             if (helpers && helpers.sendExtra) {
               await helpers.sendExtra(HIGHLIGHTS_TOKEN, { phase: "highlights" }, { echoUser: false });
+
+              // Fallback: if the Worker doesn't return structured POIs (data.local.highlights),
+              // don't leave the user stuck on the loading state. Show write-in-only choices.
+              if (poiLoading) {
+                openPoiModalWithHighlights([]);
+              }
             }
 
             // Cancel the default sendMessage flow.
@@ -604,7 +608,16 @@ const shell = window.PAWToolShell.init({
             return { skipDefault: true };
           }
 
-          // Mark the first deliverable as done after any normal reply.
+          
+          // Fallback: if we are currently waiting on POIs but the Worker did not return structured highlights,
+          // finish the loading state by showing write-in-only options. This keeps the UX responsive without
+          // surfacing any error text to the user.
+          if (poiLoading) {
+            openPoiModalWithHighlights([]);
+            return { skipDefault: true };
+          }
+
+// Mark the first deliverable as done after any normal reply.
           if (reply) {
             poiFirstDeliverableDone = true;
           }
