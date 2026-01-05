@@ -1,15 +1,24 @@
 /* ProAgent Works Tool Shell
  * Shared frontend logic for all tools.
  *
+ * HARD CONTRACT (standard for tools):
+ * - DOM: #messages, #input, #send, #reset, #tips
+ * - API: window.PAWToolShell.init(config) -> returns { sendMessage, sendExtra, reset }
+ *
  * IMPORTANT:
  * - Do NOT put prompting logic here — Worker only.
- * - Tool pages provide hooks: getPrefs, getExtraPayload, onResponse, beforeSend.
+ * - Tool pages provide hooks: getPrefs, getExtraPayload, onResponse, beforeSend(optional).
  */
+
 (function () {
   "use strict";
 
   function $(id) {
     return document.getElementById(id);
+  }
+
+  function safeText(s) {
+    return String(s || "").trim();
   }
 
   function escapeHtml(str) {
@@ -97,17 +106,7 @@
     return data;
   }
 
-  // Worker contract payload shape:
-  // {
-  //   tool: "listing_description_writer",
-  //   message: "...",
-  //   history: [...],
-  //   prefs: {...},
-  //   phase?: "highlights"|"write",
-  //   selected_highlights?: [...],
-  //   custom_pois?: [...]
-  // }
-  function buildPayloadBase(toolId, history, prefs, extra) {
+  function buildPayloadBase(toolId, history, prefs, extraPayload) {
     const payload = {
       tool: toolId || "",
       message: "",
@@ -115,8 +114,8 @@
       prefs: prefs && typeof prefs === "object" ? prefs : {},
     };
 
-    if (extra && typeof extra === "object") {
-      for (const k in extra) payload[k] = extra[k];
+    if (extraPayload && typeof extraPayload === "object") {
+      for (const k in extraPayload) payload[k] = extraPayload[k];
     }
 
     return payload;
@@ -126,26 +125,29 @@
     init: function (config) {
       config = config || {};
 
-      const apiEndpoint = String(config.apiEndpoint || "").trim();
-      const toolId = String(config.toolId || "").trim();
+      const apiEndpoint = safeText(config.apiEndpoint);
+      const toolId = safeText(config.toolId);
 
       const $messages = $("messages");
-      const inputEl = $("input") || $("prompt");
-      const sendBtnEl = $("send") || $("submitBtn");
-      const resetBtnEl = $("reset");
-      const tipsBtnEl = $("tips");
-      const $form = $("toolForm");
+      const $input = $("input") || $("prompt");
+      const $send = $("send") || $("submitBtn");
+      const $reset = $("reset");
+      const $tips = $("tips");
+      const $toolForm = $("toolForm");
 
       const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : null;
       const getExtraPayload =
         typeof config.getExtraPayload === "function" ? config.getExtraPayload : null;
-      const beforeSend = typeof config.beforeSend === "function" ? config.beforeSend : null;
       const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
 
+      // NEW: optional pre-send hook (used by listing.html to gate POIs before writing)
+      const beforeSend = typeof config.beforeSend === "function" ? config.beforeSend : null;
+
       const deliverableMode = config.deliverableMode !== false; // default true
-      const deliverableTitle = String(config.deliverableTitle || "").trim();
-      const inputPlaceholder = String(config.inputPlaceholder || "").trim();
-      if (inputEl && inputPlaceholder) inputEl.setAttribute("placeholder", inputPlaceholder);
+      const deliverableTitle = safeText(config.deliverableTitle || "Deliverable");
+
+      const inputPlaceholder = safeText(config.inputPlaceholder);
+      if ($input && inputPlaceholder) $input.setAttribute("placeholder", inputPlaceholder);
 
       const sendHistoryItems =
         typeof config.sendHistoryItems === "number" ? config.sendHistoryItems : 10;
@@ -177,10 +179,10 @@
 
       function clearComposer(opts) {
         opts = opts || {};
-        if (inputEl) inputEl.value = "";
-        if (inputEl && opts.keepFocus) {
+        if ($input) $input.value = "";
+        if ($input && opts.keepFocus) {
           try {
-            inputEl.focus();
+            $input.focus();
           } catch (_) {}
         }
       }
@@ -188,14 +190,17 @@
       function maybeAppendDisclaimerOnce() {
         if (disclaimerShown) return;
         if (!getDisclaimerText) return;
-        const txt = String(getDisclaimerText() || "").trim();
+        const txt = safeText(getDisclaimerText());
         if (!txt) return;
         disclaimerShown = true;
         appendMessage($messages, "ai", txt);
       }
 
       function getPostUrl() {
-        // IMPORTANT: Worker is at the root endpoint (no "/api" suffix).
+        // IMPORTANT FIX:
+        // Your Worker is deployed at the root:
+        //   https://paw-api.joe-b40.workers.dev
+        // So do NOT append "/api".
         return apiEndpoint.replace(/\/+$/, "");
       }
 
@@ -245,7 +250,8 @@
 
         const titleEl = card.querySelector(".deliverable-title");
         const bodyEl = card.querySelector(".deliverable-text");
-        if (titleEl) titleEl.textContent = deliverableTitle || "Deliverable";
+
+        if (titleEl) titleEl.textContent = deliverableTitle;
         if (bodyEl) bodyEl.textContent = replyText;
 
         $messages.scrollTop = $messages.scrollHeight;
@@ -254,7 +260,7 @@
       async function sendExtra(instruction, extraPayload = {}, options = {}) {
         if (isSending) return;
 
-        const msg = String(instruction || "").trim();
+        const msg = safeText(instruction);
         if (!msg) return;
 
         if (!apiEndpoint) {
@@ -275,9 +281,10 @@
 
           thinkingNode = appendThinking($messages);
 
+          // Allow tool to inject extra payload
           const prefs = getPrefs ? getPrefs() : {};
-          const extraFromHook = getExtraPayload ? getExtraPayload(msg) : {};
-          const mergedExtra = Object.assign({}, extraFromHook || {}, extraPayload || {});
+          const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
+          const mergedExtra = Object.assign({}, baseExtra, extraPayload || {});
 
           const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, mergedExtra);
           payload.message = msg;
@@ -288,12 +295,12 @@
 
           if (onResponse) {
             try {
-              const result = onResponse(data);
-              if (result && result.skipDefault) return data;
+              const r = onResponse(data);
+              if (r && r.skipDefault) return data;
             } catch (_) {}
           }
 
-          const reply = data && typeof data.reply === "string" ? data.reply.trim() : "";
+          const reply = safeText(data && data.reply);
           if (reply) {
             renderDeliverable(reply);
             pushHistory("assistant", reply);
@@ -307,33 +314,33 @@
         }
       }
 
-      async function sendMessage(text) {
-        const trimmed = String(text || "").trim();
-        if (!trimmed) return;
+      async function sendMessage() {
         if (isSending) return;
+        if (!$input) return;
+        if (!$messages) return;
+
+        const trimmed = safeText($input.value);
+        if (!trimmed) return;
 
         if (!apiEndpoint) {
           appendMessage($messages, "ai", "Missing API endpoint configuration.");
           return;
         }
 
+        // NEW: allow tools to intercept submits (e.g., POI modal gating)
+        if (beforeSend) {
+          try {
+            const res = await beforeSend(trimmed, { sendExtra, clearComposer });
+            if (res && res.cancel === true) return;
+          } catch (_) {
+            // If hook fails, continue normal send.
+          }
+        }
+
         isSending = true;
         let thinkingNode = null;
 
         try {
-          // Optional: tool can intercept submits (e.g., POI modal gating)
-          if (typeof beforeSend === "function") {
-            try {
-              const pre = await beforeSend(trimmed, { sendExtra });
-              if (pre && (pre.handled === true || pre.cancel === true)) {
-                isSending = false;
-                return;
-              }
-            } catch (_) {
-              // If hook fails, continue with default send.
-            }
-          }
-
           appendMessage($messages, "user", trimmed);
           pushHistory("user", trimmed);
 
@@ -356,12 +363,12 @@
 
           if (onResponse) {
             try {
-              const result = onResponse(data);
-              if (result && result.skipDefault) return;
+              const r = onResponse(data);
+              if (r && r.skipDefault) return;
             } catch (_) {}
           }
 
-          const reply = data && typeof data.reply === "string" ? data.reply.trim() : "";
+          const reply = safeText(data && data.reply);
           if (reply) {
             renderDeliverable(reply);
             pushHistory("assistant", reply);
@@ -379,35 +386,36 @@
           history = [];
           disclaimerShown = false;
           if ($messages) $messages.innerHTML = "";
-          if (inputEl) inputEl.value = "";
+          if ($input) $input.value = "";
         } catch (_) {}
       }
 
-      // Wire UI events (standard)
-      sendBtnEl.addEventListener("click", function () {
-        sendMessage(inputEl.value);
-      });
-
-      if ($form) {
-        $form.addEventListener("submit", function (e) {
+      // Wire UI events
+      if ($send) $send.addEventListener("click", sendMessage);
+      if ($toolForm) {
+        $toolForm.addEventListener("submit", function (e) {
           e.preventDefault();
-          sendMessage(inputEl.value);
+          sendMessage();
         });
       }
 
-      if (inputEl) {
-        inputEl.addEventListener("keydown", function (e) {
+      if ($input) {
+        $input.addEventListener("keydown", function (e) {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            sendMessage(inputEl.value);
+            sendMessage();
           }
         });
       }
 
-      if (resetBtnEl) resetBtnEl.addEventListener("click", reset);
+      if ($reset) {
+        $reset.addEventListener("click", function () {
+          reset();
+        });
+      }
 
-      if (tipsBtnEl && typeof config.tipsText === "string") {
-        tipsBtnEl.addEventListener("click", function () {
+      if ($tips && typeof config.tipsText === "string") {
+        $tips.addEventListener("click", function () {
           alert(config.tipsText);
         });
       }
