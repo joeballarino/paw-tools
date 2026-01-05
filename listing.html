@@ -23,15 +23,12 @@
             <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
 
             <div class="topbar-right">
-              <div class="utility-pair" role="group" aria-label="Tool utilities">
-                <button id="reset" class="util-btn" type="button">Reset</button>
-                <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
-              </div>
+              <button id="reset" class="util-btn" type="button">Reset</button>
+              <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
             </div>
           </div>
 
           <div class="controls-row">
-
             <div class="ctl">
               <label for="typeSel">Type</label>
               <span class="select-wrap">
@@ -84,30 +81,30 @@
               <span class="select-wrap sm">
                 <select id="stateSel" autocomplete="address-level1">
                   <option value="" selected>ST</option>
-                  <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option><option value="AR">AR</option>
-                  <option value="CA">CA</option><option value="CO">CO</option><option value="CT">CT</option><option value="DE">DE</option>
-                  <option value="FL">FL</option><option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option>
-                  <option value="IL">IL</option><option value="IN">IN</option><option value="IA">IA</option><option value="KS">KS</option>
-                  <option value="KY">KY</option><option value="LA">LA</option><option value="ME">ME</option><option value="MD">MD</option>
-                  <option value="MA">MA</option><option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
-                  <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option><option value="NV">NV</option>
-                  <option value="NH">NH</option><option value="NJ">NJ</option><option value="NM">NM</option><option value="NY">NY</option>
-                  <option value="NC">NC</option><option value="ND">ND</option><option value="OH">OH</option><option value="OK">OK</option>
-                  <option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option><option value="SC">SC</option>
-                  <option value="SD">SD</option><option value="TN">TN</option><option value="TX">TX</option><option value="UT">UT</option>
-                  <option value="VT">VT</option><option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option>
-                  <option value="WI">WI</option><option value="WY">WY</option>
+                  <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option><option value="AR">AR</option><option value="CA">CA</option>
+                  <option value="CO">CO</option><option value="CT">CT</option><option value="DE">DE</option><option value="DC">DC</option><option value="FL">FL</option>
+                  <option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option><option value="IL">IL</option><option value="IN">IN</option>
+                  <option value="IA">IA</option><option value="KS">KS</option><option value="KY">KY</option><option value="LA">LA</option><option value="ME">ME</option>
+                  <option value="MD">MD</option><option value="MA">MA</option><option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
+                  <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option><option value="NV">NV</option><option value="NH">NH</option>
+                  <option value="NJ">NJ</option><option value="NM">NM</option><option value="NY">NY</option><option value="NC">NC</option><option value="ND">ND</option>
+                  <option value="OH">OH</option><option value="OK">OK</option><option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option>
+                  <option value="SC">SC</option><option value="SD">SD</option><option value="TN">TN</option><option value="TX">TX</option><option value="UT">UT</option>
+                  <option value="VT">VT</option><option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option><option value="WI">WI</option>
+                  <option value="WY">WY</option>
                 </select>
               </span>
             </div>
+          </div>
 
-            <div class="lock-row">
+          <div class="topbar-row2">
+
+            <div class="lock-grid">
               <div class="field">
                 <label for="bedsSel">Beds</label>
                 <select id="bedsSel">
                   <option value="" selected>—</option>
-                  <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-                  <option value="4">4</option><option value="5+">5+</option>
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5+">5+</option>
                 </select>
               </div>
 
@@ -115,14 +112,13 @@
                 <label for="bathsSel">Baths</label>
                 <select id="bathsSel">
                   <option value="" selected>—</option>
-                  <option value="1">1</option><option value="1.5">1.5</option><option value="2">2</option>
-                  <option value="2.5">2.5</option><option value="3+">3+</option>
+                  <option value="1">1</option><option value="1.5">1.5</option><option value="2">2</option><option value="2.5">2.5</option><option value="3+">3+</option>
                 </select>
               </div>
 
               <div class="field">
                 <label for="sqftInp">Sqft</label>
-                <input id="sqftInp" type="text" placeholder="e.g. 1800" />
+                <input id="sqftInp" type="text" inputmode="numeric" placeholder="e.g. 1800" />
               </div>
 
               <div class="field">
@@ -209,7 +205,8 @@
 How to use it
 • Add any details above and/or paste notes/MLS data — messy is fine
 • Include city & state when you can (helps local context)
-• If something is unknown, leave it blank (or type “unknown”) and the tool will write conservatively`;
+• If something is unknown, leave it blank (or type “unknown”) and the tool will write conservatively
+• You can always refine the output after it generates`;
 
       const $type = document.getElementById("typeSel");
       const $tone = document.getElementById("toneSel");
@@ -235,9 +232,12 @@ How to use it
 
       const HIGHLIGHTS_TOKEN = "__PAW_HIGHLIGHTS__";
 
+      let pendingHighlightsOffer = false;
       let cachedHighlights = []; // {id,label}
-      let awaitingPoiDecision = false;
-      let pendingUserText = "";
+      // Prevent repeat highlights modal for same location unless city/state meaningfully changes
+      let highlightsOfferedKey = "";
+      let highlightsAppliedKey = "";
+      let suppressHighlightsOfferOnce = false;
 
       function normText(v){ return String(v || "").trim(); }
       function digitsOnly(v){ return String(v || "").replace(/[^\d]/g, ""); }
@@ -249,6 +249,12 @@ How to use it
 
       function cityVal(){ return normText($city.value); }
       function stateVal(){ return normText($state.value).toUpperCase(); }
+      function locKey(){
+        const c = cityVal().toLowerCase();
+        const s = stateVal().toLowerCase();
+        if (!c || !s) return "";
+        return `${c}|${s}`;
+      }
       function locationVal(){
         const c = cityVal(), s = stateVal();
         if (c && s) return `${c}, ${s}`;
@@ -268,6 +274,7 @@ How to use it
       function coerceHighlightLabel(item){
         if (item == null) return "";
         if (typeof item === "string") return item.trim();
+        if (typeof item === "number") return String(item);
         if (typeof item === "object") {
           return String(item.label || item.name || item.title || item.text || item.value || "").trim();
         }
@@ -276,11 +283,17 @@ How to use it
 
       function isBadHighlightLabel(label){
         const t = String(label || "").toLowerCase();
-        return (!t || t.includes("minute") || t.includes("miles") || t.includes("km"));
+        return (
+          !t ||
+          t.includes("please provide") ||
+          t.includes("city/state") ||
+          t.includes("zip code") ||
+          (t.includes("zip") && t.includes("provide"))
+        );
       }
 
-      // Keep your existing curated selection logic (unchanged)
       function pickHighlightsForModal(allHighlights){
+        // Goal: 3 larger-area / widely recognizable POIs + 2 hyper-local POIs
         const c = cityVal().toLowerCase();
         const majorKeywords = [
           "downtown","airport","university","college","hospital","medical","mall","museum","stadium",
@@ -298,19 +311,20 @@ How to use it
           for (const k of keywords){
             if (t.includes(k)) s += 3;
           }
+          // Prefer recognizable names (slightly longer) but avoid overly wordy
           if (t.length >= 18) s += 1;
           if (t.length >= 40) s -= 1;
-          if (c && t.includes(c)) s += 1;
           return s;
         }
 
-        const items = (Array.isArray(allHighlights) ? allHighlights : []).map((h, idx) => ({
-          id: h.id || String(idx+1),
+        const items = (Array.isArray(allHighlights) ? allHighlights : []).map(h => ({
+          id: h.id,
           label: h.label,
-          majorScore: score(h.label, majorKeywords, 0),
-          localScore: score(h.label, localKeywords, 0)
+          majorScore: score(h.label, majorKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? -2 : 0),
+          localScore: score(h.label, localKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? 2 : 0)
         }));
 
+        // Dedup by label
         const seen = new Set();
         const deduped = [];
         for (const it of items){
@@ -320,6 +334,7 @@ How to use it
           deduped.push(it);
         }
 
+        // Pick top 3 major
         const major = deduped
           .slice()
           .sort((a,b) => (b.majorScore - a.majorScore) || a.label.localeCompare(b.label))
@@ -327,12 +342,14 @@ How to use it
 
         const majorSet = new Set(major.map(x => x.label.toLowerCase()));
 
+        // Pick top 2 local from remaining
         const locals = deduped
           .filter(x => !majorSet.has(x.label.toLowerCase()))
           .slice()
           .sort((a,b) => (b.localScore - a.localScore) || a.label.localeCompare(b.label))
           .slice(0,2);
 
+        // Fill if we didn't have enough (keep stable)
         const picked = [...major, ...locals];
         if (picked.length < 5){
           for (const it of deduped){
@@ -345,10 +362,12 @@ How to use it
       }
 
       function openLocalModal(highlights){
+        // If highlights are present, show up to 5 curated picks; otherwise show manual-only UI.
         cachedHighlights = pickHighlightsForModal(highlights);
 
         let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
 
+        // Suggested picks (optional)
         if (cachedHighlights.length) {
           cachedHighlights.forEach((h, idx) => {
             const id = `lh_pick_${idx}`;
@@ -361,13 +380,13 @@ How to use it
           });
         }
 
-        // Custom highlight (always available)
+        // Custom highlight the agent can type in (always available)
         html += `
           <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
             <input id="lh_custom_check" type="checkbox" style="margin-top:2px;" />
             <span style="display:flex; flex-direction:column; gap:6px; width:100%;">
               <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">Add your own highlight</span>
-              <input id="lh_custom_text" type="text" placeholder="Type your own (e.g. 'Walk to Riverside Park')" style="width:100%; padding:10px 12px; border:1px solid rgba(15,23,42,.12); border-radius:10px; font-size:14px;" />
+              <input id="lh_custom_text" type="text" placeholder="Type your own (e.g., 'Walk to Riverside Park')" style="width:100%; padding:10px 12px; border:1px solid rgba(15,23,42,.12); border-radius:10px; font-size:14px;" />
             </span>
           </label>
         `;
@@ -375,6 +394,7 @@ How to use it
         html += '</div>';
         $localModalListWrap.innerHTML = html;
 
+        // If agent types a custom highlight, ensure it will be included (checkbox optional)
         const _ct = document.getElementById("lh_custom_text");
         const _cc = document.getElementById("lh_custom_check");
         if (_ct && _cc) {
@@ -393,23 +413,52 @@ How to use it
 
       function getModalSelections(){
         const selected = [];
-
         cachedHighlights.forEach((h, idx) => {
           const cb = document.getElementById(`lh_pick_${idx}`);
           if (cb && cb.checked) selected.push(h.label);
         });
 
+        // Custom highlight (optional)
         const customTextEl = document.getElementById("lh_custom_text");
         const customText = customTextEl ? normText(customTextEl.value) : "";
-        if (customText) selected.push(customText);
+        if (customText) {
+          selected.push(customText);
+        }
 
         return selected;
+      }
+
+      async function fetchHighlightsInBackground(){
+        const c = cityVal();
+        const s = stateVal();
+        if (!c || !s) return;
+        await shell.sendExtra(HIGHLIGHTS_TOKEN, {}, { echoUser: false });
       }
 
       // Modal controls
       $localModalClose.addEventListener("click", closeLocalModal);
       $localModal.addEventListener("click", (e) => { if (e.target === $localModal) closeLocalModal(); });
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLocalModal(); });
+      $localModalSkip.addEventListener("click", closeLocalModal);
+
+      $localModalApply.addEventListener("click", async () => {
+        const picked = getModalSelections();
+        closeLocalModal();
+        if (!picked.length) return;
+        // Agent has applied highlights for this location; do not re-offer.
+        highlightsAppliedKey = locKey();
+        suppressHighlightsOfferOnce = true;
+
+        const instruction =
+`Update the MLS description above.
+Only incorporate the selected nearby highlights if the agent confirms they are accurate and if they improve specificity.
+Replace generic filler lines first. Do not add fluff. Keep the overall length similar.
+
+Selected highlights:
+- ${picked.join("\n- ")}`;
+
+        await shell.sendExtra(instruction, { phase: "write", selected_highlights: picked }, { echoUser: true });
+      });
 
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
@@ -429,6 +478,9 @@ How to use it
           state: stateVal(),
           location: locationVal(),
 
+          // allow worker to know local context exists
+          local_highlights: (!!cityVal() && !!stateVal()),
+
           compelling_feature: normText($compelling.value),
 
           locked: {
@@ -441,81 +493,72 @@ How to use it
           }
         }),
 
+        // This runs on every submit, so we can arm the offer reliably.
         getExtraPayload: (text) => {
           const base = { city: cityVal(), state: stateVal(), location: locationVal() };
+          const key = locKey();
 
+          // Background highlights fetch token
           if (String(text).trim() === HIGHLIGHTS_TOKEN) {
             if (!base.city || !base.state) return base;
             return Object.assign({}, base, { phase: "highlights" });
           }
 
+          // Normal user submit: arm the offer if we have city/state.
+          // The modal never blocks the initial generation.
+          pendingHighlightsOffer = !!(key && key !== highlightsOfferedKey && key !== highlightsAppliedKey && !suppressHighlightsOfferOnce);
+          suppressHighlightsOfferOnce = false;
+
           return base;
         },
 
-        // KEY CHANGE: POIs are offered BEFORE writing.
-        beforeSend: async (text, helpers) => {
-          const t = normText(text);
-          if (!t) return null;
-
-          if (awaitingPoiDecision) return { cancel: true };
-
-          pendingUserText = t;
-          awaitingPoiDecision = true;
-
-          // Clear input immediately for responsiveness
-          if (helpers && helpers.clearComposer) helpers.clearComposer({ keepFocus: true });
-
-          // If city/state, fetch suggestions first; else show custom-only modal
-          if (cityVal() && stateVal()) {
-            await helpers.sendExtra(HIGHLIGHTS_TOKEN, {}, { echoUser: false });
-          } else {
-            openLocalModal([]);
-          }
-
-          return { cancel: true };
-        },
-
         onResponse: (data) => {
+          const reply = data && typeof data.reply === "string" ? data.reply : "";
+
+          // Detect highlight responses by presence of data.local.highlights (even empty array)
           const isHighlightsResponse = !!(data && data.local && Array.isArray(data.local.highlights));
+
+          // If this was the background highlights response, normalize + open modal (even if empty after filtering).
           if (isHighlightsResponse) {
             const highlightsRaw = data.local.highlights || [];
             const normalized = highlightsRaw
-              .map((it, i) => ({ id: String(i+1), label: coerceHighlightLabel(it) }))
+              .map((it, i) => ({ id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i+1)), label: coerceHighlightLabel(it) }))
               .filter(x => x.label && !isBadHighlightLabel(x.label));
 
-            openLocalModal(normalized);
+            const key = locKey();
+            if (key && key === highlightsOfferedKey && key !== highlightsAppliedKey) {
+              openLocalModal(normalized);
+            }
+            // Never show any "highlights" reply text in the chat
+            return { skipDefault: true };
+          }
+
+          // Deterministic trigger: after the first normal response returns, kick off highlights fetch once.
+          if (pendingHighlightsOffer && reply) {
+            pendingHighlightsOffer = false;
+            highlightsOfferedKey = locKey();
+            fetchHighlightsInBackground(); // async, no block
+            return; // allow shell to render deliverable
+          }
+
+          // Ignore any “provide city/state or zip” prompt silently
+          const lower = reply.toLowerCase();
+          if (lower.includes("provide") && (lower.includes("city/state") || lower.includes("zip"))) {
             return { skipDefault: true };
           }
         }
       });
 
-      // Continue with NO POIs
-      $localModalSkip.addEventListener("click", async () => {
-        closeLocalModal();
-        const text = pendingUserText;
-        pendingUserText = "";
-        awaitingPoiDecision = false;
-        if (!text) return;
-        await shell.sendExtra(text, { phase: "write", selected_highlights: [] }, { echoUser: true });
-      });
-
-      // Continue WITH POIs (can be empty; still proceed)
-      $localModalApply.addEventListener("click", async () => {
-        const picked = getModalSelections();
-        closeLocalModal();
-        const text = pendingUserText;
-        pendingUserText = "";
-        awaitingPoiDecision = false;
-        if (!text) return;
-        await shell.sendExtra(text, { phase: "write", selected_highlights: picked }, { echoUser: true });
-      });
-
+      // Reset
       document.getElementById("reset").addEventListener("click", () => {
+        pendingHighlightsOffer = false;
         cachedHighlights = [];
-        pendingUserText = "";
-        awaitingPoiDecision = false;
+        highlightsOfferedKey = "";
+        highlightsAppliedKey = "";
+        suppressHighlightsOfferOnce = false;
         closeLocalModal();
-        try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+        try { $city.value = ""; $state.value = ""; } catch {}
+        try { if (shell && shell.reset) shell.reset(); } catch {}
       });
 
     })();
