@@ -371,7 +371,6 @@ function coerceEmbedMode(config) {
 
           lastUserText = trimmed;
 
-           lastUserText = msg;
 
           const prefs = getPrefs ? getPrefs() : {};
           const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
@@ -444,7 +443,6 @@ function coerceEmbedMode(config) {
 
           lastUserText = trimmed;
 
-           lastUserText = msg;
 
           const prefs = getPrefs ? getPrefs() : {};
           const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
