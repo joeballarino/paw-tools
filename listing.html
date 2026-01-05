@@ -182,7 +182,7 @@
           Here are some common neighborhood highlights. Choose what fits this listing, or add your own.
           <b>Nothing is added unless you choose it.</b>
         </div>
-        <div id="localModalListWrap"></div>
+        <div id="localModalListWrap" class="poi-listwrap"></div>
 
         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
           <button id="localModalSkip" class="btn" type="button">Keep as-is</button>
@@ -426,7 +426,11 @@ How to use it
         `;
 
         html += '</div>';
-        $localModalListWrap.innerHTML = html;
+        $localModalListWrap.innerHTML = `
+  <div class="poi-loading">
+    <div class="paw-thinking" style="font-size:14px; color:rgba(15,23,42,.72);">Finding nearby highlights<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>
+  </div>
+`;
 
         // If agent types a custom highlight, ensure it will be included
         const _ct = document.getElementById("lh_custom_text");
@@ -446,8 +450,11 @@ How to use it
         // Disable apply while loading
         try { $localModalApply.disabled = true; } catch {}
 
-        $localModalListWrap.innerHTML =
-          '<div style="padding:10px 2px; font-size:14px; color:rgba(15,23,42,.72);">Finding nearby highlights…</div>';
+        $localModalListWrap.innerHTML = `
+  <div class="poi-loading">
+    <div class="paw-thinking" style="font-size:14px; color:rgba(15,23,42,.72);">Finding nearby highlights<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>
+  </div>
+`;
 
         $localModal.classList.add("show");
         $localModal.setAttribute("aria-hidden", "false");
