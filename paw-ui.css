@@ -488,6 +488,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   font-size:14px;
   color:rgba(15,23,42,.86);
   line-height:1.45;
+  white-space:pre-wrap;
+  word-break:break-word;
 }
 .tips-list{ margin:0; padding-left:18px; }
 .tips-list li{ margin:6px 0; }
