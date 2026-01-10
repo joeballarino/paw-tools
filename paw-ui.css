@@ -217,15 +217,16 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 
 .lock-grid{
   display:grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap:12px;
-}
+  /*
+    Responsive grid without “mystery breakpoints”.
+    We want these fields to stay on ONE row on desktop whenever there is room,
+    but wrap naturally when the iframe/container is narrower due to Circle layout,
+    OS display scaling, or browser zoom.
 
-@media (max-width: 980px){
-  .lock-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-@media (max-width: 540px){
-  .lock-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    auto-fit + minmax() makes the layout respond to *actual available space*.
+  */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap:12px;
 }
 
 /* FIX: give “Most Compelling Feature” more breathing room */
