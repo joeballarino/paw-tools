@@ -3,183 +3,171 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PAW • MLS Description Writer</title>
-
-  <meta property="og:title" content="PAW • MLS Description Writer" />
-  <meta property="og:description" content="Write MLS-safe listing descriptions that spark emotion and drive showings." />
-  <meta property="og:image" content="./OG1200x630.png" />
-  <link rel="icon" type="image/png" href="./Icon32x32.png" />
-
-  <link rel="stylesheet" href="./paw-ui.css" />
+  <title>Listing Description Writer</title>
+  <link rel="stylesheet" href="./paw-ui.css">
+  <!--
+    HEADER CONTRACT (LOCKED):
+    - The panel top bar (.topbar-row0) MUST NEVER include a title.
+    - It only contains: subtitle (left) + Reset/Tips buttons (right).
+  -->
 </head>
 
 <body>
   <div class="app">
-    <header class="topbar">
-      <div class="brand">
-        <img src="./Logo240x60.png" alt="ProAgent Works" />
-      </div>
+    <div class="frame">
+      <div class="panel">
 
-      <div class="topbar-actions">
-        <button id="tips" class="ghost" type="button" aria-label="Tips">
-          Tips
-        </button>
+        <div class="panel-topbar">
 
-        <button id="reset" class="ghost" type="button" aria-label="Reset">
-          Reset
-        </button>
-      </div>
-    </header>
+          <div class="topbar-row0">
+            <div class="tool-subtitle">MLS-ready listing remarks with built-in real estate expertise.</div>
 
-    <main class="main">
-      <section class="panel">
-        <div class="panel-head">
-          <h1>MLS Description Writer</h1>
-          <div class="sub">Fast, emotional, compliant copy that helps buyers feel the home.</div>
-        </div>
-
-        <div class="panel-body">
-          <div class="grid">
-            <div class="field">
-              <label for="typeSel">Property Type</label>
-              <select id="typeSel">
-                <option value="">Pick one</option>
-                <option value="single_family">Single family</option>
-                <option value="condo">Condo</option>
-                <option value="townhome">Townhome</option>
-                <option value="multi_family">Multi-family</option>
-                <option value="land">Land</option>
-                <option value="luxury">Luxury</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="toneSel">Tone</label>
-              <select id="toneSel">
-                <option value="">Pick one</option>
-                <option value="warm">Warm + inviting</option>
-                <option value="modern">Modern + clean</option>
-                <option value="luxury">Luxury + elevated</option>
-                <option value="playful">Playful + fun</option>
-                <option value="straight">Straightforward</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="lenSel">Length</label>
-              <select id="lenSel">
-                <option value="">Pick one</option>
-                <option value="short">Short (scroll-stopper)</option>
-                <option value="standard">Standard (MLS ready)</option>
-                <option value="long">Long (story + detail)</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="cityInp">City</label>
-              <input id="cityInp" type="text" placeholder="e.g., Tampa" />
-            </div>
-
-            <div class="field">
-              <label for="stateSel">State</label>
-              <select id="stateSel">
-                <option value="">Select</option>
-                <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option><option value="AR">AR</option>
-                <option value="CA">CA</option><option value="CO">CO</option><option value="CT">CT</option><option value="DE">DE</option>
-                <option value="FL">FL</option><option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option>
-                <option value="IL">IL</option><option value="IN">IN</option><option value="IA">IA</option><option value="KS">KS</option>
-                <option value="KY">KY</option><option value="LA">LA</option><option value="ME">ME</option><option value="MD">MD</option>
-                <option value="MA">MA</option><option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
-                <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option><option value="NV">NV</option>
-                <option value="NH">NH</option><option value="NJ">NJ</option><option value="NM">NM</option><option value="NY">NY</option>
-                <option value="NC">NC</option><option value="ND">ND</option><option value="OH">OH</option><option value="OK">OK</option>
-                <option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option><option value="SC">SC</option>
-                <option value="SD">SD</option><option value="TN">TN</option><option value="TX">TX</option><option value="UT">UT</option>
-                <option value="VT">VT</option><option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option>
-                <option value="WI">WI</option><option value="WY">WY</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="bedsSel">Beds</label>
-              <select id="bedsSel">
-                <option value="">—</option>
-                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
-                <option value="5">5</option><option value="6+">6+</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="bathsSel">Baths</label>
-              <select id="bathsSel">
-                <option value="">—</option>
-                <option value="1">1</option><option value="1.5">1.5</option><option value="2">2</option><option value="2.5">2.5</option>
-                <option value="3">3</option><option value="3.5">3.5</option><option value="4+">4+</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="sqftInp">Sq Ft</label>
-              <input id="sqftInp" type="text" placeholder="e.g., 2050" />
-            </div>
-
-            <div class="field">
-              <label for="priceInp">Price</label>
-              <input id="priceInp" type="text" placeholder="e.g., 649000" />
-            </div>
-
-            <div class="field">
-              <label for="poolSel">Pool</label>
-              <select id="poolSel">
-                <option value="">—</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="porchSel">Porch / Patio</label>
-              <select id="porchSel">
-                <option value="">—</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </div>
-
-            <div class="field" style="grid-column: 1 / -1;">
-              <label for="compellingInp">Most Compelling Feature</label>
-              <input id="compellingInp" type="text" placeholder="e.g., lake views, vaulted ceilings, walkable downtown…" />
-            </div>
-
-            <div class="field" style="grid-column: 1 / -1;">
-              <label for="input">Paste your listing details</label>
-              <textarea id="input" rows="7" placeholder="Paste raw listing notes, MLS fields, or whatever you have…"></textarea>
+            <div class="topbar-right">
+              <button id="reset" class="util-btn" type="button">Reset</button>
+              <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
             </div>
           </div>
 
-          <form id="toolForm" class="actions">
-            <button id="send" class="btn primary" type="submit">
-              Generate MLS Description
-            </button>
-          </form>
+          <div class="controls-row">
+            <div class="ctl">
+              <label for="typeSel">Type</label>
+              <span class="select-wrap">
+                <select id="typeSel">
+                  <option value="" selected>Choose…</option>
+                  <option value="general">General</option>
+                  <option value="starter">Starter</option>
+                  <option value="moveup">Move-Up</option>
+                  <option value="luxury">Luxury</option>
+                  <option value="investor">Investor</option>
+                  <option value="relocation">Relocation</option>
+                </select>
+              </span>
+            </div>
 
-          <div id="messages" class="messages" aria-live="polite"></div>
-        </div>
-      </section>
+            <div class="ctl">
+              <label for="toneSel">Tone</label>
+              <span class="select-wrap">
+                <select id="toneSel">
+                  <option value="" selected>Choose…</option>
+                  <option value="general">General</option>
+                  <option value="professional">Professional</option>
+                  <option value="warm">Warm</option>
+                  <option value="elevated">Elevated</option>
+                </select>
+              </span>
+            </div>
 
-      <section class="panel mini">
-        <div class="panel-head">
-          <h2>Compliance-friendly defaults</h2>
+            <div class="ctl">
+              <label for="lenSel">Length</label>
+              <span class="select-wrap">
+                <select id="lenSel">
+                  <option value="" selected>Choose…</option>
+                  <option value="standard">Standard</option>
+                  <option value="short">Short</option>
+                  <option value="long">Long</option>
+                </select>
+              </span>
+            </div>
+
+            <div class="ctl">
+              <label for="cityInp">City</label>
+              <span class="input-wrap md">
+                <input id="cityInp" type="text" placeholder="City" autocomplete="address-level2" />
+              </span>
+            </div>
+
+            <div class="ctl">
+              <label for="stateSel">State</label>
+              <span class="select-wrap sm">
+                <select id="stateSel" autocomplete="address-level1">
+                  <option value="" selected>ST</option>
+                  <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option><option value="AR">AR</option><option value="CA">CA</option>
+                  <option value="CO">CO</option><option value="CT">CT</option><option value="DE">DE</option><option value="DC">DC</option><option value="FL">FL</option>
+                  <option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option><option value="IL">IL</option><option value="IN">IN</option>
+                  <option value="IA">IA</option><option value="KS">KS</option><option value="KY">KY</option><option value="LA">LA</option><option value="ME">ME</option>
+                  <option value="MD">MD</option><option value="MA">MA</option><option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
+                  <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option><option value="NV">NV</option><option value="NH">NH</option>
+                  <option value="NJ">NJ</option><option value="NM">NM</option><option value="NY">NY</option><option value="NC">NC</option><option value="ND">ND</option>
+                  <option value="OH">OH</option><option value="OK">OK</option><option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option>
+                  <option value="SC">SC</option><option value="SD">SD</option><option value="TN">TN</option><option value="TX">TX</option><option value="UT">UT</option>
+                  <option value="VT">VT</option><option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option><option value="WI">WI</option>
+                  <option value="WY">WY</option>
+                </select>
+              </span>
+            </div>
+          </div>
+
+          <div class="topbar-row2">
+
+            <div class="lock-grid">
+              <div class="field">
+                <label for="bedsSel">Beds</label>
+                <select id="bedsSel">
+                  <option value="" selected>—</option>
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5+">5+</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="bathsSel">Baths</label>
+                <select id="bathsSel">
+                  <option value="" selected>—</option>
+                  <option value="1">1</option><option value="1.5">1.5</option><option value="2">2</option><option value="2.5">2.5</option><option value="3+">3+</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="sqftInp">Sqft</label>
+                <input id="sqftInp" type="text" inputmode="numeric" placeholder="e.g. 1800" />
+              </div>
+
+              <div class="field">
+                <label for="priceInp">Price</label>
+                <input id="priceInp" type="text" placeholder="for context only" />
+              </div>
+
+              <div class="field">
+                <label for="poolSel">Pool</label>
+                <select id="poolSel">
+                  <option value="" selected>—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="porchSel">Porch</label>
+                <select id="porchSel">
+                  <option value="" selected>—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="lock-row2">
+              <label class="field" style="width:100%;">
+                <div class="field-label" style="font-size:12px; font-weight:700; color:rgba(15,23,42,.82); margin-bottom:8px; letter-spacing:-0.01em;">Most Compelling Feature</div>
+                <input id="compellingInp" class="big-input" type="text" placeholder="Location, design, lifestyle, value, etc." />
+              </label>
+            </div>
+
+          </div>
         </div>
-        <div class="panel-body">
-          <ul class="bullets">
-            <li>No protected-class language or steering.</li>
-            <li>No “guarantees” or unverifiable claims.</li>
-            <li>Clear, buyer-friendly tone without legal-sounding fluff.</li>
-          </ul>
+
+        <div id="messages" class="messages"></div>
+
+        <div class="composer">
+          <textarea id="input" placeholder="Add upgrades, finishes, neighborhood notes, disclosures, HOA details, or paste listing data here"></textarea>
+          <button id="send" class="send" aria-label="Send" type="button">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8L6.4 13.4 5 12l7-7z" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
-      </section>
-    </main>
+
+      </div>
+    </div>
   </div>
 
   <!-- Local Highlights Modal -->
@@ -194,45 +182,31 @@
           Here are some common neighborhood highlights. Choose what fits this listing, or add your own.
           <b>Nothing is added unless you choose it.</b>
         </div>
+        <div id="localModalListWrap" class="poi-listwrap"></div>
 
-        <div id="localModalList" class="chips"></div>
-
-        <div style="margin-top:10px;">
-          <label style="display:block; font-size:12px; color:rgba(15,23,42,.7); margin-bottom:6px;">Add your own</label>
-          <input id="localModalCustom" type="text" placeholder="e.g., walkable coffee shops, top-rated parks…" />
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+          <button id="localModalSkip" class="btn" type="button">Keep as-is</button>
+          <button id="localModalApply" class="btn primary" type="button">Update description</button>
         </div>
-      </div>
-      <div class="modal-foot" style="display:flex; gap:10px; justify-content:flex-end;">
-        <button id="localModalSkip" class="btn" type="button">Keep as-is</button>
-        <button id="localModalApply" class="btn primary" type="button">Update description</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Resume Draft Modal (Listing tool) -->
-  <div id="resumeModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="resumeModalTitle">
-      <div class="modal-head">
-        <div id="resumeModalTitle" class="modal-title">Resume your draft?</div>
-        <button class="modal-close" id="resumeModalClose" aria-label="Close" type="button">✕</button>
-      </div>
-      <div class="modal-body" id="resumeModalBody"></div>
-      <div class="modal-foot" style="display:flex; gap:10px; justify-content:flex-end;">
-        <button id="resumeModalFresh" class="btn" type="button">Start fresh</button>
-        <button id="resumeModalResume" class="btn primary" type="button">Resume</button>
       </div>
     </div>
   </div>
 
   <script src="./tool-shell.js"></script>
+
   <script>
     (function () {
-      "use strict";
+      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
 
-      // IMPORTANT: AI logic is in the Worker. This page only builds context/prefs and calls the shell.
-      const API_ENDPOINT = "/api/ask"; // Cloudflare Worker route (your tooling likely rewrites this)
       const TIPS_TEXT =
-        "Tip: Paste whatever you have. PAW will turn messy notes into a clean MLS-ready description.";
+`What this tool does
+• Generates MLS-ready listing remarks that are accurate, motivating, and Fair Housing–safe.
+
+How to use it
+• Add any details above and/or paste notes/MLS data — messy is fine
+• Include city & state when you can (helps local context)
+• If something is unknown, leave it blank (or type “unknown”) and the tool will write conservatively
+• You can always refine the output after it generates`;
 
       const $type = document.getElementById("typeSel");
       const $tone = document.getElementById("toneSel");
@@ -249,264 +223,463 @@
       const $compelling = document.getElementById("compellingInp");
       const $input = document.getElementById("input");
 
-      // Local highlights modal wiring
+      // Local highlights modal elements
       const $localModal = document.getElementById("localModal");
-      const $localModalList = document.getElementById("localModalList");
-      const $localModalCustom = document.getElementById("localModalCustom");
       const $localModalClose = document.getElementById("localModalClose");
       const $localModalSkip = document.getElementById("localModalSkip");
       const $localModalApply = document.getElementById("localModalApply");
+      const $localModalListWrap = document.getElementById("localModalListWrap");
 
-      function openLocalModal() {
-        if (!$localModal) return;
+      const HIGHLIGHTS_TOKEN = "__PAW_HIGHLIGHTS__";
+
+      // ==========================================================
+      // POI (Nearby Highlights) workflow — BEFORE first deliverable
+      // ----------------------------------------------------------
+      // Product contract (LOCKED):
+      // - If we can determine City+State (from fields OR pasted input), we offer POIs BEFORE generating.
+      // - The POI modal is shown at most once per session, and never again after the first deliverable is generated.
+      // - Reset returns the tool to "first time" state (POI can appear again).
+      // - Even if no POIs are found, the modal still provides a write-in option and can be skipped.
+      // - POIs never block output: user can bypass with "Keep as-is".
+      // ==========================================================
+
+      // State for the one-time POI gate (per session)
+      let poiGateCompleted = false;     // true after user clicks Skip or Apply (not merely opening)
+      let poiFirstDeliverableDone = false; // true after the first listing description is generated
+      let poiPendingUserText = "";      // the user prompt we will send after POI step
+      let poiCtx = { city: "", state: "" }; // effective location for POI lookup + payload
+
+      let cachedHighlights = []; // {id,label}
+      let poiLoading = false;
+
+      function normText(v){ return String(v || "").trim(); }
+      function digitsOnly(v){ return String(v || "").replace(/[^\d]/g, ""); }
+      function normEnum(v){ const t = normText(v); return t ? t : ""; }
+
+      function mapType(v){ return normText(v) || "general"; }
+      function mapTone(v){ return normText(v) || "general"; }
+      function mapLen(v){ return normText(v) || "standard"; }
+
+      function cityVal(){ return normText($city.value); }
+      function stateVal(){ return normText($state.value).toUpperCase(); }
+
+      // Conservative extraction: only accept "City, ST" style signals.
+      // We avoid guessing; if we cannot determine it confidently, we don't gate.
+      function inferCityStateFromText(text){
+        const t = String(text || "");
+        // Match: City, ST (e.g., "Austin, TX"). City must be 3+ letters to reduce false positives.
+        const re = /\b([A-Za-z][A-Za-z .'-]{2,})\s*,\s*([A-Z]{2})\b/g;
+        let m;
+        while ((m = re.exec(t)) !== null){
+          const city = normText(m[1]);
+          const st = normText(m[2]).toUpperCase();
+          if (city && st && st.length === 2) return { city, state: st };
+        }
+        return { city:"", state:"" };
+      }
+
+      function effectiveCityState(userText){
+        const c = cityVal();
+        const s = stateVal();
+        if (c && s) return { city: c, state: s };
+
+        const inferred = inferCityStateFromText(userText);
+        if (inferred.city && inferred.state) return inferred;
+
+        return { city:"", state:"" };
+      }
+
+      function locationVal(city, state){
+        const c = normText(city), s = normText(state).toUpperCase();
+        if (c && s) return `${c}, ${s}`;
+        if (s) return s;
+        return c;
+      }
+
+      function escapeHtml(str){
+        return String(str || "")
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;")
+          .replaceAll("'","&#39;");
+      }
+
+      function coerceHighlightLabel(item){
+        if (item == null) return "";
+        if (typeof item === "string") return item.trim();
+        if (typeof item === "number") return String(item);
+        if (typeof item === "object") {
+          return String(item.label || item.name || item.title || item.text || item.value || "").trim();
+        }
+        return String(item).trim();
+      }
+
+      function isBadHighlightLabel(label){
+        const t = String(label || "").toLowerCase();
+        return (
+          !t ||
+          t.includes("please provide") ||
+          t.includes("city/state") ||
+          t.includes("zip code") ||
+          (t.includes("zip") && t.includes("provide"))
+        );
+      }
+
+      function pickHighlightsForModal(allHighlights){
+        // Goal: 3 larger-area / widely recognizable POIs + 2 hyper-local POIs
+        const c = (poiCtx.city || "").toLowerCase();
+
+        const majorKeywords = [
+          "downtown","airport","university","college","hospital","medical","mall","museum","stadium",
+          "national","state park","lake","river","historic","convention","zoo","botanical",
+          "resort","ski","mountain","trail","greenway"
+        ];
+        const localKeywords = [
+          "elementary","middle","high school","school","community","neighborhood","greenway","trail",
+          "park","playground","library","rec center","recreation","shopping","grocery","farmers"
+        ];
+
+        function score(label, keywords, base){
+          const t = String(label||"").toLowerCase();
+          let s = base || 0;
+          for (const k of keywords){
+            if (t.includes(k)) s += 3;
+          }
+          // Prefer recognizable names (slightly longer) but avoid overly wordy
+          if (t.length >= 18) s += 1;
+          if (t.length >= 40) s -= 1;
+          return s;
+        }
+
+        const items = (Array.isArray(allHighlights) ? allHighlights : []).map(h => ({
+          id: h.id,
+          label: h.label,
+          majorScore: score(h.label, majorKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? -2 : 0),
+          localScore: score(h.label, localKeywords, 0) + (c && String(h.label||"").toLowerCase().includes(c) ? 2 : 0)
+        }));
+
+        // Dedup by label
+        const seen = new Set();
+        const deduped = [];
+        for (const it of items){
+          const key = String(it.label||"").trim().toLowerCase();
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(it);
+        }
+
+        // Pick top 3 major
+        const major = deduped
+          .slice()
+          .sort((a,b) => (b.majorScore - a.majorScore) || a.label.localeCompare(b.label))
+          .slice(0,3);
+
+        const majorSet = new Set(major.map(x => x.label.toLowerCase()));
+
+        // Pick top 2 local from remaining
+        const locals = deduped
+          .filter(x => !majorSet.has(x.label.toLowerCase()))
+          .slice()
+          .sort((a,b) => (b.localScore - a.localScore) || a.label.localeCompare(b.label))
+          .slice(0,2);
+
+        // Fill if we didn't have enough
+        const picked = [...major, ...locals];
+        if (picked.length < 5){
+          for (const it of deduped){
+            if (picked.length >= 5) break;
+            if (picked.some(p => p.label.toLowerCase() === it.label.toLowerCase())) continue;
+            picked.push(it);
+          }
+        }
+        return picked.slice(0,5).map(x => ({ id: x.id, label: x.label }));
+      }
+
+      function renderPoiModalContent(highlights){
+        cachedHighlights = pickHighlightsForModal(highlights);
+
+        let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
+
+        // Suggested picks (optional)
+        if (cachedHighlights.length) {
+          cachedHighlights.forEach((h, idx) => {
+            const id = `lh_pick_${idx}`;
+            html += `
+              <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
+                <input id="${id}" type="checkbox" style="margin-top:2px;" />
+                <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">${escapeHtml(h.label)}</span>
+              </label>
+            `;
+          });
+        }
+
+        // Custom highlight (always available)
+        html += `
+          <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.86); border-radius:12px;">
+            <input id="lh_custom_check" type="checkbox" style="margin-top:2px;" />
+            <span style="display:flex; flex-direction:column; gap:6px; width:100%;">
+              <span style="font-size:14px; color:rgba(15,23,42,.90); line-height:1.35;">Add your own highlight</span>
+              <input id="lh_custom_text" type="text" placeholder="Type your own (e.g., 'Walk to Riverside Park')" style="width:100%; padding:10px 12px; border:1px solid rgba(15,23,42,.12); border-radius:10px; font-size:14px;" />
+            </span>
+          </label>
+        `;
+
+        html += '</div>';
+        $localModalListWrap.innerHTML = `<div class="poi-body" style="min-height:220px;">${html}</div>`;
+
+        // If agent types a custom highlight, ensure it will be included
+        const _ct = document.getElementById("lh_custom_text");
+        const _cc = document.getElementById("lh_custom_check");
+        if (_ct && _cc) {
+          _ct.addEventListener("input", () => { if (normText(_ct.value)) _cc.checked = true; });
+        }
+
+        // Enable apply now that we have rendered options
+        try { $localModalApply.disabled = false; } catch {}
+      }
+
+      function openPoiModalLoading(){
+        cachedHighlights = [];
+        poiLoading = true;
+
+        // Disable apply while loading
+        try { $localModalApply.disabled = true; } catch {}
+
+        $localModalListWrap.innerHTML = `
+  <div class="poi-body" style="min-height:220px;">
+    <div class="poi-loading">
+      <div class="paw-thinking" style="font-size:14px; color:rgba(15,23,42,.72);">Finding nearby highlights<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>
+    </div>
+  </div>
+`;
+
         $localModal.classList.add("show");
         $localModal.setAttribute("aria-hidden", "false");
       }
-      function closeLocalModal() {
-        if (!$localModal) return;
-        $localModal.classList.remove("show");
-        $localModal.setAttribute("aria-hidden", "true");
+
+      function openPoiModalWithHighlights(highlights){
+        poiLoading = false;
+        renderPoiModalContent(highlights);
+        // Modal might already be open; ensure visible anyway.
+        $localModal.classList.add("show");
+        $localModal.setAttribute("aria-hidden", "false");
       }
 
-      if ($localModalClose) $localModalClose.addEventListener("click", closeLocalModal);
+      function closeLocalModal(){
+        poiLoading = false;
+        $localModal.classList.remove("show");
+        $localModal.setAttribute("aria-hidden", "true");
+        $localModalListWrap.innerHTML = "";
+        try { $localModalApply.disabled = false; } catch {}
+      }
 
-      // POI workflow state (one-time gate)
-      // These are page-local. Reset MUST re-arm the one-time POI gate so it runs again for a new listing.
-      let poiGateCompleted = false;
-      let poiFirstDeliverableDone = false;
-      let poiPendingUserText = "";
-      let poiCtx = { city: "", state: "" };
-      let cachedHighlights = [];
-      let poiLoading = false;
+      function getModalSelections(){
+        const selected = [];
+        cachedHighlights.forEach((h, idx) => {
+          const cb = document.getElementById(`lh_pick_${idx}`);
+          if (cb && cb.checked) selected.push(h.label);
+        });
 
-      // Shell init
-      const shell = window.PAWToolShell.init({
+        const customTextEl = document.getElementById("lh_custom_text");
+        const customText = customTextEl ? normText(customTextEl.value) : "";
+        if (customText) selected.push(customText);
+
+        return selected;
+      }
+const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "listing_description_writer",
         tipsText: TIPS_TEXT,
         deliverableTitle: "Your MLS Description",
+
         getPrefs: () => ({
-          type: $type ? $type.value : "",
-          tone: $tone ? $tone.value : "",
-          length: $len ? $len.value : "",
+          listing_type: mapType($type.value),
+          output_use: "MLS",
+          tone: mapTone($tone.value),
+          length: mapLen($len.value),
+          safe_mode: true,
+          ask_followups: false,
+
+          city: cityVal(),
+          state: stateVal(),
+          location: locationVal(cityVal(), stateVal()),
+
+          // allow worker to know local context exists
+          local_highlights: (!!cityVal() && !!stateVal()),
+
+          compelling_feature: normText($compelling.value),
+
+          locked: {
+            beds: normEnum($beds.value),
+            baths: normEnum($baths.value),
+            sqft: digitsOnly($sqft.value),
+            price: normText($price.value),
+            pool: normEnum($pool.value),
+            porch: normEnum($porch.value)
+          }
         }),
+
+        // This runs on every submit, so we can arm the offer reliably.
+        getExtraPayload: (text) => {
+          // Extra payload is derived from whatever location context we can determine.
+          // IMPORTANT: We do not guess. If we can't confidently extract City+State, we omit it.
+          const msg = String(text || "").trim();
+
+          // Highlights lookup uses the POI context captured at gate time.
+          if (msg === HIGHLIGHTS_TOKEN) {
+            if (!poiCtx.city || !poiCtx.state) return {};
+            return {
+              phase: "highlights",
+              city: poiCtx.city,
+              state: poiCtx.state,
+              location: locationVal(poiCtx.city, poiCtx.state)
+            };
+          }
+
+          const loc = effectiveCityState(msg);
+          return {
+            city: loc.city,
+            state: loc.state,
+            location: locationVal(loc.city, loc.state),
+            local_highlights: !!(loc.city && loc.state)
+          };
+        },
+
+        // Gate sending BEFORE the first deliverable when City+State is available.
+        // This prevents "POIs after output" regressions and keeps flow predictable.
+        beforeSend: async (userText, helpers) => {
+          try {
+            // Only gate before the first description is generated.
+            if (poiFirstDeliverableDone) return;
+
+            // Only gate once per session, unless user closes the modal without choosing.
+            if (poiGateCompleted) return;
+
+            const loc = effectiveCityState(userText);
+            if (!loc.city || !loc.state) return;
+
+            // Capture state for this run
+            poiPendingUserText = String(userText || "");
+            poiCtx = { city: loc.city, state: loc.state };
+
+            // Open modal immediately (loading), then fetch POIs in the background.
+            openPoiModalLoading();
+
+            // Clear composer since the send will happen after POI selection/skip.
+            if (helpers && helpers.clearComposer) helpers.clearComposer({ keepPlaceholder: true });
+
+            // Ask the Worker for nearby highlights (no user echo).
+            if (helpers && helpers.sendExtra) {
+              await helpers.sendExtra(HIGHLIGHTS_TOKEN, { phase: "highlights" }, { echoUser: false });
+
+              // Fallback: if the Worker doesn't return structured POIs (data.local.highlights),
+              // don't leave the user stuck on the loading state. Show write-in-only choices.
+              if (poiLoading) {
+                openPoiModalWithHighlights([]);
+              }
+            }
+
+            // Cancel the default sendMessage flow.
+            return { cancel: true };
+          } catch (_) {
+            // If anything goes wrong, fail open (do not block generation).
+            closeLocalModal();
+            return;
+          }
+        },
+
+        onResponse: (data) => {
+          const reply = data && typeof data.reply === "string" ? data.reply : "";
+
+          // Highlights response: render the POI options (or write-in only).
+          const isHighlightsResponse = !!(data && data.local && Array.isArray(data.local.highlights));
+          if (isHighlightsResponse) {
+            const highlightsRaw = data.local.highlights || [];
+            const normalized = highlightsRaw
+              .map((it, i) => ({
+                id: String((it && typeof it === "object" && (it.id || it.key)) ? (it.id || it.key) : (i + 1)),
+                label: coerceHighlightLabel(it)
+              }))
+              .filter(x => x.label && !isBadHighlightLabel(x.label));
+
+            // Even if empty, we still show the modal (write-in option is always present).
+            openPoiModalWithHighlights(normalized);
+            return { skipDefault: true };
+          }
+
+          
+          // Fallback: if we are currently waiting on POIs but the Worker did not return structured highlights,
+          // finish the loading state by showing write-in-only options. This keeps the UX responsive without
+          // surfacing any error text to the user.
+          if (poiLoading) {
+            openPoiModalWithHighlights([]);
+            return { skipDefault: true };
+          }
+
+// Mark the first deliverable as done after any normal reply.
+          if (reply) {
+            poiFirstDeliverableDone = true;
+          }
+
+          // Ignore any “provide city/state or zip” prompt silently (fail-safe).
+          const lower = String(reply || "").toLowerCase();
+          if (lower.includes("provide") && (lower.includes("city/state") || lower.includes("zip"))) {
+            return { skipDefault: true };
+          }
+        }
       });
 
-      function buildContext() {
-        return {
-          city: $city ? $city.value : "",
-          state: $state ? $state.value : "",
-          beds: $beds ? $beds.value : "",
-          baths: $baths ? $baths.value : "",
-          sqft: $sqft ? $sqft.value : "",
-          price: $price ? $price.value : "",
-          pool: $pool ? $pool.value : "",
-          porch: $porch ? $porch.value : "",
-          compelling_feature: $compelling ? $compelling.value : "",
-          selected_highlights: cachedHighlights || [],
-        };
-      }
+      // ==========================================================
+      // POI modal controls
+      // ==========================================================
+      $localModalClose.addEventListener("click", () => closeLocalModal());
+      $localModal.addEventListener("click", (e) => { if (e.target === $localModal) closeLocalModal(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLocalModal(); });
 
-      function renderHighlightsChips(list) {
-        if (!$localModalList) return;
-        $localModalList.innerHTML = "";
-        (list || []).forEach((txt) => {
-          const chip = document.createElement("button");
-          chip.type = "button";
-          chip.className = "chip";
-          chip.textContent = txt;
-          chip.dataset.selected = "0";
-          chip.addEventListener("click", () => {
-            const isSel = chip.dataset.selected === "1";
-            chip.dataset.selected = isSel ? "0" : "1";
-            chip.classList.toggle("selected", !isSel);
-          });
-          $localModalList.appendChild(chip);
-        });
-      }
+      // Skip / Keep as-is: proceed to generate WITHOUT forcing POIs.
+      $localModalSkip.addEventListener("click", async () => {
+        closeLocalModal();
+        poiGateCompleted = true;
 
-      function getPickedHighlights() {
-        const selected = [];
-        if ($localModalList) {
-          $localModalList.querySelectorAll(".chip.selected").forEach((chip) => {
-            selected.push(chip.textContent || "");
-          });
+        const msg = poiPendingUserText;
+        poiPendingUserText = "";
+
+        if (!msg) return;
+        await shell.sendExtra(msg, { city: poiCtx.city, state: poiCtx.state, location: locationVal(poiCtx.city, poiCtx.state) }, { echoUser: true });
+      });
+
+      // Apply: proceed to generate WITH selected POIs as context.
+      $localModalApply.addEventListener("click", async () => {
+        const picked = getModalSelections();
+        closeLocalModal();
+        poiGateCompleted = true;
+
+        const baseMsg = poiPendingUserText;
+        poiPendingUserText = "";
+
+        if (!baseMsg) return;
+
+        let msg = baseMsg;
+        if (picked && picked.length) {
+          msg += `\n\nNearby highlights to consider (include only if accurate and relevant):\n- ${picked.join("\n- ")}`;
         }
-        const customText = ($localModalCustom && $localModalCustom.value || "").trim();
-        if (customText) selected.push(customText);
-        return selected;
-      }
 
-      // ------------------------------------------------------------------
-      // Local draft save/restore (Listing tool)
-      // Goal: help agents recover from accidental navigation/crash WITHOUT ever
-      // silently mixing two different properties. We always ask before restoring.
-      //
-      // Storage strategy:
-      // - Use localStorage (persists across refresh/close) for resilience.
-      // - Wrap every access in try/catch (some browsers/iframe privacy modes block it).
-      // - Never expires (per product decision). Reset deletes the draft.
-      const DRAFT_KEY = `paw:listing:draft:v1:${location.pathname}`;
-
-      function storageGet(key) {
-        try { return window.localStorage.getItem(key); } catch (_) { return null; }
-      }
-      function storageSet(key, val) {
-        try { window.localStorage.setItem(key, val); return true; } catch (_) { return false; }
-      }
-      function storageRemove(key) {
-        try { window.localStorage.removeItem(key); } catch (_) {}
-      }
-
-      function collectDraft() {
-        const form = {
-          type: $type ? $type.value : "",
-          tone: $tone ? $tone.value : "",
-          len: $len ? $len.value : "",
-          city: $city ? $city.value : "",
-          state: $state ? $state.value : "",
-          beds: $beds ? $beds.value : "",
-          baths: $baths ? $baths.value : "",
-          sqft: $sqft ? $sqft.value : "",
-          price: $price ? $price.value : "",
-          pool: $pool ? $pool.value : "",
-          porch: $porch ? $porch.value : "",
-          compelling: $compelling ? $compelling.value : "",
-          input: $input ? $input.value : "",
-        };
-
-        const shellState = (shell && shell.getState) ? shell.getState() : { history: [], input: form.input };
-
-        return {
-          v: 1,
-          ts: Date.now(),
-          form,
-          poi: {
-            poiGateCompleted,
-            poiFirstDeliverableDone,
-            poiPendingUserText,
-            poiCtx,
-            cachedHighlights
+        await shell.sendExtra(
+          msg,
+          {
+            city: poiCtx.city,
+            state: poiCtx.state,
+            location: locationVal(poiCtx.city, poiCtx.state),
+            selected_highlights: picked || []
           },
-          shell: shellState
-        };
-      }
-
-      function applyDraft(draft) {
-        if (!draft || !draft.form) return;
-
-        const f = draft.form;
-
-        try { if ($type && typeof f.type === "string") $type.value = f.type; } catch {}
-        try { if ($tone && typeof f.tone === "string") $tone.value = f.tone; } catch {}
-        try { if ($len  && typeof f.len  === "string") $len.value  = f.len; } catch {}
-        try { if ($city && typeof f.city === "string") $city.value = f.city; } catch {}
-        try { if ($state && typeof f.state === "string") $state.value = f.state; } catch {}
-        try { if ($beds && typeof f.beds === "string") $beds.value = f.beds; } catch {}
-        try { if ($baths && typeof f.baths === "string") $baths.value = f.baths; } catch {}
-        try { if ($sqft && typeof f.sqft === "string") $sqft.value = f.sqft; } catch {}
-        try { if ($price && typeof f.price === "string") $price.value = f.price; } catch {}
-        try { if ($pool && typeof f.pool === "string") $pool.value = f.pool; } catch {}
-        try { if ($porch && typeof f.porch === "string") $porch.value = f.porch; } catch {}
-        try { if ($compelling && typeof f.compelling === "string") $compelling.value = f.compelling; } catch {}
-        try { if ($input && typeof f.input === "string") $input.value = f.input; } catch {}
-
-        // Restore POI workflow state so we don't unexpectedly re-run the 1-time gate.
-        if (draft.poi) {
-          poiGateCompleted = !!draft.poi.poiGateCompleted;
-          poiFirstDeliverableDone = !!draft.poi.poiFirstDeliverableDone;
-          poiPendingUserText = String(draft.poi.poiPendingUserText || "");
-          poiCtx = draft.poi.poiCtx || { city: "", state: "" };
-          cachedHighlights = Array.isArray(draft.poi.cachedHighlights) ? draft.poi.cachedHighlights : [];
-        }
-
-        try { if (shell && shell.setState && draft.shell) shell.setState(draft.shell); } catch {}
-      }
-
-      let saveTimer = null;
-      function scheduleDraftSave() {
-        if (saveTimer) clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => {
-          const draft = collectDraft();
-          const payload = JSON.stringify(draft);
-          storageSet(DRAFT_KEY, payload);
-        }, 350);
-      }
-
-      function clearDraft() {
-        storageRemove(DRAFT_KEY);
-      }
-
-      // Resume modal (separate from POI modal to avoid workflow conflicts)
-      const $resumeModal = document.getElementById("resumeModal");
-      const $resumeTitle = document.getElementById("resumeModalTitle");
-      const $resumeBody = document.getElementById("resumeModalBody");
-      const $resumeBtn = document.getElementById("resumeModalResume");
-      const $freshBtn = document.getElementById("resumeModalFresh");
-      const $resumeClose = document.getElementById("resumeModalClose");
-
-      function openResumeModal(draft) {
-        if (!$resumeModal) return;
-
-        const f = (draft && draft.form) ? draft.form : {};
-        const cityState = [f.city, f.state].filter(Boolean).join(", ");
-        const when = draft && draft.ts ? new Date(draft.ts).toLocaleString() : "";
-
-        if ($resumeTitle) $resumeTitle.textContent = "Resume your draft?";
-        if ($resumeBody) {
-          $resumeBody.innerHTML = `
-            <div style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45;">
-              We found a saved draft${when ? ` from <b>${when}</b>` : ""}${cityState ? ` for <b>${cityState}</b>` : ""}.
-              <div style="margin-top:10px; color:rgba(15,23,42,.72);">
-                Choose <b>Resume</b> to continue, or <b>Start fresh</b> to clear everything for a new property.
-              </div>
-            </div>
-          `;
-        }
-
-        $resumeModal.classList.add("show");
-        $resumeModal.setAttribute("aria-hidden", "false");
-
-        const close = () => {
-          $resumeModal.classList.remove("show");
-          $resumeModal.setAttribute("aria-hidden", "true");
-        };
-
-        const onResume = () => {
-          applyDraft(draft);
-          close();
-        };
-
-        const onFresh = () => {
-          // Start fresh also deletes the stored draft (prevents prior listing leakage).
-          clearDraft();
-          fullReset(true);
-          close();
-        };
-
-        // Wire once per open (lightweight + safe)
-        if ($resumeClose) $resumeClose.onclick = close;
-        if ($resumeBtn) $resumeBtn.onclick = onResume;
-        if ($freshBtn) $freshBtn.onclick = onFresh;
-      }
-
-      // Save on any meaningful change
-      const autosaveEls = [$type,$tone,$len,$city,$state,$beds,$baths,$sqft,$price,$pool,$porch,$compelling,$input].filter(Boolean);
-      autosaveEls.forEach(el => {
-        el.addEventListener("input", scheduleDraftSave);
-        el.addEventListener("change", scheduleDraftSave);
+          { echoUser: true }
+        );
       });
 
-      // Also save right before unload (best-effort)
-      window.addEventListener("beforeunload", () => {
-        try {
-          const draft = collectDraft();
-          storageSet(DRAFT_KEY, JSON.stringify(draft));
-        } catch (_) {}
-      });
-
-      // Full reset helper: clears UI + POI state + draft.
-      function fullReset(skipDraftClear) {
+      // Reset
+// Reset
+      document.getElementById("reset").addEventListener("click", () => {
         // Reset = "fresh start" for a new listing.
         poiGateCompleted = false;
         poiFirstDeliverableDone = false;
@@ -516,123 +689,11 @@
         poiLoading = false;
 
         closeLocalModal();
-
-        // Clear all form fields/selects (no trace of the prior property)
-        try { if ($type) $type.selectedIndex = 0; } catch {}
-        try { if ($tone) $tone.selectedIndex = 0; } catch {}
-        try { if ($len)  $len.selectedIndex = 0; } catch {}
-        try { if ($city) $city.value = ""; } catch {}
-        try { if ($state) $state.selectedIndex = 0; } catch {}
-        try { if ($beds) $beds.selectedIndex = 0; } catch {}
-        try { if ($baths) $baths.selectedIndex = 0; } catch {}
-        try { if ($sqft) $sqft.value = ""; } catch {}
-        try { if ($price) $price.value = ""; } catch {}
-        try { if ($pool) $pool.selectedIndex = 0; } catch {}
-        try { if ($porch) $porch.selectedIndex = 0; } catch {}
-        try { if ($compelling) $compelling.value = ""; } catch {}
-        try { if ($input) $input.value = ""; } catch {}
-
-        // Clear shell chat + composer
+        try { $city.value = ""; $state.value = ""; } catch {}
         try { if (shell && shell.reset) shell.reset(); } catch {}
-
-        if (!skipDraftClear) clearDraft();
-
-        // Snap back to top so it *feels* like a new session
-        try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
-      }
-
-      // On load: if a draft exists, ASK before restoring (never silent restore).
-      (function maybeOfferResume() {
-        const raw = storageGet(DRAFT_KEY);
-        if (!raw) return;
-        let draft = null;
-        try { draft = JSON.parse(raw); } catch (_) { draft = null; }
-        if (!draft || !draft.form) return;
-
-        // Only prompt if there's meaningful content.
-        const hasAny =
-          Object.values(draft.form || {}).some(v => String(v || "").trim().length > 0) ||
-          (draft.shell && Array.isArray(draft.shell.history) && draft.shell.history.length > 0);
-
-        if (hasAny) openResumeModal(draft);
-      })();
-
-      // Main submit
-      document.getElementById("toolForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        // First deliverable triggers POI gate once
-        if (!poiGateCompleted) {
-          poiGateCompleted = true;
-          poiCtx = { city: $city ? $city.value : "", state: $state ? $state.value : "" };
-          cachedHighlights = [
-            "Walkable shops + dining",
-            "Minutes to parks + trails",
-            "Easy commuter access",
-            "Near top attractions",
-            "Strong community vibe",
-            "Great local amenities",
-          ];
-          renderHighlightsChips(cachedHighlights);
-          openLocalModal();
-
-          // Store what user intended to send; POI modal will continue flow
-          poiPendingUserText = ($input && $input.value || "").trim();
-          return;
-        }
-
-        // Normal send
-        await shell.sendExtra(
-          { message: ($input && $input.value || "").trim(), context: buildContext(), echoUser: true },
-          { echoUser: true }
-        );
       });
 
-      // POI modal actions
-      if ($localModalSkip) {
-        $localModalSkip.addEventListener("click", async () => {
-          closeLocalModal();
-          poiFirstDeliverableDone = true;
-
-          // Send now, with no added highlights
-          await shell.sendExtra(
-            { message: poiPendingUserText || ($input && $input.value || ""), context: buildContext(), echoUser: true },
-            { echoUser: true }
-          );
-        });
-      }
-
-      if ($localModalApply) {
-        $localModalApply.addEventListener("click", async () => {
-          const picked = getPickedHighlights();
-          cachedHighlights = picked;
-
-          closeLocalModal();
-          poiFirstDeliverableDone = true;
-
-          await shell.sendExtra(
-            {
-              message: poiPendingUserText || ($input && $input.value || ""),
-              context: {
-                ...buildContext(),
-                city: poiCtx.city || ($city ? $city.value : ""),
-                state: poiCtx.state || ($state ? $state.value : ""),
-                selected_highlights: picked || []
-              },
-              echoUser: true
-            },
-            { echoUser: true }
-          );
-        });
-      }
-
-      // Reset
-      document.getElementById("reset").addEventListener("click", () => {
-        // Hard reset: clear everything for a brand-new property.
-        fullReset(false);
-      });
-
-    })();
+})();
   </script>
 </body>
 </html>
