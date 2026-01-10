@@ -15,117 +15,83 @@
   function enforceCircleOnly() {
     try {
       const qp = new URLSearchParams(location.search);
-      const embed = qp.get('embed');
+      const embed = qp.get("embed");
       const inFrame = window.self !== window.top;
-      if (!inFrame && embed !== '1') {
-        location.replace('https://proagentworks.com');
+      if (!inFrame && embed !== "1") {
+        location.replace("https://proagentworks.com");
       }
     } catch (_) {}
   }
 
   enforceCircleOnly();
 
-  function $(id) {
-    return document.getElementById(id);
-  }
-
-  function safeText(s) {
-    return String(s || "").trim();
-  }
-
-  function escapeHtml(str) {
-    return String(str || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-  }
-
-  function appendMessage($messages, role, text) {
-    const wrap = document.createElement("div");
-    wrap.className = "msg " + (role === "user" ? "user" : "ai");
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.innerHTML = "<p>" + escapeHtml(text) + "</p>";
-    wrap.appendChild(bubble);
-    $messages.appendChild(wrap);
-    $messages.scrollTop = $messages.scrollHeight;
-    return wrap;
-  }
-
-  function appendThinking($messages) {
-    const wrap = document.createElement("div");
-    wrap.className = "msg ai paw-thinking";
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.innerHTML =
-      '<p>Thinking<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></p>';
-    wrap.appendChild(bubble);
-    $messages.appendChild(wrap);
-    $messages.scrollTop = $messages.scrollHeight;
-    return wrap;
-  }
-
-  
-  // --- UX helper: always-visible "Working..." strip -------------------------
-  // Problem this solves:
-  // In embedded/iframe tools (Circle), long text pastes can push the chat stream
-  // below the fold. We *do* append an in-stream thinking bubble, but users may
-  // not be scrolled to it, so it looks like nothing is happening until results
-  // appear "all at once".
+  // --------------------------------------------------------------------------
+  // Global, always-visible progress cue.
+  // This prevents the "nothing happened... then BAM" feeling when the chat/output
+  // area is off-screen (common after pasting very large text).
   //
-  // This lightweight fixed bar gives immediate, always-visible feedback while a
-  // request is in-flight. It does NOT change backend behavior.
-  let __pawWorkingBar = null;
-  let __pawWorkingBarStyleInjected = false;
+  // This bar is local-only UI; it has no effect on Worker logic.
+  // --------------------------------------------------------------------------
 
-  function nextPaint() {
-    // Ensure the browser gets a chance to render state changes (spinner/dots)
-    // before we do any heavier sync work or kick off fetch().
-    return new Promise((resolve) => {
-      try {
-        requestAnimationFrame(() => resolve());
-      } catch (_) {
-        setTimeout(resolve, 0);
-      }
-    });
-  }
+  let __pawWorkingBar = null;
 
   function ensureWorkingBarStyles() {
-    if (__pawWorkingBarStyleInjected) return;
-    __pawWorkingBarStyleInjected = true;
+    if (document.getElementById("paw-working-bar-style")) return;
 
     const style = document.createElement("style");
-    style.setAttribute("data-paw", "working-bar");
+    style.id = "paw-working-bar-style";
     style.textContent = `
       .paw-working-bar{
         position: fixed;
         left: 12px;
         right: 12px;
         bottom: 12px;
-        z-index: 99999;
-        pointer-events: none;
+        z-index: 2147483647; /* stay above modals/overlays */
         display: none;
-      }
-      .paw-working-bar .paw-working-inner{
-        pointer-events: auto;
-        margin: 0 auto;
-        max-width: 720px;
-        border-radius: 14px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
         padding: 10px 12px;
-        box-shadow: 0 12px 30px rgba(0,0,0,.12);
-        background: rgba(255,255,255,.96);
-        border: 1px solid rgba(0,0,0,.08);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.92);
+        color: white;
         font-size: 14px;
-        line-height: 1.2;
+        box-shadow: 0 12px 30px rgba(0,0,0,.35);
+        backdrop-filter: blur(10px);
       }
-      /* Dark mode-ish fallback (if host page is dark) */
-      @media (prefers-color-scheme: dark){
-        .paw-working-bar .paw-working-inner{
-          background: rgba(20,20,20,.92);
+      .paw-working-left{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        min-width: 0;
+      }
+      .paw-working-label{
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 70vw;
+      }
+      .paw-dots{
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .paw-dot{
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.75);
+        animation: pawDotPulse 1.2s infinite ease-in-out;
+      }
+      .paw-dot:nth-child(2){ animation-delay: .15s; }
+      .paw-dot:nth-child(3){ animation-delay: .30s; }
+      @keyframes pawDotPulse{
+        0%, 80%, 100% { transform: translateY(0); opacity: .35; }
+        40% { transform: translateY(-2px); opacity: 1; }
+      }
+      @media (prefers-color-scheme: light) {
+        .paw-working-bar{
+          background: rgba(15, 23, 42, 0.88);
           border: 1px solid rgba(255,255,255,.10);
           box-shadow: 0 12px 30px rgba(0,0,0,.35);
           color: #f2f2f2;
@@ -142,19 +108,26 @@
       __pawWorkingBar.className = "paw-working-bar";
       __pawWorkingBar.setAttribute("role", "status");
       __pawWorkingBar.setAttribute("aria-live", "polite");
+
       __pawWorkingBar.innerHTML = `
-        <div class="paw-working-inner">
-          <span class="paw-working-label"></span>
+        <div class="paw-working-left">
           <span class="paw-dots" aria-hidden="true">
-            <span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span>
+            <span class="paw-dot"></span>
+            <span class="paw-dot"></span>
+            <span class="paw-dot"></span>
           </span>
+          <span class="paw-working-label" id="pawWorkingLabel">Working…</span>
         </div>
       `;
+
       document.body.appendChild(__pawWorkingBar);
     }
-    const label = __pawWorkingBar.querySelector(".paw-working-label");
-    if (label) label.textContent = safeText(labelText || "Working…");
-    __pawWorkingBar.style.display = "block";
+
+    try {
+      const lbl = __pawWorkingBar.querySelector("#pawWorkingLabel");
+      if (lbl) lbl.textContent = String(labelText || "Working…");
+      __pawWorkingBar.style.display = "flex";
+    } catch (_) {}
   }
 
   function hideWorkingBar() {
@@ -162,158 +135,81 @@
       if (__pawWorkingBar) __pawWorkingBar.style.display = "none";
     } catch (_) {}
   }
+
   // --------------------------------------------------------------------------
-function removeNode(node) {
+  // Helpers
+  // --------------------------------------------------------------------------
+
+  function removeNode(node) {
     try {
       if (node && node.parentNode) node.parentNode.removeChild(node);
     } catch (_) {}
   }
 
-  function showToast(text) {
-    const t = document.createElement("div");
-    t.className = "toast";
-    t.textContent = String(text || "");
-    document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add("show"));
-    setTimeout(() => {
-      t.classList.remove("show");
-      setTimeout(() => removeNode(t), 250);
-    }, 1800);
+  function safeText(v) {
+    if (v == null) return "";
+    return String(v);
   }
 
-  /**
-   * Clipboard helper used by the "Copy" button in the Copy/Revise modal.
-   *
-   * Why this exists:
-   * - Some tools run inside an iframe (Circle embed). Clipboard permissions can vary.
-   * - `navigator.clipboard.writeText()` is async and may be blocked without a user gesture,
-   *   insecure context, or denied permission. We fall back to `document.execCommand("copy")`
-   *   for older browsers / stricter embed contexts.
-   *
-   * IMPORTANT: Keep this lightweight. No backend calls. No analytics. Just copy.
-   */
-  function copyToClipboard(value) {
-    const text = String(value || "");
-    // Prefer modern async clipboard when available.
+  // Yield one paint so UI (spinners/dots) render before heavy work begins.
+  function nextPaint() {
+    return new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+
+  // Clipboard helper used by deliverable modals.
+  // Some embedded contexts (iframes) may restrict clipboard APIs; we fallback to a hidden textarea.
+  async function copyToClipboard(text) {
+    const txt = String(text || "");
+    if (!txt) return false;
+
+    // Preferred modern API
     try {
       if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        // Fire-and-forget: callers in this repo are synchronous.
-        navigator.clipboard.writeText(text).catch(() => copyToClipboardFallback(text));
-        return;
+        await navigator.clipboard.writeText(txt);
+        return true;
       }
     } catch (_) {
-      // If access throws (rare), use fallback below.
+      // fall through to legacy path
     }
-    copyToClipboardFallback(text);
-  }
 
-  function copyToClipboardFallback(text) {
+    // Legacy fallback
     try {
       const ta = document.createElement("textarea");
-      ta.value = String(text || "");
-      // Keep it off-screen so it doesn't shift layout.
-      ta.setAttribute("readonly", "");
+      ta.value = txt;
+      ta.setAttribute("readonly", "true");
       ta.style.position = "fixed";
       ta.style.top = "-9999px";
       ta.style.left = "-9999px";
       document.body.appendChild(ta);
       ta.select();
       ta.setSelectionRange(0, ta.value.length);
-      document.execCommand("copy");
-      document.body.removeChild(ta);
+
+      const ok = document.execCommand && document.execCommand("copy");
+      removeNode(ta);
+      return !!ok;
     } catch (_) {
-      // Swallow errors—UI will still show the toast from the caller.
-      // If you ever need to surface failures, do it at the call site.
+      return false;
     }
   }
 
-  function getCSRFTokenFromMeta() {
-    const el = document.querySelector('meta[name="csrf-token"]');
-    return el ? String(el.getAttribute("content") || "").trim() : "";
-  }
-
-  function coerceEmbedMode() {
-    try {
-      const qp = new URLSearchParams(location.search);
-      const embed = qp.get("embed");
-      const inFrame = window.self !== window.top;
-      if (embed === "1" || inFrame) {
-        document.documentElement.setAttribute("data-embed", "1");
-      }
-    } catch (_) {}
-  }
-
-  async function postJSON(url, payload, csrfToken) {
-    const headers = { "Content-Type": "application/json" };
-    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
-
-    const text = await res.text();
-    let data = null;
-    try {
-      data = JSON.parse(text);
-    } catch (_) {
-      data = { reply: text || "" };
-    }
-
-    if (!res.ok) {
-      const msg =
-        (data && (data.reply || data.error || data.message)) ||
-        "Request failed (" + res.status + ")";
-      throw new Error(msg);
-    }
-
-    return data;
-  }
-
-  function buildPayloadBase(toolId, history, prefs, extraPayload) {
-    const payload = {
-      tool: toolId || "",
-      message: "",
-      history: Array.isArray(history) ? history : [],
-      prefs: prefs && typeof prefs === "object" ? prefs : {},
-    };
-
-    if (extraPayload && typeof extraPayload === "object") {
-      for (const k in extraPayload) payload[k] = extraPayload[k];
-    }
-
-    return payload;
-  }
+  // --------------------------------------------------------------------------
+  // PAW Tool Shell API
+  // --------------------------------------------------------------------------
 
   window.PAWToolShell = {
-    init: function (config) {
-      config = config || {};
-
-      // Ensure embed mode when framed (fixes “double container” look)
-      coerceEmbedMode();
-
+    init: function initToolShell(config) {
       const apiEndpoint = safeText(config.apiEndpoint);
       const toolId = safeText(config.toolId);
-
-      const $messages = $("messages");
-      const $input = $("input") || $("prompt");
-      const $send = $("send") || $("submitBtn");
-      const $reset = $("reset");
-      const $tips = $("tips");
-      const $toolForm = $("toolForm");
-
       const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : null;
-      const getExtraPayload =
-        typeof config.getExtraPayload === "function" ? config.getExtraPayload : null;
-      const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
 
-      // NEW: tool can gate sending (listing uses this for POI modal before write)
-      const beforeSend =
-        typeof config.beforeSend === "function" ? config.beforeSend : null;
+      const $messages = document.getElementById("messages");
+      const $input = document.getElementById("input");
+      const $send = document.getElementById("send");
+      const $reset = document.getElementById("reset");
+      const $toolForm = document.getElementById("toolForm");
+      const $tips = document.getElementById("tips");
 
-      const deliverableMode = config.deliverableMode !== false; // default true
-      const deliverableTitle = safeText(config.deliverableTitle || "Deliverable");
+      const deliverableTitle = safeText(config.deliverableTitle || "Your Deliverable");
 
       const inputPlaceholder = safeText(config.inputPlaceholder);
       if ($input && inputPlaceholder) $input.setAttribute("placeholder", inputPlaceholder);
@@ -337,115 +233,59 @@ function removeNode(node) {
 
       function getHistoryForSend() {
         if (!history.length) return [];
-        return history.slice(-Math.max(0, sendHistoryItems));
+        return history.slice(-sendHistoryItems);
       }
 
-      function clearComposer(opts) {
-        opts = opts || {};
-        if ($input) $input.value = "";
-        if ($input && opts.keepFocus) {
-          try { $input.focus(); } catch (_) {}
-        }
+      function appendMessage(container, role, text) {
+        if (!container) return null;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = role === "assistant" ? "msg assistant" : "msg user";
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = String(text || "");
+
+        wrapper.appendChild(bubble);
+        container.appendChild(wrapper);
+
+        // Keep it simple; tools can handle scroll behavior themselves.
+        try {
+          container.scrollTop = container.scrollHeight;
+        } catch (_) {}
+
+        return wrapper;
       }
 
-      function getPostUrl() {
-        // IMPORTANT FIX: Worker is at the root, NOT /api
-        return apiEndpoint.replace(/\/+$/, "");
+      function appendThinking(container) {
+        if (!container) return null;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "msg assistant";
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble thinking";
+        bubble.innerHTML = `
+          <span class="thinking-dots" aria-label="Working">
+            <span></span><span></span><span></span>
+          </span>
+        `;
+
+        wrapper.appendChild(bubble);
+        container.appendChild(wrapper);
+
+        try {
+          container.scrollTop = container.scrollHeight;
+        } catch (_) {}
+
+        return wrapper;
       }
 
-      async function postToWorker(payload) {
-        const token = getCSRFTokenFromMeta();
-        const url = getPostUrl();
-        return await postJSON(url, payload, token);
-      }
-
-      
-      // Render Worker reply.
-      // Listing tool uses "deliverableMode" and should keep the chat flow linear:
-      // - Always render the deliverable as a normal assistant message in the thread.
-      // - Also open a modal with Copy / Revise actions (every time).
-      // Assistant tool sets deliverableMode=false, so it will only render in-flow.
-      function ensureDeliverableModal() {
-        let modal = document.getElementById("pawDeliverableModal");
-        if (modal) return modal;
-
-        modal = document.createElement("div");
-        modal.id = "pawDeliverableModal";
-        modal.className = "modal";
-        modal.setAttribute("aria-hidden", "true");
-
-        // IMPORTANT: We reuse the shared .modal styling in paw-ui.css.
-        // This keeps UI consistent and avoids tool-specific CSS regressions.
-        modal.innerHTML =
-          '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawDeliverableTitle">' +
-          '  <div class="modal-head">' +
-          '    <div id="pawDeliverableTitle" class="modal-title"></div>' +
-          '    <button class="modal-close" data-action="close" aria-label="Close" type="button">✕</button>' +
-          '  </div>' +
-          '  <div class="modal-body">' +
-          '    <div class="paw-deliverable-text" style="white-space:pre-wrap; word-break:break-word;"></div>' +
-          '    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">' +
-          '      <button class="btn" type="button" data-action="copy">Copy</button>' +
-          '      <button class="btn primary" type="button" data-action="revise">Revise</button>' +
-          '    </div>' +
-          '  </div>' +
-          '</div>';
-
-        document.body.appendChild(modal);
-
-        // Click handlers (delegated)
-        modal.addEventListener("click", function (e) {
-          const t = e.target;
-          if (!t) return;
-
-          // Click outside card closes
-          if (t === modal) {
-            hideDeliverableModal();
-            return;
-          }
-
-          const action = t.getAttribute("data-action");
-          if (!action) return;
-
-          if (action === "close") {
-            hideDeliverableModal();
-            return;
-          }
-
-          if (action === "copy") {
-            const textEl = modal.querySelector(".paw-deliverable-text");
-            const txt = textEl ? textEl.textContent : "";
-            copyToClipboard(txt);
-            showToast("Copied");
-            return;
-          }
-
-          if (action === "revise") {
-            hideDeliverableModal();
-
-            // UX: focus the composer and prompt for the revision request.
-            try {
-              if ($input) {
-                $input.focus();
-                // Encourage a revision request without auto-sending anything.
-                $input.placeholder =
-                  "Tell me what to change (tone, length, highlights, wording, what to emphasize, etc.)";
-              }
-            } catch (_) {}
-            return;
-          }
-        });
-
-        // Escape closes
-        document.addEventListener("keydown", function (e) {
-          if (e.key === "Escape") hideDeliverableModal();
-        });
-
-        return modal;
-      }
-
+      // Deliverable modal helpers (copy/revise)
       function showDeliverableModal(title, bodyText) {
-        const modal = ensureDeliverableModal();
+        const modal = document.getElementById("pawDeliverableModal");
+        if (!modal) return;
+
         const titleEl = modal.querySelector("#pawDeliverableTitle");
         const bodyEl = modal.querySelector(".paw-deliverable-text");
         if (titleEl) titleEl.textContent = String(title || "Your Deliverable");
@@ -462,142 +302,119 @@ function removeNode(node) {
         modal.setAttribute("aria-hidden", "true");
       }
 
-      function renderDeliverable(replyText) {
-        // Always render in-flow for a clean chat experience.
-        appendMessage($messages, "ai", replyText);
+      async function sendExtra(payload) {
+        // payload: { message, context, ... } from tool pages
+        if (!apiEndpoint || !toolId) return;
 
-        if (!deliverableMode) return;
-
-        // Also open a modal with Copy / Revise every time for deliverables.
-        showDeliverableModal(deliverableTitle, replyText);
-
-        $messages.scrollTop = $messages.scrollHeight;
-      }
-async function sendExtra(instruction, extraPayload = {}, options = {}) {
         if (isSending) return;
+        isSending = true;
 
-        const msg = safeText(instruction);
+        let thinkingNode = null;
+
+        // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
+        showWorkingBar("Working…");
+        await nextPaint();
+
+        try {
+          const msg = safeText(payload && payload.message);
+          const context = payload && payload.context ? payload.context : {};
+
+          const prefs = getPrefs
+            ? getPrefs()
+            : {
+                type: "",
+                tone: "",
+                length: "",
+              };
+
+          thinkingNode = appendThinking($messages);
+
+          const body = {
+            tool_id: toolId,
+            message: msg,
+            context: context,
+            prefs: prefs,
+            history: getHistoryForSend(),
+          };
+
+          const res = await fetch(apiEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+
+          let data = null;
+          try {
+            data = await res.json();
+          } catch (_) {
+            data = null;
+          }
+
+          removeNode(thinkingNode);
+
+          if (!res.ok) {
+            const errText =
+              (data && (data.error || data.message)) ||
+              `Something went wrong (${res.status}).`;
+            appendMessage($messages, "assistant", errText);
+            pushHistory("assistant", errText);
+            return;
+          }
+
+          const assistantText =
+            (data && (data.output || data.text || data.message)) || "";
+
+          if (payload && payload.openDeliverableModal) {
+            // Show modal with copy/revise buttons.
+            showDeliverableModal(deliverableTitle, assistantText);
+          } else {
+            appendMessage($messages, "assistant", assistantText);
+          }
+
+          pushHistory("assistant", assistantText);
+
+          // Wire Copy button inside modal (if present)
+          try {
+            const modal = document.getElementById("pawDeliverableModal");
+            if (modal) {
+              const copyBtn = modal.querySelector("[data-paw-copy]");
+              if (copyBtn) {
+                copyBtn.onclick = async () => {
+                  const ok = await copyToClipboard(assistantText);
+                  copyBtn.textContent = ok ? "Copied" : "Copy failed";
+                  setTimeout(() => (copyBtn.textContent = "Copy"), 1100);
+                };
+              }
+
+              const closeBtn = modal.querySelector("[data-paw-close]");
+              if (closeBtn) closeBtn.onclick = hideDeliverableModal;
+            }
+          } catch (_) {}
+        } catch (e) {
+          removeNode(thinkingNode);
+          appendMessage($messages, "assistant", "Network error. Please try again.");
+        } finally {
+          isSending = false;
+          hideWorkingBar();
+        }
+      }
+
+      async function sendMessage(evt) {
+        if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
+
+        if (!apiEndpoint || !toolId) return;
+        if (!$input) return;
+
+        const msg = String($input.value || "").trim();
         if (!msg) return;
 
-        if (!apiEndpoint) {
-          appendMessage($messages, "ai", "Missing API endpoint configuration.");
-          return;
-        }
+        // Default: echo user into chat for normal send.
+        await sendExtra({ message: msg, context: {}, echoUser: true, openDeliverableModal: false });
 
-        const echoUser = options.echoUser !== false;
-
-        isSending = true;
-        let thinkingNode = null;
-
-        // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
-        showWorkingBar("Working…");
-        await nextPaint();
-
+        // Clear input after send
         try {
-          if (echoUser) {
-            appendMessage($messages, "user", msg);
-            pushHistory("user", msg);
-          }
-
-          thinkingNode = appendThinking($messages);
-
-          const prefs = getPrefs ? getPrefs() : {};
-          const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
-          const mergedExtra = Object.assign({}, baseExtra, extraPayload || {});
-
-          const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, mergedExtra);
-          payload.message = msg;
-
-          const data = await postToWorker(payload);
-
-          removeNode(thinkingNode);
-
-          if (onResponse) {
-            try {
-              const r = onResponse(data);
-              if (r && r.skipDefault) return data;
-            } catch (_) {}
-          }
-
-          const reply = safeText(data && data.reply);
-          if (reply) {
-            renderDeliverable(reply);
-            pushHistory("assistant", reply);
-          }
-          return data;
-        } catch (err) {
-          removeNode(thinkingNode);
-          appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
-        } finally {
-          isSending = false;
-          hideWorkingBar();
-        }
-      }
-
-      async function sendMessage() {
-        if (isSending) return;
-        if (!$input) return;
-        if (!$messages) return;
-
-        const trimmed = safeText($input.value);
-        if (!trimmed) return;
-
-        if (!apiEndpoint) {
-          appendMessage($messages, "ai", "Missing API endpoint configuration.");
-          return;
-        }
-
-        // NEW: allow tool to gate sending
-        if (beforeSend) {
-          try {
-            const res = await beforeSend(trimmed, { sendExtra, clearComposer });
-            if (res && res.cancel === true) return;
-          } catch (_) {}
-        }
-
-        isSending = true;
-        let thinkingNode = null;
-
-        // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
-        showWorkingBar("Working…");
-        await nextPaint();
-
-        try {
-          appendMessage($messages, "user", trimmed);
-          pushHistory("user", trimmed);
-
-          clearComposer({ keepFocus: true });
-
-          thinkingNode = appendThinking($messages);
-
-          const prefs = getPrefs ? getPrefs() : {};
-          const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
-          const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, extraPayload);
-          payload.message = trimmed;
-
-          const data = await postToWorker(payload);
-
-          removeNode(thinkingNode);
-
-          if (onResponse) {
-            try {
-              const r = onResponse(data);
-              if (r && r.skipDefault) return;
-            } catch (_) {}
-          }
-
-          const reply = safeText(data && data.reply);
-          if (reply) {
-            renderDeliverable(reply);
-            pushHistory("assistant", reply);
-          }
-        } catch (err) {
-          removeNode(thinkingNode);
-          appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
-        } finally {
-          isSending = false;
-          hideWorkingBar();
-        }
+          $input.value = "";
+        } catch (_) {}
       }
 
       function reset() {
@@ -608,21 +425,48 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         } catch (_) {}
       }
 
+      // ------------------------------------------------------------------
+      // Draft persistence helpers
+      // These are intentionally simple and optional: individual tools can
+      // choose to save/restore state locally (e.g., after a crash).
+      //
+      // SECURITY/PRIVACY NOTE:
+      // - Nothing is transmitted; this is local-only state.
+      // - Tools should ALWAYS ask the user before restoring (no silent restore),
+      //   and Reset should clear any saved draft to avoid "prior listing" leaks.
+      function getState() {
+        try {
+          return {
+            history: Array.isArray(history) ? history.slice(0) : [],
+            input: $input ? String($input.value || "") : "",
+          };
+        } catch (_) {
+          return { history: [], input: "" };
+        }
+      }
+
+      function setState(state) {
+        try {
+          const h = state && Array.isArray(state.history) ? state.history : [];
+          history = h.slice(0, maxHistoryItems);
+
+          if ($messages) $messages.innerHTML = "";
+          for (const item of history) {
+            if (!item) continue;
+            const role = item.role === "assistant" ? "assistant" : "user";
+            appendMessage($messages, role, item.content || "");
+          }
+
+          if ($input && typeof state.input === "string") $input.value = state.input;
+        } catch (_) {}
+      }
+
       // Wire events
       if ($send) $send.addEventListener("click", sendMessage);
       if ($toolForm) {
         $toolForm.addEventListener("submit", function (e) {
           e.preventDefault();
-          sendMessage();
-        });
-      }
-
-      if ($input) {
-        $input.addEventListener("keydown", function (e) {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-          }
+          sendMessage(e);
         });
       }
 
@@ -634,7 +478,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         });
       }
 
-      return { sendMessage, sendExtra, reset };
+      return { sendMessage, sendExtra, reset, getState, setState };
     },
   };
 })();
