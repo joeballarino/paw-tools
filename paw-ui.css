@@ -47,7 +47,8 @@ body{
 
 .frame{
   width:100%;
-  max-width:1100px;
+  /* Canonical desktop width inside Circle: 1040px. No standalone app surface. */
+  max-width:1040px;
   display:flex;
   flex-direction:column;
 }

@@ -9,6 +9,22 @@
 (function () {
   "use strict";
 
+  // Circle-only product: if a tool page is opened outside an iframe (i.e., outside Circle),
+  // redirect to the marketing site. This prevents 'standalone' usage and avoids layout drift.
+  // NOTE: embed=1 is still honored for safety/testing, but Circle always runs tools in an iframe.
+  function enforceCircleOnly() {
+    try {
+      const qp = new URLSearchParams(location.search);
+      const embed = qp.get('embed');
+      const inFrame = window.self !== window.top;
+      if (!inFrame && embed !== '1') {
+        location.replace('https://proagentworks.com');
+      }
+    } catch (_) {}
+  }
+
+  enforceCircleOnly();
+
   function $(id) {
     return document.getElementById(id);
   }
