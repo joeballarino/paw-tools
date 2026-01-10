@@ -67,7 +67,103 @@
     return wrap;
   }
 
-  function removeNode(node) {
+  
+  // --- UX helper: always-visible "Working..." strip -------------------------
+  // Problem this solves:
+  // In embedded/iframe tools (Circle), long text pastes can push the chat stream
+  // below the fold. We *do* append an in-stream thinking bubble, but users may
+  // not be scrolled to it, so it looks like nothing is happening until results
+  // appear "all at once".
+  //
+  // This lightweight fixed bar gives immediate, always-visible feedback while a
+  // request is in-flight. It does NOT change backend behavior.
+  let __pawWorkingBar = null;
+  let __pawWorkingBarStyleInjected = false;
+
+  function nextPaint() {
+    // Ensure the browser gets a chance to render state changes (spinner/dots)
+    // before we do any heavier sync work or kick off fetch().
+    return new Promise((resolve) => {
+      try {
+        requestAnimationFrame(() => resolve());
+      } catch (_) {
+        setTimeout(resolve, 0);
+      }
+    });
+  }
+
+  function ensureWorkingBarStyles() {
+    if (__pawWorkingBarStyleInjected) return;
+    __pawWorkingBarStyleInjected = true;
+
+    const style = document.createElement("style");
+    style.setAttribute("data-paw", "working-bar");
+    style.textContent = `
+      .paw-working-bar{
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        z-index: 99999;
+        pointer-events: none;
+        display: none;
+      }
+      .paw-working-bar .paw-working-inner{
+        pointer-events: auto;
+        margin: 0 auto;
+        max-width: 720px;
+        border-radius: 14px;
+        padding: 10px 12px;
+        box-shadow: 0 12px 30px rgba(0,0,0,.12);
+        background: rgba(255,255,255,.96);
+        border: 1px solid rgba(0,0,0,.08);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        font-size: 14px;
+        line-height: 1.2;
+      }
+      /* Dark mode-ish fallback (if host page is dark) */
+      @media (prefers-color-scheme: dark){
+        .paw-working-bar .paw-working-inner{
+          background: rgba(20,20,20,.92);
+          border: 1px solid rgba(255,255,255,.10);
+          box-shadow: 0 12px 30px rgba(0,0,0,.35);
+          color: #f2f2f2;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function showWorkingBar(labelText) {
+    ensureWorkingBarStyles();
+    if (!__pawWorkingBar) {
+      __pawWorkingBar = document.createElement("div");
+      __pawWorkingBar.className = "paw-working-bar";
+      __pawWorkingBar.setAttribute("role", "status");
+      __pawWorkingBar.setAttribute("aria-live", "polite");
+      __pawWorkingBar.innerHTML = `
+        <div class="paw-working-inner">
+          <span class="paw-working-label"></span>
+          <span class="paw-dots" aria-hidden="true">
+            <span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span>
+          </span>
+        </div>
+      `;
+      document.body.appendChild(__pawWorkingBar);
+    }
+    const label = __pawWorkingBar.querySelector(".paw-working-label");
+    if (label) label.textContent = safeText(labelText || "Working…");
+    __pawWorkingBar.style.display = "block";
+  }
+
+  function hideWorkingBar() {
+    try {
+      if (__pawWorkingBar) __pawWorkingBar.style.display = "none";
+    } catch (_) {}
+  }
+  // --------------------------------------------------------------------------
+function removeNode(node) {
     try {
       if (node && node.parentNode) node.parentNode.removeChild(node);
     } catch (_) {}
@@ -393,6 +489,10 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         isSending = true;
         let thinkingNode = null;
 
+        // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
+        showWorkingBar("Working…");
+        await nextPaint();
+
         try {
           if (echoUser) {
             appendMessage($messages, "user", msg);
@@ -430,6 +530,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
         } finally {
           isSending = false;
+          hideWorkingBar();
         }
       }
 
@@ -456,6 +557,10 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
 
         isSending = true;
         let thinkingNode = null;
+
+        // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
+        showWorkingBar("Working…");
+        await nextPaint();
 
         try {
           appendMessage($messages, "user", trimmed);
@@ -491,6 +596,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
         } finally {
           isSending = false;
+          hideWorkingBar();
         }
       }
 
