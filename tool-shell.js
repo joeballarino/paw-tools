@@ -85,6 +85,52 @@
     }, 1800);
   }
 
+  /**
+   * Clipboard helper used by the "Copy" button in the Copy/Revise modal.
+   *
+   * Why this exists:
+   * - Some tools run inside an iframe (Circle embed). Clipboard permissions can vary.
+   * - `navigator.clipboard.writeText()` is async and may be blocked without a user gesture,
+   *   insecure context, or denied permission. We fall back to `document.execCommand("copy")`
+   *   for older browsers / stricter embed contexts.
+   *
+   * IMPORTANT: Keep this lightweight. No backend calls. No analytics. Just copy.
+   */
+  function copyToClipboard(value) {
+    const text = String(value || "");
+    // Prefer modern async clipboard when available.
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        // Fire-and-forget: callers in this repo are synchronous.
+        navigator.clipboard.writeText(text).catch(() => copyToClipboardFallback(text));
+        return;
+      }
+    } catch (_) {
+      // If access throws (rare), use fallback below.
+    }
+    copyToClipboardFallback(text);
+  }
+
+  function copyToClipboardFallback(text) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = String(text || "");
+      // Keep it off-screen so it doesn't shift layout.
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-9999px";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch (_) {
+      // Swallow errors—UI will still show the toast from the caller.
+      // If you ever need to surface failures, do it at the call site.
+    }
+  }
+
   function getCSRFTokenFromMeta() {
     const el = document.querySelector('meta[name="csrf-token"]');
     return el ? String(el.getAttribute("content") || "").trim() : "";
