@@ -426,8 +426,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   outline:none;
 }
 .send{
-  width:48px;
-  height:48px;
+  width:60px;
+  height:60px;
   border-radius:999px;
   border:0;
   background: var(--accent);
@@ -437,8 +437,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   justify-content:center;
   cursor:pointer;
   box-shadow:
-    0 6px 14px rgba(5,195,249,.22),
-    0 2px 6px rgba(15,23,42,.12);
+    0 10px 22px rgba(5,195,249,.30),
+    0 4px 10px rgba(15,23,42,.18);
 }
 
 /* ===== Tips modal ===== */
@@ -553,11 +553,4 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 @keyframes pawDotPulse{
   0%, 80%, 100%{ transform:translateY(0); opacity:.25; }
   40%{ transform:translateY(-2px); opacity:.85; }
-}
-
-/* ===== Send button icon (PAW paw) ===== */
-.send-icon{
-  width:22px;
-  height:22px;
-  display:block;
 }
