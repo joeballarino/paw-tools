@@ -436,9 +436,95 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   align-items:center;
   justify-content:center;
   cursor:pointer;
+
+  /* Brand: make the primary action feel premium + intentional.
+     Shadow is tuned to read as a soft lift (not a hard halo). */
   box-shadow:
-    0 10px 22px rgba(5,195,249,.30),
-    0 4px 10px rgba(15,23,42,.18);
+    0 14px 28px rgba(5,195,249,.18),
+    0 6px 14px rgba(15,23,42,.14);
+
+  /* Interaction (subtle, professional, fun) */
+  transition:
+    transform .14s ease,
+    box-shadow .14s ease,
+    filter .14s ease;
+  will-change: transform;
+  position:relative; /* enables ::after loading ring */
+}
+
+.send:hover{
+  transform: translateY(-1px) scale(1.03);
+  box-shadow:
+    0 18px 34px rgba(5,195,249,.22),
+    0 8px 18px rgba(15,23,42,.16);
+  filter: saturate(1.04);
+}
+
+.send:active{
+  transform: translateY(1px) scale(.98);
+  box-shadow:
+    0 10px 22px rgba(5,195,249,.16),
+    0 4px 10px rgba(15,23,42,.14);
+  filter: saturate(1.00);
+}
+
+/* Keyboard accessibility */
+.send:focus-visible{
+  outline:none;
+  box-shadow:
+    0 0 0 4px rgba(5,195,249,.22),
+    0 14px 28px rgba(5,195,249,.18),
+    0 6px 14px rgba(15,23,42,.14);
+}
+
+/* Icon micro-motion on hover/press */
+.send .send-icon{
+  width:28px;
+  height:28px;
+  display:block;
+  object-fit:contain;
+}
+.send:hover .send-icon{ transform: scale(1.06); }
+.send:active .send-icon{ transform: scale(.96); }
+
+/* Loading state (CSS-only hooks)
+   ----------------------------------------------------------
+   We do NOT change any JS/HTML here.
+   If/when the app sets any of these, the button will feel “alive”:
+   - <button class="send is-loading">
+   - <button class="send loading">
+   - <button class="send" aria-busy="true">
+   - <button class="send" data-loading="1">
+*/
+.send.is-loading,
+.send.loading,
+.send[aria-busy="true"],
+.send[data-loading="1"]{
+  pointer-events:none;
+}
+
+/* Soft “brand ring” pulse while loading */
+.send.is-loading::after,
+.send.loading::after,
+.send[aria-busy="true"]::after,
+.send[data-loading="1"]::after{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:999px;
+  border:2px solid rgba(255,255,255,.24);
+  box-shadow:
+    0 0 0 0 rgba(5,195,249,.20),
+    0 0 0 0 rgba(15,23,42,0);
+  opacity:.85;
+  animation: pawSendPulse 1.05s ease-in-out infinite;
+  pointer-events:none;
+}
+
+@keyframes pawSendPulse{
+  0%   { transform: scale(1);   opacity:.55; }
+  50%  { transform: scale(1.06); opacity:.95; }
+  100% { transform: scale(1);   opacity:.55; }
 }
 
 /* ===== Tips modal ===== */
@@ -553,16 +639,4 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 @keyframes pawDotPulse{
   0%, 80%, 100%{ transform:translateY(0); opacity:.25; }
   40%{ transform:translateY(-2px); opacity:.85; }
-}
-
-/* ===== Send button icon (PAW paw) =====
-   NOTE:
-   - This is intentionally scoped to the primary action button icon.
-   - Safe for shared use because it only applies when HTML opts in via class="send-icon".
-*/
-.send-icon{
-  width:28px;
-  height:28px;
-  display:block;
-  object-fit:contain;
 }
