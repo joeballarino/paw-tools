@@ -1,6 +1,24 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <!--
+    PAW Embed Guard (required):
+    These tool pages are built for Circle embedding.
+    If someone opens this page directly (not in an iframe), redirect to proagentworks.com.
+    Keep this lightweight; no dependencies.
+  -->
+  <script>
+    (function () {
+      try {
+        if (window.top === window.self) {
+          window.location.replace("https://proagentworks.com");
+        }
+      } catch (e) {
+        // If cross-origin framing prevents access to window.top, fail closed.
+        window.location.replace("https://proagentworks.com");
+      }
+    })();
+  </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PAW Tools</title>

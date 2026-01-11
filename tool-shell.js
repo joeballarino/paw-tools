@@ -698,7 +698,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           return false;
         }
       }
-return { sendMessage, sendExtra, reset, getState, setState };
+return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     },
   };
 })();

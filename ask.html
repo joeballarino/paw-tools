@@ -1,6 +1,24 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <!--
+    PAW Embed Guard (required):
+    These tool pages are built for Circle embedding.
+    If someone opens this page directly (not in an iframe), redirect to proagentworks.com.
+    Keep this lightweight; no dependencies.
+  -->
+  <script>
+    (function () {
+      try {
+        if (window.top === window.self) {
+          window.location.replace("https://proagentworks.com");
+        }
+      } catch (e) {
+        // If cross-origin framing prevents access to window.top, fail closed.
+        window.location.replace("https://proagentworks.com");
+      }
+    })();
+  </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Assistant</title>
@@ -113,6 +131,18 @@
 
       const DRAFT_KEY = "paw:assistant:draft:v1";
 
+      // Draft safety caps (localStorage is limited; large pastes can exceed quotas)
+      const MAX_DRAFT_INPUT_CHARS = 50000;
+      const MAX_DRAFT_HISTORY_ITEMS = 30;
+      const MAX_DRAFT_SHELL_INPUT_CHARS = 8000;
+
+      function trunc(s, max){
+        s = (s == null) ? "" : String(s);
+        if (!max || max <= 0) return "";
+        return s.length > max ? s.slice(0, max) : s;
+      }
+
+
       const $resumeModal = document.getElementById("pawResumeModal");
       const $resumeClose = document.getElementById("pawResumeClose");
       const $resumeMeta = document.getElementById("pawResumeMeta");
@@ -134,6 +164,7 @@
       }
 
       let __draftSaveT = null;
+      let __draftSaveFailWarned = false; // prevent repeated toasts
 
       function scheduleDraftSave(){
         try {
@@ -144,16 +175,25 @@
 
       function saveDraftNow(){
         try {
-          const st = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+          const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+          const st = {
+            history: Array.isArray(rawShellState.history) ? rawShellState.history.slice(-MAX_DRAFT_HISTORY_ITEMS) : [],
+            input: trunc(rawShellState.input, MAX_DRAFT_SHELL_INPUT_CHARS)
+          };
           const hasAny = (st.input && st.input.trim()) || (Array.isArray(st.history) && st.history.length);
           if (!hasAny) { storageDel(DRAFT_KEY); return; }
 
-          storageSet(DRAFT_KEY, {
+          const ok = storageSet(DRAFT_KEY, {
             v: 1,
             updatedAt: new Date().toISOString(),
             toolId: "assistant",
             shell: st
           });
+          if (!ok && !__draftSaveFailWarned) {
+            __draftSaveFailWarned = true;
+            try { if (shell && shell.toast) shell.toast("Draft couldn’t be saved on this device/browser."); } catch (_) {}
+          }
+
         } catch (_) {}
       }
 
@@ -189,6 +229,16 @@
         if ($reset) {
           $reset.addEventListener("click", (e) => {
             try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
+            try {
+              const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+              const hasAny =
+                (rawShellState && Array.isArray(rawShellState.history) && rawShellState.history.length) ||
+                (rawShellState && typeof rawShellState.input === "string" && rawShellState.input.trim().length);
+              if (hasAny) {
+                const ok = window.confirm("Reset will clear this session and start fresh. Continue?");
+                if (!ok) return;
+              }
+            } catch (_) {}
             fullReset();
           }, true);
         }

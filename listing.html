@@ -1,6 +1,24 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <!--
+    PAW Embed Guard (required):
+    These tool pages are built for Circle embedding.
+    If someone opens this page directly (not in an iframe), redirect to proagentworks.com.
+    Keep this lightweight; no dependencies.
+  -->
+  <script>
+    (function () {
+      try {
+        if (window.top === window.self) {
+          window.location.replace("https://proagentworks.com");
+        }
+      } catch (e) {
+        // If cross-origin framing prevents access to window.top, fail closed.
+        window.location.replace("https://proagentworks.com");
+      }
+    })();
+  </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Listing Description Writer</title>
@@ -304,6 +322,19 @@ How to use it
 
       const DRAFT_KEY = "paw:listing_description_writer:draft:v1";
 
+      // Draft safety caps (localStorage is limited; large MLS pastes can exceed quotas)
+      const MAX_DRAFT_INPUT_CHARS = 50000;   // ~50k chars of pasted listing/context
+      const MAX_DRAFT_FIELD_CHARS = 5000;    // single-line fields (ex: compelling feature)
+      const MAX_DRAFT_HISTORY_ITEMS = 30;    // last N chat turns (user+assistant)
+      const MAX_DRAFT_SHELL_INPUT_CHARS = 8000;
+
+      function trunc(s, max){
+        s = (s == null) ? "" : String(s);
+        if (!max || max <= 0) return "";
+        return s.length > max ? s.slice(0, max) : s;
+      }
+
+
       function storageGet(key){
         try {
           const raw = localStorage.getItem(key);
@@ -319,6 +350,7 @@ How to use it
       }
 
       let __draftSaveT = null;
+      let __draftSaveFailWarned = false; // prevent repeated toasts
 
       function scheduleDraftSave(){
         try {
@@ -328,7 +360,12 @@ How to use it
       }
 
       function buildDraft(){
-        const shellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+        const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+        // Cap draft size to reduce storage failures on huge pastes/conversations.
+        const shellState = {
+          history: Array.isArray(rawShellState.history) ? rawShellState.history.slice(-MAX_DRAFT_HISTORY_ITEMS) : [],
+          input: trunc(rawShellState.input, MAX_DRAFT_SHELL_INPUT_CHARS)
+        };
 
         return {
           v: 1,
@@ -346,8 +383,8 @@ How to use it
             price: $price ? $price.value : "",
             pool: $pool ? $pool.value : "",
             porch: $porch ? $porch.value : "",
-            compelling: $compelling ? $compelling.value : "",
-            input: $input ? $input.value : ""
+            compelling: trunc($compelling ? $compelling.value : "", MAX_DRAFT_FIELD_CHARS),
+            input: trunc($input ? $input.value : "", MAX_DRAFT_INPUT_CHARS)
           },
           poi: {
             poiGateCompleted,
@@ -373,7 +410,11 @@ How to use it
             storageDel(DRAFT_KEY);
             return;
           }
-          storageSet(DRAFT_KEY, d);
+          const ok = storageSet(DRAFT_KEY, d);
+          if (!ok && !__draftSaveFailWarned) {
+            __draftSaveFailWarned = true;
+            try { if (shell && shell.toast) shell.toast("Draft couldn’t be saved on this device/browser."); } catch (_) {}
+          }
         } catch (_) {}
       }
 
@@ -902,6 +943,16 @@ const shell = window.PAWToolShell.init({
 // Reset
       document.getElementById("reset").addEventListener("click", (e) => {
         try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
+        try {
+          const d = buildDraft();
+          const hasAny =
+            (d.form && Object.values(d.form).some(v => normText(v))) ||
+            (d.shell && Array.isArray(d.shell.history) && d.shell.history.length);
+          if (hasAny) {
+            const ok = window.confirm("Reset will clear this session and start fresh for a new listing. Continue?");
+            if (!ok) return;
+          }
+        } catch (_) {}
         fullReset();
       }, true);
 
