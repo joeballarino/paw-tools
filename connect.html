@@ -66,6 +66,7 @@
       padding: 12px 14px 12px;
       border-bottom:1px solid var(--border-soft);
     }
+    .connect-block{display:flex; align-items:center; gap:10px;}
     .connect-row{
       display:flex;
       align-items:center;
@@ -95,7 +96,8 @@
     }
     @media (max-width: 540px){
       .connect-controls{ padding: 10px 12px; }
-      .connect-row{ align-items:flex-start; flex-wrap:wrap; overflow-x:visible; }
+      .connect-block{display:flex; align-items:center; gap:10px;}
+    .connect-row{ align-items:flex-start; flex-wrap:wrap; overflow-x:visible; }
       .connect-group{ flex-wrap:wrap; }
       .connect-label{ width:100%; }
     }
@@ -120,23 +122,35 @@
             </div>
           </div>
 
-          <!-- Compact configuration controls (no questions; labels inline) -->
-          <div class="connect-controls" aria-label="Connect settings">
-            <div class="connect-row" aria-label="Connect settings">
-              <div class="connect-label">Choose one</div>
-              <div class="connect-group" role="group" aria-label="Type">
-                <button class="btn connect-pill" type="button" data-group="type" data-value="first_contact">First contact</button>
-                <button class="btn connect-pill" type="button" data-group="type" data-value="continue">Continue</button>
-              </div>
-              <div class="connect-group" role="group" aria-label="Send via">
-                <div class="connect-label">Send via</div>
-              <div class="connect-group" role="group" aria-label="Use as">
-                <div class="connect-label">Use as</div>
-            </div>
-          </div>
-        </div>
+          <!-- Settings (2 rows compressed into 1 row; labels inline) -->
+<div class="connect-controls" aria-label="Connect settings">
+  <div class="connect-row" aria-label="Connect settings">
+    <div class="connect-block">
+      <div class="connect-label">Choose one</div>
+      <div class="connect-group" role="group" aria-label="Type">
+        <button class="btn connect-pill" type="button" data-group="type" data-value="first_contact">First contact</button>
+        <button class="btn connect-pill" type="button" data-group="type" data-value="continue">Continue</button>
+      </div>
+    </div>
 
-        <!-- Message feed (same structure as Listing/Ask so tool-shell can manage it later) -->
+    <div class="connect-block">
+      <div class="connect-label">Send via</div>
+      <div class="connect-group" role="group" aria-label="Send via">
+        <button class="btn connect-pill" type="button" data-group="channel" data-value="email">Email</button>
+        <button class="btn connect-pill" type="button" data-group="channel" data-value="text">Text</button>
+      </div>
+    </div>
+
+    <div class="connect-block">
+      <div class="connect-label">Use as</div>
+      <div class="connect-group" role="group" aria-label="Use as">
+        <button class="btn connect-pill" type="button" data-group="use" data-value="once">Send once</button>
+        <button class="btn connect-pill" type="button" data-group="use" data-value="template">Template</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Message feed (same structure as Listing/Ask so tool-shell can manage it later) -->
         <div id="messages" class="messages" aria-live="polite"></div>
 
         <!-- Composer -->
