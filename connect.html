@@ -4,50 +4,99 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Connect</title>
-
-  <!--
-    ProAgent Works — Connect (Circle Embed Tool)
-    -------------------------------------------
-    PURPOSE:
-    - UI scaffold for the Connect communication tool (Email/Text + reusable templates).
-    - This file intentionally ships UI first so it can be reviewed inside Circle before
-      wiring requests to the Cloudflare Worker.
-
-    CRITICAL PRODUCT RULES:
-    - Circle owns the tool title (H1). This embedded tool MUST NOT render its own title.
-    - The top bar row (.topbar-row0) contains:
-        * a single short description (left)
-        * Reset + Tips & How To buttons (right)
-      ...and NOTHING ELSE.
-    - Embed mode / “no double container” rule:
-        * When ?embed=1 is present OR the page is inside an iframe,
-          we set html[data-embed="1"].
-        * paw-ui.css flattens .panel in embed mode so Circle provides the outer card.
-
-    NOTE FOR FUTURE WIRING:
-    - NO AI logic lives in this file. All prompting + generation lives in the Worker.
-    - Once wiring begins, we can either:
-        A) Use PAWToolShell.init(...) like listing.html/ask.html, OR
-        B) Keep custom handlers but still reuse shell helpers (draft, reset, toast).
-      For now, Generate is a harmless local stub message.
-  -->
+  <link rel="stylesheet" href="./paw-ui.css">
 
   <script>
-    // Embed flattening MUST happen even if we don't call PAWToolShell.init yet.
-    // This prevents the “too many containers / nested cards” look inside Circle.
+    // PAW Embed Mode Guard
+    // -------------------
+    // Circle provides the outer card. The embedded tool must render "flat".
+    // We rely on paw-ui.css rules that activate when html[data-embed="1"] is present.
+    // tool-shell.js will set this when initialized, but this UI scaffold does not
+    // depend on shell init yet, so we set it here as well.
     (function(){
       try{
-        const qp = new URLSearchParams(location.search);
-        const embed = qp.get("embed");
-        const inFrame = window.self !== window.top;
-        if(embed === "1" || inFrame){
-          document.documentElement.setAttribute("data-embed","1");
+        var params = new URLSearchParams(window.location.search);
+        var isEmbedParam = params.get('embed') === '1';
+        var isInIframe = (function(){ try{ return window.self !== window.top; } catch(e){ return true; } })();
+        if(isEmbedParam || isInIframe){
+          document.documentElement.setAttribute('data-embed','1');
         }
-      }catch(_){}
+      }catch(e){}
     })();
   </script>
 
-  <link rel="stylesheet" href="./paw-ui.css">
+  <!--
+    ProAgent Works — Connect (EMBED TOOL)
+    ------------------------------------
+    PURPOSE (v1 UI scaffold):
+    - This file is the Circle-embedded UI for the Connect communication tool.
+    - In this step we are intentionally shipping the UI skeleton first so it can be reviewed
+      inside Circle before wiring to the Cloudflare Worker.
+
+    IMPORTANT PRODUCT RULES (locked for PAW tools):
+    - Circle owns the tool title. The embedded tool MUST NOT render its own title.
+    - The panel top bar (.topbar-row0) contains:
+        subtitle/description (left) + Reset/Tips buttons (right)
+      ...and NOTHING ELSE.
+    - Embed mode:
+        tool-shell.js sets html[data-embed="1"] when ?embed=1 is present or when inside an iframe.
+        paw-ui.css flattens the panel in embed mode so Circle provides the outer card.
+
+    WIRING NOTE:
+    - NO AI logic lives here. All model prompting + output generation will be done by the Worker.
+    - This UI currently provides:
+        * button-state controls (Type / Send via / Use as)
+        * message/context textarea + Generate button
+        * message feed area (same shell structure as other tools)
+      The Generate button is stubbed for now (it adds a local placeholder message).
+
+    FUTURE ASSISTANTS:
+    - When wiring begins, reuse the proven patterns from listing.html and ask.html:
+        * shell state (tool-shell.js)
+        * reset contract (full reset clears UI + deletes draft)
+        * resume modal + autosave (if we decide to keep it consistent with Listing)
+  -->
+  <style>
+    /* Connect-only UI helpers.
+       Keep minimal to avoid impacting other tools. */
+    .connect-controls{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding: 12px 14px 12px;
+      border-bottom:1px solid var(--border-soft);
+    }
+    .connect-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .connect-label{
+      font-size:12px;
+      font-weight:800;
+      color:var(--text-strong);
+      white-space:nowrap;
+      letter-spacing:-0.01em;
+      margin-right:2px;
+    }
+    .connect-group{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    /* Slightly tighter pills than the default .btn for compactness */
+    .connect-pill.btn{
+      height:32px;
+      padding:0 12px;
+      font-weight:800;
+    }
+    @media (max-width: 540px){
+      .connect-controls{ padding: 10px 12px; }
+      .connect-row{ align-items:flex-start; }
+      .connect-label{ width:100%; } /* label becomes its own line on small screens */
+    }
+  </style>
 </head>
 
 <body>
@@ -57,49 +106,44 @@
 
         <div class="panel-topbar">
           <div class="topbar-row0">
+            <!-- Circle owns the tool title; embed only shows a short description. -->
             <div class="tool-subtitle">Clear, confident messages for email and text conversations.</div>
 
             <div class="topbar-right">
-              <button id="reset" class="util-btn" type="button">Reset</button>
-              <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
+              <div class="utility-pair" role="group" aria-label="Tool utilities">
+                <button id="reset" class="util-btn" type="button">Reset</button>
+                <button id="tips" class="util-btn" type="button">Tips &amp; How To</button>
+              </div>
             </div>
           </div>
 
-          <!--
-            Connect controls
-            - Two compact rows (no questions, no dropdowns)
-            - Inline labels (left of buttons)
-            - Defaults are highlighted
-            - Uses the same layout primitives as listing.html (.controls-row, .ctl, .btn)
-          -->
-          <div class="controls-row" aria-label="Connect settings">
-            <div class="ctl" aria-label="Choose one">
-              <label>Choose one</label>
-              <div class="btn-row" role="group" aria-label="Type">
-                <button class="btn" type="button" data-group="type" data-value="first_contact">First contact</button>
-                <button class="btn" type="button" data-group="type" data-value="continue">Continue conversation</button>
+          <!-- Compact configuration controls (no questions; labels inline) -->
+          <div class="connect-controls" aria-label="Connect settings">
+            <div class="connect-row" aria-label="Primary type">
+              <div class="connect-label">Choose one</div>
+              <div class="connect-group" role="group" aria-label="Type">
+                <button class="btn connect-pill" type="button" data-group="type" data-value="first_contact">First contact</button>
+                <button class="btn connect-pill" type="button" data-group="type" data-value="continue">Continue</button>
               </div>
             </div>
 
-            <div class="ctl" aria-label="Send via">
-              <label>Send via</label>
-              <div class="btn-row" role="group" aria-label="Channel">
-                <button class="btn" type="button" data-group="channel" data-value="email">Email</button>
-                <button class="btn" type="button" data-group="channel" data-value="text">Text</button>
+            <div class="connect-row" aria-label="Channel and usage">
+              <div class="connect-group" role="group" aria-label="Send via">
+                <div class="connect-label">Send via</div>
+                <button class="btn connect-pill" type="button" data-group="channel" data-value="email">Email</button>
+                <button class="btn connect-pill" type="button" data-group="channel" data-value="text">Text</button>
               </div>
-            </div>
 
-            <div class="ctl" aria-label="Use as">
-              <label>Use as</label>
-              <div class="btn-row" role="group" aria-label="Usage">
-                <button class="btn" type="button" data-group="use" data-value="once">Send once</button>
-                <button class="btn" type="button" data-group="use" data-value="template">Reusable template</button>
+              <div class="connect-group" role="group" aria-label="Use as">
+                <div class="connect-label">Use as</div>
+                <button class="btn connect-pill" type="button" data-group="use" data-value="once">Send once</button>
+                <button class="btn connect-pill" type="button" data-group="use" data-value="template">Template</button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Message feed (reserved for future chat-style output) -->
+        <!-- Message feed (same structure as Listing/Ask so tool-shell can manage it later) -->
         <div id="messages" class="messages" aria-live="polite"></div>
 
         <!-- Composer -->
@@ -107,10 +151,9 @@
           <textarea id="prompt" class="prompt" rows="3"
             placeholder="Add any context here, or paste a message if you’re replying"></textarea>
 
-          <!-- Use the SAME up-arrow icon as the Listing tool for consistency -->
           <button id="send" class="send" aria-label="Generate message" type="button">
             <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8L6.4 13.4 5 12l7-7z" fill="currentColor"/>
+              <path d="M3 20L21 12L3 4V10L14 12L3 14V20Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
             </svg>
           </button>
         </div>
@@ -135,6 +178,7 @@
 
       function setSelected(group, value){
         state[group] = value;
+
         document.querySelectorAll('[data-group="'+group+'"]').forEach(btn=>{
           const on = btn.getAttribute("data-value") === value;
           btn.classList.toggle("primary", on);
@@ -154,35 +198,43 @@
 
       function addLocalNote(text){
         const div = document.createElement("div");
-        div.className = "msg reminder";
+        div.className = "msg reminder"; // reuse existing message styling
         div.textContent = text;
         messagesEl.appendChild(div);
         messagesEl.scrollTop = messagesEl.scrollHeight;
       }
 
-      // Reset: straightforward UI clear.
-      // When we wire full behavior, this must also clear drafts and any stored state.
+      // Reset: for the UI scaffold, do a straightforward clear.
+      // When we wire full behavior, this must also clear drafts + any hidden workflow flags.
       document.getElementById("reset").addEventListener("click", ()=>{
         promptEl.value = "";
         messagesEl.innerHTML = "";
+        // Restore defaults.
         setSelected("type", "continue");
         setSelected("channel", "email");
         setSelected("use", "once");
       });
 
+      // Tips modal: keep minimal now; real content will be added later.
       document.getElementById("tips").addEventListener("click", ()=>{
-        alert("Tips & How To\n\nComing next: examples for First contact vs Continue conversation, plus best practices for Email vs Text and Template mode.");
+        alert("Tips & How To\n\nComing next: examples for First contact vs Continue,\nplus best practices for Email vs Text and Template mode.");
       });
 
+      // Stubbed generate button: leaves a clear placeholder message so UI can be reviewed end-to-end.
       document.getElementById("send").addEventListener("click", ()=>{
         const hasText = (promptEl.value || "").trim().length > 0;
 
+        // In v1 wiring, this will call the Worker with:
+        // - state.type / state.channel / state.use
+        // - prompt text
+        // - shell chat history (if we keep chat-based UX)
+        // For now we just show a placeholder.
         addLocalNote(
           "Connect UI scaffold is live. Wiring to the Worker comes next.\n\n" +
           "Current settings: " +
-          (state.type === "first_contact" ? "First contact" : "Continue conversation") + " • " +
+          (state.type === "first_contact" ? "First contact" : "Continue") + " • " +
           (state.channel === "email" ? "Email" : "Text") + " • " +
-          (state.use === "template" ? "Reusable template" : "Send once") +
+          (state.use === "template" ? "Template" : "Send once") +
           (hasText ? "" : "\n\nTip: add context or paste a message in the box below.")
         );
       });
