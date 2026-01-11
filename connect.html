@@ -62,15 +62,17 @@
     .connect-controls{
       display:flex;
       flex-direction:column;
-      gap:10px;
+      gap:8px;
       padding: 12px 14px 12px;
       border-bottom:1px solid var(--border-soft);
     }
     .connect-row{
       display:flex;
       align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
+      gap:12px;
+      flex-wrap:nowrap;
+      overflow-x:auto;
+      -webkit-overflow-scrolling: touch;
     }
     .connect-label{
       font-size:12px;
@@ -93,8 +95,9 @@
     }
     @media (max-width: 540px){
       .connect-controls{ padding: 10px 12px; }
-      .connect-row{ align-items:flex-start; }
-      .connect-label{ width:100%; } /* label becomes its own line on small screens */
+      .connect-row{ align-items:flex-start; flex-wrap:wrap; overflow-x:visible; }
+      .connect-group{ flex-wrap:wrap; }
+      .connect-label{ width:100%; }
     }
   </style>
 </head>
@@ -119,26 +122,16 @@
 
           <!-- Compact configuration controls (no questions; labels inline) -->
           <div class="connect-controls" aria-label="Connect settings">
-            <div class="connect-row" aria-label="Primary type">
+            <div class="connect-row" aria-label="Connect settings">
               <div class="connect-label">Choose one</div>
               <div class="connect-group" role="group" aria-label="Type">
                 <button class="btn connect-pill" type="button" data-group="type" data-value="first_contact">First contact</button>
                 <button class="btn connect-pill" type="button" data-group="type" data-value="continue">Continue</button>
               </div>
-            </div>
-
-            <div class="connect-row" aria-label="Channel and usage">
               <div class="connect-group" role="group" aria-label="Send via">
                 <div class="connect-label">Send via</div>
-                <button class="btn connect-pill" type="button" data-group="channel" data-value="email">Email</button>
-                <button class="btn connect-pill" type="button" data-group="channel" data-value="text">Text</button>
-              </div>
-
               <div class="connect-group" role="group" aria-label="Use as">
                 <div class="connect-label">Use as</div>
-                <button class="btn connect-pill" type="button" data-group="use" data-value="once">Send once</button>
-                <button class="btn connect-pill" type="button" data-group="use" data-value="template">Template</button>
-              </div>
             </div>
           </div>
         </div>
@@ -153,7 +146,7 @@
 
           <button id="send" class="send" aria-label="Generate message" type="button">
             <svg viewBox="0 0 24 24" fill="none">
-              <path d="M3 20L21 12L3 4V10L14 12L3 14V20Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M12 5l7 7-1.4 1.4L13 8.8V20h-2V8.8L6.4 13.4 5 12l7-7z" fill="currentColor"/>
             </svg>
           </button>
         </div>
