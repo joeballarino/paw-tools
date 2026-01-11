@@ -58,61 +58,50 @@
   -->
   <style>
     /* Connect-only UI helpers.
-   Keep minimal to avoid impacting other tools. */
-.connect-controls{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  padding: 12px 14px 12px;
-  border-bottom:1px solid var(--border-soft);
-}
-
-/* One row, three logical groups. Each group stays together, but the whole row can wrap responsively. */
-.connect-row{
-  display:flex;
-  align-items:center;
-  flex-wrap:wrap;              /* allows groups to wrap cleanly on narrower widths */
-  column-gap:22px;             /* space BETWEEN the 3 groups */
-  row-gap:10px;                /* space when wrapping to a new line */
-}
-
-.connect-block{
-  display:inline-flex;
-  align-items:center;
-  gap:10px;                    /* space between the label and its buttons */
-  flex:0 0 auto;               /* keeps each group as a unit */
-  min-width:max-content;       /* prevents label/button breakup */
-}
-
-.connect-label{
-  font-size:12px;
-  font-weight:800;
-  color:var(--text-strong);
-  white-space:nowrap;
-  letter-spacing:-0.01em;
-  margin-right:2px;
-}
-
-.connect-group{
-  display:inline-flex;
-  gap:8px;                     /* tight spacing INSIDE the group */
-  flex-wrap:nowrap;
-}
-
-/* Slightly tighter pills than the default .btn for compactness */
-.connect-pill.btn{
-  height:32px;
-  padding:0 12px;
-  font-weight:800;
-}
-
-/* On very small screens, let each group stack and allow button wrap if needed */
-@media (max-width: 540px){
-  .connect-controls{ padding: 10px 12px; }
-  .connect-row{ column-gap:14px; row-gap:12px; }
-  .connect-block{ width:100%; min-width:0; justify-content:flex-start; }
-  .connect-group{ flex-wrap:wrap; }
-}
+       Keep minimal to avoid impacting other tools. */
+    .connect-controls{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding: 12px 14px 12px;
+      border-bottom:1px solid var(--border-soft);
+    }
+    .connect-block{display:flex; align-items:center; gap:10px; padding-right:18px; margin-right:18px; border-right:1px solid var(--border-soft);}
+    .connect-block:last-child{padding-right:0; margin-right:0; border-right:0;}
+    .connect-row{
+      display:flex;
+      align-items:center;
+      flex-wrap:nowrap;
+      gap:0;
+      overflow-x:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .connect-label{
+      font-size:12px;
+      font-weight:700;
+      color:var(--text-muted);
+      white-space:nowrap;
+      letter-spacing:-0.01em;
+      margin-right:2px;
+    }
+    .connect-group{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    /* Slightly tighter pills than the default .btn for compactness */
+    .connect-pill.btn{
+      height:32px;
+      padding:0 12px;
+      font-weight:800;
+    }
+    @media (max-width: 540px){
+      .connect-controls{ padding: 10px 12px; }
+      .connect-row{ align-items:flex-start; flex-wrap:wrap; overflow-x:visible; }
+      .connect-block{padding-right:0; margin-right:0; border-right:0; width:100%;}
+      .connect-group{ flex-wrap:wrap; }
+      .connect-label{ width:100%; }
+    }
 </style>
 </head>
 
