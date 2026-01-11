@@ -49,6 +49,26 @@
     </div>
   </div>
 
+  <!-- Resume Draft Modal (Assistant tool) -->
+  <div id="pawResumeModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawResumeTitle">
+      <div class="modal-head">
+        <div id="pawResumeTitle" class="modal-title">Resume draft?</div>
+        <button class="modal-close" id="pawResumeClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="pawResumeMeta" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45; margin-bottom:14px;">
+          We found a saved draft on this device.
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button id="pawResumeFresh" class="btn" type="button">Start fresh</button>
+          <button id="pawResumeGo" class="btn primary" type="button">Resume</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <script src="./tool-shell.js"></script>
 
   <script>
@@ -68,7 +88,7 @@
 • Use it to think through next steps, messaging, objections, or client situations
 • Use this as a thinking partner — final judgment always stays with you`;
 
-      window.PAWToolShell.init({
+      const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "assistant",
         inputPlaceholder: "How can I assist you today?",
@@ -82,6 +102,135 @@
         maxHistoryItems: 20,
         deliverableMode: false
       });
+
+      // ==========================================================
+      // Local Save + Resume (Assistant tool)
+      // ----------------------------------------------------------
+      // Same contract as Listing:
+      // - localStorage only, never silent restore
+      // - Reset / Start fresh deletes the draft and wipes UI
+      // ==========================================================
+
+      const DRAFT_KEY = "paw:assistant:draft:v1";
+
+      const $resumeModal = document.getElementById("pawResumeModal");
+      const $resumeClose = document.getElementById("pawResumeClose");
+      const $resumeMeta = document.getElementById("pawResumeMeta");
+      const $resumeFresh = document.getElementById("pawResumeFresh");
+      const $resumeGo = document.getElementById("pawResumeGo");
+
+      function storageGet(key){
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (_) { return null; }
+      }
+      function storageSet(key, val){
+        try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (_) { return false; }
+      }
+      function storageDel(key){
+        try { localStorage.removeItem(key); return true; } catch (_) { return false; }
+      }
+
+      let __draftSaveT = null;
+
+      function scheduleDraftSave(){
+        try {
+          if (__draftSaveT) clearTimeout(__draftSaveT);
+          __draftSaveT = setTimeout(saveDraftNow, 350);
+        } catch (_) {}
+      }
+
+      function saveDraftNow(){
+        try {
+          const st = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+          const hasAny = (st.input && st.input.trim()) || (Array.isArray(st.history) && st.history.length);
+          if (!hasAny) { storageDel(DRAFT_KEY); return; }
+
+          storageSet(DRAFT_KEY, {
+            v: 1,
+            updatedAt: new Date().toISOString(),
+            toolId: "assistant",
+            shell: st
+          });
+        } catch (_) {}
+      }
+
+      function openResumeModal(draft){
+        try {
+          if (!$resumeModal) return;
+          const d = draft || {};
+          const ts = d.updatedAt ? new Date(d.updatedAt) : null;
+          const when = ts && !isNaN(ts.getTime()) ? ts.toLocaleString() : "";
+          $resumeMeta.textContent = `We found a saved draft on this device.` + (when ? ` Last saved: ${when}.` : "");
+
+          $resumeModal.classList.add("show");
+          $resumeModal.setAttribute("aria-hidden", "false");
+        } catch (_) {}
+      }
+      function closeResumeModal(){
+        try {
+          if (!$resumeModal) return;
+          $resumeModal.classList.remove("show");
+          $resumeModal.setAttribute("aria-hidden", "true");
+        } catch (_) {}
+      }
+
+      function fullReset(){
+        try { storageDel(DRAFT_KEY); } catch (_) {}
+        closeResumeModal();
+        try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+      }
+
+      // Intercept Reset so we can guarantee draft deletion.
+      try {
+        const $reset = document.getElementById("reset");
+        if ($reset) {
+          $reset.addEventListener("click", (e) => {
+            try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
+            fullReset();
+          }, true);
+        }
+      } catch (_) {}
+
+      // Autosave on composer input changes
+      try {
+        const $input = document.getElementById("input") || document.getElementById("prompt");
+        if ($input) {
+          $input.addEventListener("input", scheduleDraftSave);
+          $input.addEventListener("change", scheduleDraftSave);
+        }
+      } catch (_) {}
+
+      window.addEventListener("beforeunload", () => { try { saveDraftNow(); } catch (_) {} });
+
+      // Resume controls
+      try { if ($resumeClose) $resumeClose.addEventListener("click", () => closeResumeModal()); } catch (_) {}
+      try {
+        if ($resumeModal) $resumeModal.addEventListener("click", (e) => { if (e.target === $resumeModal) closeResumeModal(); });
+      } catch (_) {}
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeResumeModal(); } });
+
+      try {
+        if ($resumeFresh) $resumeFresh.addEventListener("click", () => {
+          closeResumeModal();
+          fullReset();
+        });
+      } catch (_) {}
+
+      try {
+        if ($resumeGo) $resumeGo.addEventListener("click", () => {
+          const d = storageGet(DRAFT_KEY);
+          closeResumeModal();
+          if (d && d.shell && shell && shell.setState) shell.setState(d.shell);
+        });
+      } catch (_) {}
+
+      // On load: show resume prompt (never silent restore)
+      const existingDraft = storageGet(DRAFT_KEY);
+      if (existingDraft) openResumeModal(existingDraft);
+
     })();
   </script>
 </body>

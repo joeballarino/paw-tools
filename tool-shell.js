@@ -601,10 +601,29 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
       }
 
       function reset() {
+        // Reset is a "fresh start" for the tool shell UI only:
+        // - clears chat thread
+        // - clears composer
+        // - hides any always-visible working indicator
+        //
+        // Tool-specific pages (listing.html, ask.html, etc.) may call this as part of a
+        // larger "full reset" that also clears their own form fields + local draft storage.
         try {
           history = [];
           if ($messages) $messages.innerHTML = "";
           if ($input) $input.value = "";
+
+          // Hide the fixed "Working..." strip if it is visible.
+          try { hideWorkingBar(); } catch (_) {}
+
+          // Best-effort: close any deliverable modal that might be open.
+          try {
+            const dm = document.getElementById("pawDeliverableModal");
+            if (dm) {
+              dm.classList.remove("show");
+              dm.setAttribute("aria-hidden", "true");
+            }
+          } catch (_) {}
         } catch (_) {}
       }
 
@@ -634,7 +653,52 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         });
       }
 
-      return { sendMessage, sendExtra, reset };
+      
+      // ------------------------------------------------------------
+      // State helpers (for local save/resume at the tool-page level)
+      // ------------------------------------------------------------
+      // IMPORTANT:
+      // - These DO NOT persist anything themselves.
+      // - They only expose enough state so each tool page can store drafts in localStorage.
+      // - We intentionally store *history* (user/assistant turns), not raw DOM HTML,
+      //   so we can safely re-render without brittle markup coupling.
+      function getState() {
+        try {
+          return {
+            history: Array.isArray(history) ? history.map((h) => ({ role: h.role, content: h.content })) : [],
+            input: $input ? String($input.value || "") : ""
+          };
+        } catch (_) {
+          return { history: [], input: "" };
+        }
+      }
+
+      function setState(state) {
+        try {
+          const st = state && typeof state === "object" ? state : {};
+          const hist = Array.isArray(st.history) ? st.history : [];
+          history = hist
+            .filter((h) => h && (h.role === "user" || h.role === "assistant"))
+            .map((h) => ({ role: h.role, content: String(h.content || "") }));
+
+          if ($messages) {
+            $messages.innerHTML = "";
+            history.forEach((h) => {
+              appendMessage($messages, h.role === "user" ? "user" : "assistant", h.content);
+            });
+          }
+
+          if ($input) $input.value = typeof st.input === "string" ? st.input : "";
+
+          // Ensure we're not showing "Working..." after a restore.
+          try { hideWorkingBar(); } catch (_) {}
+
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+return { sendMessage, sendExtra, reset, getState, setState };
     },
   };
 })();

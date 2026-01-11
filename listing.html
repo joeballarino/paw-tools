@@ -192,6 +192,26 @@
     </div>
   </div>
 
+  <!-- Resume Draft Modal (Listing tool) -->
+  <div id="pawResumeModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawResumeTitle">
+      <div class="modal-head">
+        <div id="pawResumeTitle" class="modal-title">Resume draft?</div>
+        <button class="modal-close" id="pawResumeClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="pawResumeMeta" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45; margin-bottom:14px;">
+          We found a saved draft on this device.
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button id="pawResumeFresh" class="btn" type="button">Start fresh</button>
+          <button id="pawResumeGo" class="btn primary" type="button">Resume</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <script src="./tool-shell.js"></script>
 
   <script>
@@ -230,6 +250,14 @@ How to use it
       const $localModalApply = document.getElementById("localModalApply");
       const $localModalListWrap = document.getElementById("localModalListWrap");
 
+      // Resume draft modal elements (Listing tool)
+      const $resumeModal = document.getElementById("pawResumeModal");
+      const $resumeClose = document.getElementById("pawResumeClose");
+      const $resumeMeta = document.getElementById("pawResumeMeta");
+      const $resumeFresh = document.getElementById("pawResumeFresh");
+      const $resumeGo = document.getElementById("pawResumeGo");
+
+
       const HIGHLIGHTS_TOKEN = "__PAW_HIGHLIGHTS__";
 
       // ==========================================================
@@ -262,6 +290,199 @@ How to use it
 
       function cityVal(){ return normText($city.value); }
       function stateVal(){ return normText($state.value).toUpperCase(); }
+
+      // ==========================================================
+      // Local Save + Resume (Listing tool)
+      // ----------------------------------------------------------
+      // Product contract (LOCKED):
+      // - Draft is stored ONLY on this device (localStorage).
+      // - We NEVER silently restore.
+      // - On load, if a draft exists, we show Resume vs Start fresh.
+      // - Reset and "Start fresh" both perform a full wipe AND delete the draft.
+      // - Draft does not auto-expire; it stays until user starts fresh or resets.
+      // ==========================================================
+
+      const DRAFT_KEY = "paw:listing_description_writer:draft:v1";
+
+      function storageGet(key){
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (_) { return null; }
+      }
+      function storageSet(key, val){
+        try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (_) { return false; }
+      }
+      function storageDel(key){
+        try { localStorage.removeItem(key); return true; } catch (_) { return false; }
+      }
+
+      let __draftSaveT = null;
+
+      function scheduleDraftSave(){
+        try {
+          if (__draftSaveT) clearTimeout(__draftSaveT);
+          __draftSaveT = setTimeout(saveDraftNow, 350);
+        } catch (_) {}
+      }
+
+      function buildDraft(){
+        const shellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+
+        return {
+          v: 1,
+          updatedAt: new Date().toISOString(),
+          toolId: "listing_description_writer",
+          form: {
+            type: $type ? $type.value : "",
+            tone: $tone ? $tone.value : "",
+            len:  $len ? $len.value : "",
+            city: $city ? $city.value : "",
+            state: $state ? $state.value : "",
+            beds: $beds ? $beds.value : "",
+            baths: $baths ? $baths.value : "",
+            sqft: $sqft ? $sqft.value : "",
+            price: $price ? $price.value : "",
+            pool: $pool ? $pool.value : "",
+            porch: $porch ? $porch.value : "",
+            compelling: $compelling ? $compelling.value : "",
+            input: $input ? $input.value : ""
+          },
+          poi: {
+            poiGateCompleted,
+            poiFirstDeliverableDone,
+            poiPendingUserText,
+            poiCtx,
+            cachedHighlights,
+            poiLoading
+          },
+          shell: shellState
+        };
+      }
+
+      function saveDraftNow(){
+        try {
+          const d = buildDraft();
+          // If the session is completely blank, do not keep a draft around.
+          const hasAny =
+            (d.form && Object.values(d.form).some(v => normText(v))) ||
+            (d.shell && Array.isArray(d.shell.history) && d.shell.history.length);
+
+          if (!hasAny) {
+            storageDel(DRAFT_KEY);
+            return;
+          }
+          storageSet(DRAFT_KEY, d);
+        } catch (_) {}
+      }
+
+      function openResumeModal(draft){
+        try {
+          if (!$resumeModal) return;
+          const d = draft || {};
+          const ts = d.updatedAt ? new Date(d.updatedAt) : null;
+          const when = ts && !isNaN(ts.getTime()) ? ts.toLocaleString() : "";
+          const c = d.form && d.form.city ? String(d.form.city || "").trim() : "";
+          const s = d.form && d.form.state ? String(d.form.state || "").trim().toUpperCase() : "";
+          const loc = (c && s) ? ` (${c}, ${s})` : (c ? ` (${c})` : "");
+
+          $resumeMeta.textContent = `We found a saved draft on this device${loc}.` + (when ? ` Last saved: ${when}.` : "");
+
+          $resumeModal.classList.add("show");
+          $resumeModal.setAttribute("aria-hidden", "false");
+        } catch (_) {}
+      }
+
+      function closeResumeModal(){
+        try {
+          if (!$resumeModal) return;
+          $resumeModal.classList.remove("show");
+          $resumeModal.setAttribute("aria-hidden", "true");
+        } catch (_) {}
+      }
+
+      function applyDraft(draft){
+        const d = draft && typeof draft === "object" ? draft : null;
+        if (!d) return false;
+
+        try {
+          // Restore form fields
+          const f = d.form || {};
+          if ($type) $type.value = f.type || "";
+          if ($tone) $tone.value = f.tone || "";
+          if ($len)  $len.value  = f.len || "";
+          if ($city) $city.value = f.city || "";
+          if ($state) $state.value = f.state || "";
+          if ($beds) $beds.value = f.beds || "";
+          if ($baths) $baths.value = f.baths || "";
+          if ($sqft) $sqft.value = f.sqft || "";
+          if ($price) $price.value = f.price || "";
+          if ($pool) $pool.value = f.pool || "";
+          if ($porch) $porch.value = f.porch || "";
+          if ($compelling) $compelling.value = f.compelling || "";
+          if ($input) $input.value = f.input || "";
+
+          // Restore POI flags/state
+          const p = d.poi || {};
+          poiGateCompleted = !!p.poiGateCompleted;
+          poiFirstDeliverableDone = !!p.poiFirstDeliverableDone;
+          poiPendingUserText = String(p.poiPendingUserText || "");
+          poiCtx = p.poiCtx && typeof p.poiCtx === "object" ? p.poiCtx : { city: "", state: "" };
+          cachedHighlights = Array.isArray(p.cachedHighlights) ? p.cachedHighlights : [];
+          poiLoading = !!p.poiLoading;
+
+          // Never restore an open modal. Start from a clean UI surface.
+          closeLocalModal();
+          closeResumeModal();
+
+          // Restore chat history
+          if (shell && shell.setState && d.shell) shell.setState(d.shell);
+
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function fullReset(){
+        // FULL reset = guaranteed fresh session for a new property.
+        // Clears: tool fields, composer, chat, POI workflow, modals, and local draft.
+        try { storageDel(DRAFT_KEY); } catch (_) {}
+
+        // POI workflow state
+        poiGateCompleted = false;
+        poiFirstDeliverableDone = false;
+        poiPendingUserText = "";
+        poiCtx = { city: "", state: "" };
+        cachedHighlights = [];
+        poiLoading = false;
+
+        // Close modals
+        closeLocalModal();
+        closeResumeModal();
+
+        // Clear fields
+        try {
+          if ($type) $type.value = "";
+          if ($tone) $tone.value = "";
+          if ($len)  $len.value = "";
+          if ($city) $city.value = "";
+          if ($state) $state.value = "";
+          if ($beds) $beds.value = "";
+          if ($baths) $baths.value = "";
+          if ($sqft) $sqft.value = "";
+          if ($price) $price.value = "";
+          if ($pool) $pool.value = "";
+          if ($porch) $porch.value = "";
+          if ($compelling) $compelling.value = "";
+          if ($input) $input.value = "";
+        } catch (_) {}
+
+        // Clear shell thread
+        try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+      }
+
 
       // Conservative extraction: only accept "City, ST" style signals.
       // We avoid guessing; if we cannot determine it confidently, we don't gate.
@@ -679,21 +900,58 @@ const shell = window.PAWToolShell.init({
 
       // Reset
 // Reset
-      document.getElementById("reset").addEventListener("click", () => {
-        // Reset = "fresh start" for a new listing.
-        poiGateCompleted = false;
-        poiFirstDeliverableDone = false;
-        poiPendingUserText = "";
-        poiCtx = { city: "", state: "" };
-        cachedHighlights = [];
-        poiLoading = false;
+      document.getElementById("reset").addEventListener("click", (e) => {
+        try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
+        fullReset();
+      }, true);
 
-        closeLocalModal();
-        try { $city.value = ""; $state.value = ""; } catch {}
-        try { if (shell && shell.reset) shell.reset(); } catch {}
+      // ==========================================================
+      // Autosave wiring (Listing tool)
+      // ==========================================================
+      [
+        $type,$tone,$len,$city,$state,$beds,$baths,$sqft,$price,$pool,$porch,$compelling,$input
+      ].forEach((el) => {
+        try {
+          if (!el) return;
+          el.addEventListener("input", scheduleDraftSave);
+          el.addEventListener("change", scheduleDraftSave);
+        } catch (_) {}
       });
 
+      // Best-effort save when the user leaves the page/tab.
+      window.addEventListener("beforeunload", () => { try { saveDraftNow(); } catch (_) {} });
+
+      // ==========================================================
+      // Resume modal controls (Listing tool)
+      // ==========================================================
+      try { if ($resumeClose) $resumeClose.addEventListener("click", () => closeResumeModal()); } catch (_) {}
+      try {
+        if ($resumeModal) $resumeModal.addEventListener("click", (e) => { if (e.target === $resumeModal) closeResumeModal(); });
+      } catch (_) {}
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeResumeModal(); } });
+
+      try {
+        if ($resumeFresh) $resumeFresh.addEventListener("click", () => {
+          closeResumeModal();
+          fullReset();
+        });
+      } catch (_) {}
+
+      try {
+        if ($resumeGo) $resumeGo.addEventListener("click", () => {
+          const d = storageGet(DRAFT_KEY);
+          closeResumeModal();
+          if (d) applyDraft(d);
+        });
+      } catch (_) {}
+
+      // On load: if a draft exists, ask user what to do (NEVER silent restore)
+      const existingDraft = storageGet(DRAFT_KEY);
+      if (existingDraft) {
+        openResumeModal(existingDraft);
+      }
+
 })();
-  </script>
+</script>
 </body>
 </html>
