@@ -470,6 +470,17 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
     0 16px 32px rgba(5,195,249,.22);
 }
 
+
+
+/* ===== Send button icon (PAW paw) =====
+   This is the base sizing for the paw icon inside the primary action button.
+   Safe in shared CSS because it only applies when HTML opts in via class="send-icon". */
+.send-icon{
+  width:28px;
+  height:28px;
+  display:block;
+  object-fit:contain;
+}
 /* Icon micro-motion */
 .send .send-icon{
   transition: transform .14s ease;
@@ -498,9 +509,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   100% { transform: scale(1);   opacity:.45; }
 }
 
-@keyframes pawSendPulse{
-  0%   { transform: scale(1);   opacity:.55; }
-  50%  { transform: scale(1.06); opacity:.95; }
+50%  { transform: scale(1.06); opacity:.95; }
   100% { transform: scale(1);   opacity:.55; }
 }
 
