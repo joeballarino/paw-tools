@@ -438,36 +438,30 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   cursor:pointer;
   position:relative;
 
-  /* Clean circular lift — no squared-off base */
-  box-shadow:
-    0 16px 32px rgba(5,195,249,.22);
+  /* Shadow: use drop-shadow so it stays perfectly circular (no “squared-off” base). */
+  filter: drop-shadow(0 16px 30px rgba(5,195,249,.22));
 
   transition:
     transform .14s ease,
-    box-shadow .14s ease,
-    filter .14s ease;
-  will-change: transform;
+    filter .14s ease,
+    background-color .14s ease;
+  will-change: transform, filter;
 }
 
 .send:hover{
   transform: translateY(-1px) scale(1.03);
-  box-shadow:
-    0 20px 38px rgba(5,195,249,.26);
-  filter: saturate(1.05);
+  filter: drop-shadow(0 20px 38px rgba(5,195,249,.26));
 }
 
 .send:active{
   transform: translateY(1px) scale(.97);
-  box-shadow:
-    0 10px 22px rgba(5,195,249,.18);
-  filter: saturate(1.00);
+  filter: drop-shadow(0 12px 22px rgba(5,195,249,.18));
 }
 
+/* Keyboard accessibility ring (separate from drop-shadow) */
 .send:focus-visible{
   outline:none;
-  box-shadow:
-    0 0 0 4px rgba(5,195,249,.22),
-    0 16px 32px rgba(5,195,249,.22);
+  box-shadow: 0 0 0 4px rgba(5,195,249,.22);
 }
 
 
@@ -488,7 +482,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .send:hover .send-icon{ transform: scale(1.06); }
 .send:active .send-icon{ transform: scale(.95); }
 
-/* Loading pulse (circular, no box edges) */
+/* Loading pulse (brand ring) */
 .send.is-loading::after,
 .send.loading::after,
 .send[aria-busy="true"]::after,
@@ -509,8 +503,11 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   100% { transform: scale(1);   opacity:.45; }
 }
 
-50%  { transform: scale(1.06); opacity:.95; }
-  100% { transform: scale(1);   opacity:.55; }
+  50%  { transform: scale(1.06); opacity:.85; }
+  100% { transform: scale(1);   opacity:.45; }
+}
+50%  { transform: scale(1.06); opacity:.85; }
+  100% { transform: scale(1);   opacity:.45; }
 }
 
 /* ===== Tips modal ===== */
