@@ -170,35 +170,43 @@
 
   <script src="./tool-shell.js"></script>
   
+  
   <script>
     /**
      * PAW Connect (Circle-embedded tool page)
      * ------------------------------------------------------------
-     * This file is intentionally "thin": all AI logic lives in the Cloudflare Worker.
-     * The frontend only:
+     * Frontend stays intentionally thin:
      *  - collects UI preferences (first_contact/continue, email/text, once/template)
-     *  - sends the user's text to the Worker via tool-shell.js
+     *  - sends user input to the Cloudflare Worker via tool-shell.js
      *  - shows the result in the standard PAW deliverable modal (Copy / Revise)
      *
      * IMPORTANT:
-     * - Do not move prompt logic into this file.
+     * - All "secret sauce" prompting lives in the Worker.
      * - Keep IDs consistent with tool-shell.js expectations: #messages, #prompt, #send, #reset, #tips
      */
     (function () {
+      // Keep API endpoint consistent across tools (same as ask/listing).
+      // If you ever change Worker URL, update it everywhere in your tool pages.
+      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+
+      // Toggle defaults (matches prior Connect behavior):
+      // Continue + Email + Send once
       const state = {
-        type: "first_contact",  // first_contact | continue
-        channel: "email",       // email | text
-        use: "once",            // once | template
+        type: "continue", // first_contact | continue
+        channel: "email", // email | text
+        use: "once",      // once | template
       };
 
       const $ = (sel) => document.querySelector(sel);
       const pills = Array.from(document.querySelectorAll(".connect-pill"));
 
+      // Visual selection: this UI previously used the "primary" class (not "is-active").
+      // We keep that convention so the selected pill is obvious.
       function setActive(group, value) {
         pills.forEach((btn) => {
           if (btn.dataset.group !== group) return;
           const isOn = btn.dataset.value === value;
-          btn.classList.toggle("is-active", isOn);
+          btn.classList.toggle("primary", isOn);
           btn.setAttribute("aria-pressed", isOn ? "true" : "false");
         });
       }
@@ -209,7 +217,6 @@
         setActive("use", state.use);
       }
 
-      // Attach pill handlers
       pills.forEach((btn) => {
         btn.addEventListener("click", () => {
           const group = btn.dataset.group;
@@ -230,12 +237,12 @@
         resetBtn.addEventListener(
           "click",
           () => {
-            state.type = "first_contact";
+            state.type = "continue";
             state.channel = "email";
             state.use = "once";
             syncUIFromState();
           },
-          true // capture so we run before tool-shell reset, but we do NOT prevent it
+          true // capture: run before tool-shell reset, but do NOT prevent it
         );
       }
 
@@ -256,28 +263,33 @@
 
       // Tips modal content (light, action-oriented)
       const tipsText =
-        "What to paste here:\\n" +
-        "• The last message they sent (if you’re replying)\\n" +
-        "• A quick note about who they are + what you want\\n" +
-        "• Any relevant detail (property address, timeline, question)\\n\\n" +
-        "Best results when you include:\\n" +
-        "• The relationship (lead, past client, friend, vendor)\\n" +
-        "• The goal (book a showing, set a call, re-engage, confirm next step)\\n" +
+        "What to paste here:\n" +
+        "• The last message they sent (if you’re replying)\n" +
+        "• A quick note about who they are + what you want\n" +
+        "• Any relevant detail (property address, timeline, question)\n\n" +
+        "Best results when you include:\n" +
+        "• The relationship (lead, past client, friend, vendor)\n" +
+        "• The goal (book a showing, set a call, re-engage, confirm next step)\n" +
         "• Any tone preference (shorter, warmer, more direct)";
 
-      // Initialize tool-shell wiring
       if (!window.PAWToolShell || typeof window.PAWToolShell.init !== "function") {
         console.error("PAWToolShell not found. Ensure tool-shell.js is loaded.");
         return;
       }
 
       window.PAWToolShell.init({
+        apiEndpoint: API_ENDPOINT,
         toolId: "connect",
-        deliverableMode: true,                 // Listing-style modal w/ Copy + Revise
-        deliverableTitle: getDeliverableTitle, // tool-shell now supports a function
+
+        // Listing-style modal deliverable (Copy / Revise)
+        deliverableMode: true,
+
+        // tool-shell supports a function here (requires tool-shell.updated.js)
+        deliverableTitle: getDeliverableTitle,
+
         tipsText,
 
-        // These prefs are sent to the Worker and drive the “secret sauce” behavior.
+        // Prefs are sent to the Worker and drive the Connect “secret sauce”.
         getPrefs: function () {
           return {
             connect_type: state.type,
@@ -287,10 +299,11 @@
         },
       });
 
-      // Set initial UI state
+      // Set initial UI selection
       syncUIFromState();
     })();
   </script>
+
 
 </body>
 </html>
