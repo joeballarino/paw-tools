@@ -169,138 +169,128 @@
   </div>
 
   <script src="./tool-shell.js"></script>
+  
   <script>
+    /**
+     * PAW Connect (Circle-embedded tool page)
+     * ------------------------------------------------------------
+     * This file is intentionally "thin": all AI logic lives in the Cloudflare Worker.
+     * The frontend only:
+     *  - collects UI preferences (first_contact/continue, email/text, once/template)
+     *  - sends the user's text to the Worker via tool-shell.js
+     *  - shows the result in the standard PAW deliverable modal (Copy / Revise)
+     *
+     * IMPORTANT:
+     * - Do not move prompt logic into this file.
+     * - Keep IDs consistent with tool-shell.js expectations: #messages, #prompt, #send, #reset, #tips
+     */
     (function () {
-      // ==========================================================
-      // ProAgent Works — Connect (Wired to tool-shell.js)
-      // ----------------------------------------------------------
-      // IMPORTANT:
-      // - All "secret sauce" prompting lives in the Cloudflare Worker.
-      // - This page only collects user inputs + preferences and sends them
-      //   to the Worker via tool-shell.js.
-      //
-      // DOM contract with tool-shell.js (LOCKED):
-      // - #messages  (thread container)
-      // - #prompt OR #input (composer textarea)
-      // - #send      (primary action button)
-      // - #reset/#tips (utility buttons)
-      // ==========================================================
-
-      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
-
-      // Tips are shown in the shared modal controlled by tool-shell.js
-      const TIPS_TEXT =
-`What this tool does
-• Writes clear, confident email + text messages for real estate conversations.
-
-How to use it
-• Choose First contact vs Continue
-• Choose Email vs Text
-• Choose Send once vs Template
-• Paste the other person’s message (if you’re replying) and add any context you want
-• If you want a specific vibe, say it (e.g., “warm but direct”, “confident, no fluff”)`;
-
-      // UI state from the three button groups
       const state = {
-        type: "continue",   // first_contact | continue
-        channel: "email",   // email | text
-        use: "once",        // once | template
+        type: "first_contact",  // first_contact | continue
+        channel: "email",       // email | text
+        use: "once",            // once | template
       };
 
-      const messagesEl = document.getElementById("messages");
-      const promptEl = document.getElementById("prompt");
+      const $ = (sel) => document.querySelector(sel);
+      const pills = Array.from(document.querySelectorAll(".connect-pill"));
 
-      function setSelected(group, value) {
-        state[group] = value;
-
-        document.querySelectorAll('[data-group="' + group + '"]').forEach((btn) => {
-          const on = btn.getAttribute("data-value") === value;
-          btn.classList.toggle("primary", on);
+      function setActive(group, value) {
+        pills.forEach((btn) => {
+          if (btn.dataset.group !== group) return;
+          const isOn = btn.dataset.value === value;
+          btn.classList.toggle("is-active", isOn);
+          btn.setAttribute("aria-pressed", isOn ? "true" : "false");
         });
       }
 
-      // Defaults highlighted so users immediately see what's selected.
-      setSelected("type", state.type);
-      setSelected("channel", state.channel);
-      setSelected("use", state.use);
-
-      // Button group clicks
-      document.addEventListener("click", (e) => {
-        const btn = e.target.closest('button[data-group]');
-        if (!btn) return;
-        setSelected(btn.getAttribute("data-group"), btn.getAttribute("data-value"));
-      });
-
-      // Wire the shared shell (messages, send, reset, tips)
-      const shell = window.PAWToolShell.init({
-        apiEndpoint: API_ENDPOINT,
-        toolId: "connect",
-        tipsText: TIPS_TEXT,
-
-        // Deliverable card is the primary output surface for this tool.
-        deliverableTitle: "Your Message",
-
-        // Keep the placeholder aligned to the tool's purpose.
-        inputPlaceholder: "Add context here, or paste the message you’re replying to…",
-
-        // Preferences are sent with every request so the Worker can prompt correctly.
-        getPrefs: () => ({
-          // Connect tool toggles
-          connect_type: state.type,       // first_contact | continue
-          connect_channel: state.channel, // email | text
-          connect_use: state.use,         // once | template
-
-          // Safe default posture for messaging tools
-          safe_mode: true,
-          ask_followups: false
-        }),
-
-        // Optional extra payload (kept minimal for now; can expand later without changing UI)
-        getExtraPayload: () => ({
-          // Helpful for debugging / analytics on the Worker side
-          ui_version: 1
-        })
-      });
-
-      function resetLocalUiToDefaults() {
-        try {
-          setSelected("type", "continue");
-          setSelected("channel", "email");
-          setSelected("use", "once");
-        } catch (_) {}
+      function syncUIFromState() {
+        setActive("type", state.type);
+        setActive("channel", state.channel);
+        setActive("use", state.use);
       }
 
-      // Intercept Reset to also restore the Connect toggle defaults.
-      // We use capture so we run before tool-shell's built-in reset handler.
-      try {
-        const $reset = document.getElementById("reset");
-        if ($reset) {
-          $reset.addEventListener("click", (e) => {
-            try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
+      // Attach pill handlers
+      pills.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const group = btn.dataset.group;
+          const value = btn.dataset.value;
+          if (!group || !value) return;
 
-            // Confirm only if there's anything to lose
-            try {
-              const st = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
-              const hasAny =
-                (st && Array.isArray(st.history) && st.history.length) ||
-                (st && typeof st.input === "string" && st.input.trim().length);
-              if (hasAny) {
-                const ok = window.confirm("Reset will clear this session and start fresh. Continue?");
-                if (!ok) return;
-              }
-            } catch (_) {}
+          if (group === "type") state.type = value;
+          if (group === "channel") state.channel = value;
+          if (group === "use") state.use = value;
 
-            resetLocalUiToDefaults();
-            try { if (shell && shell.reset) shell.reset(); } catch (_) {}
-          }, true);
-        }
-      } catch (_) {}
+          syncUIFromState();
+        });
+      });
 
-      // Defensive: if shell fails to init, keep the UI usable (no throw).
-      // (No extra fallback behavior here; the send button will simply do nothing.)
-      void messagesEl;
-      void promptEl;
+      // Reset should restore the toggle defaults AND let tool-shell clear thread/input.
+      const resetBtn = $("#reset");
+      if (resetBtn) {
+        resetBtn.addEventListener(
+          "click",
+          () => {
+            state.type = "first_contact";
+            state.channel = "email";
+            state.use = "once";
+            syncUIFromState();
+          },
+          true // capture so we run before tool-shell reset, but we do NOT prevent it
+        );
+      }
+
+      // Dynamic deliverable title (Suggestion #1)
+      function getDeliverableTitle() {
+        const isTemplate = state.use === "template";
+        const isText = state.channel === "text";
+        const isFirst = state.type === "first_contact";
+
+        if (isTemplate && isText) return "Reusable Text Template";
+        if (isTemplate && !isText) return "Reusable Email Template";
+
+        if (!isTemplate && isText && isFirst) return "Your First Text Message";
+        if (!isTemplate && isText && !isFirst) return "Your Follow-Up Text";
+        if (!isTemplate && !isText && isFirst) return "Your Intro Email";
+        return "Your Reply Email";
+      }
+
+      // Tips modal content (light, action-oriented)
+      const tipsText =
+        "What to paste here:\\n" +
+        "• The last message they sent (if you’re replying)\\n" +
+        "• A quick note about who they are + what you want\\n" +
+        "• Any relevant detail (property address, timeline, question)\\n\\n" +
+        "Best results when you include:\\n" +
+        "• The relationship (lead, past client, friend, vendor)\\n" +
+        "• The goal (book a showing, set a call, re-engage, confirm next step)\\n" +
+        "• Any tone preference (shorter, warmer, more direct)";
+
+      // Initialize tool-shell wiring
+      if (!window.PAWToolShell || typeof window.PAWToolShell.init !== "function") {
+        console.error("PAWToolShell not found. Ensure tool-shell.js is loaded.");
+        return;
+      }
+
+      window.PAWToolShell.init({
+        toolId: "connect",
+        deliverableMode: true,                 // Listing-style modal w/ Copy + Revise
+        deliverableTitle: getDeliverableTitle, // tool-shell now supports a function
+        tipsText,
+
+        // These prefs are sent to the Worker and drive the “secret sauce” behavior.
+        getPrefs: function () {
+          return {
+            connect_type: state.type,
+            connect_channel: state.channel,
+            connect_use: state.use,
+          };
+        },
+      });
+
+      // Set initial UI state
+      syncUIFromState();
     })();
   </script>
+
 </body>
 </html>

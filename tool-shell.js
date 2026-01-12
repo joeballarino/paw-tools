@@ -313,7 +313,12 @@ function removeNode(node) {
         typeof config.beforeSend === "function" ? config.beforeSend : null;
 
       const deliverableMode = config.deliverableMode !== false; // default true
-      const deliverableTitle = safeText(config.deliverableTitle || "Deliverable");
+      const getDeliverableTitle =
+        typeof config.deliverableTitle === "function"
+          ? config.deliverableTitle
+          : function () {
+              return safeText(config.deliverableTitle || "Deliverable");
+            };
 
       const inputPlaceholder = safeText(config.inputPlaceholder);
       if ($input && inputPlaceholder) $input.setAttribute("placeholder", inputPlaceholder);
@@ -469,7 +474,7 @@ function removeNode(node) {
         if (!deliverableMode) return;
 
         // Also open a modal with Copy / Revise every time for deliverables.
-        showDeliverableModal(deliverableTitle, replyText);
+        showDeliverableModal(getDeliverableTitle(), replyText);
 
         $messages.scrollTop = $messages.scrollHeight;
       }
