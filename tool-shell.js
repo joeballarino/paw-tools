@@ -312,6 +312,8 @@ function removeNode(node) {
       const beforeSend =
         typeof config.beforeSend === "function" ? config.beforeSend : null;
 
+      let lastDeliverableText = "";
+
       const deliverableMode = config.deliverableMode !== false; // default true
       const getDeliverableTitle =
         typeof config.deliverableTitle === "function"
@@ -471,10 +473,27 @@ function removeNode(node) {
         // Always render in-flow for a clean chat experience.
         appendMessage($messages, "ai", replyText);
 
+        // Remember the last deliverable so the user can re-open/copy it again.
+        lastDeliverableText = String(replyText || "");
+
         if (!deliverableMode) return;
 
-        // Also open a modal with Copy / Revise every time for deliverables.
+        // Open a modal with Copy / Revise every time for deliverables.
         showDeliverableModal(getDeliverableTitle(), replyText);
+
+        // UX: allow users to click the most recent AI message to re-open the modal.
+        // This solves the common case: they closed the modal, then want to copy again.
+        try {
+          const aiBubbles = $messages.querySelectorAll(".msg.ai");
+          const last = aiBubbles[aiBubbles.length - 1];
+          if (last) {
+            last.style.cursor = "pointer";
+            last.title = "Click to re-open and copy";
+            last.onclick = function () {
+              showDeliverableModal(getDeliverableTitle(), lastDeliverableText);
+            };
+          }
+        } catch (_) {}
 
         $messages.scrollTop = $messages.scrollHeight;
       }
