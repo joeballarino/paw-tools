@@ -413,6 +413,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   justify-content:center;
   cursor:pointer;
   position:relative;
+  transition: transform .15s ease, filter .15s ease;
+}
 .send:hover{
   transform: translateY(-1px) scale(1.03);
   filter: drop-shadow(0 20px 38px rgba(5,195,249,.26));
@@ -440,8 +442,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 /* ===== Send button icon (PAW paw) =====
    This is the base sizing for the paw icon inside the primary action button.
    Safe in shared CSS because it only applies when HTML opts in via class="send-icon". */
-/* Icon micro-motion */
-.send .send:hover .send:active 
+/* Icon micro-motion
+   (Reserved for future subtle animation hooks.) */
 
 /* Loading pulse (brand ring)
    Hooked to common state flags. No JS changes required.
@@ -459,6 +461,13 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   animation: pawSendPulse 1.05s ease-in-out infinite;
   pointer-events:none;
 }
+
+@keyframes pawSendPulse{
+  0%{ transform:scale(1); opacity:.75; }
+  50%{ transform:scale(1.06); opacity:.35; }
+  100%{ transform:scale(1); opacity:.75; }
+}
+
 
 
 /* ===== Tips modal ===== */
