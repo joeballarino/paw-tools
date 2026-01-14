@@ -80,8 +80,28 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   color:rgba(15,23,42,.62);
   line-height:1.3;
 }
-/* Utilities (Reset / Tips) */
+/* Utilities (Reset / Tips) — segmented pill
+   ----------------------------------------------------------
+   Goal (global + future-proof):
+   - Create ONE shared "segmented control" component that splits buttons evenly.
+   - Works inside Circle iframes at narrow widths.
+   - Next tools should just reuse: .paw-seg + .paw-seg__btn
+
+   Markup patterns supported:
+   A) <div class="topbar-right"><div class="utility-pair paw-seg">...</div></div>   (ask/connect)
+   B) <div class="topbar-right paw-seg">...</div>                                  (listing)
+*/
+
+/* Layout wrapper for the utilities area (NOT the pill itself unless it also has .paw-seg) */
 .topbar-right{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+
+/* The pill / segmented control container */
+.paw-seg,
+.topbar-right.paw-seg{
   display:flex;
   align-items:center;
   gap:0;
@@ -91,7 +111,12 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   overflow:hidden;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
 }
+
+/* Segment buttons — force equal widths (50/50) regardless of label length */
+.paw-seg__btn,
 .util-btn{
+  flex:1 1 0;
+  min-width:0; /* prevents long labels from breaking the split */
   height:34px;
   padding:0 12px;
   border:0;
@@ -101,46 +126,30 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   font-size:13px;
   cursor:pointer;
   white-space:nowrap;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
   transition: background .15s ease;
 }
+.paw-seg__btn:hover,
 .util-btn:hover{ background:rgba(15,23,42,.05); }
+.paw-seg__btn + .paw-seg__btn,
 .util-btn + .util-btn{ border-left:1px solid rgba(15,23,42,.08); }
 
+/* Back-compat wrapper used by some tools */
+.utility-pair{ display:flex; }
 
-
-/* ===== Mobile responsiveness for the top bar =====
-   Why this exists:
-   - In Circle embeds, the tool header is often inside a narrow iframe.
-   - On small widths the subtitle (left) and utility pill (right) can collide.
-   - These rules allow the top bar to WRAP cleanly instead of overflowing.
-   Shared impact:
-   - Applies to ALL tools that use the shared top bar (ask, listing, connect, etc).
+/* Mobile/narrow iframe behavior:
+   - allow the top row to wrap so the pill can drop below the subtitle
+   - make the utilities area full width
 */
 @media (max-width: 560px){
-  .topbar-row0{
-    flex-wrap: wrap;
-    align-items: flex-start;
-    row-gap: 10px;
-  }
-  .tool-subtitle{
-    flex: 1 1 100%;
-  }
-  .topbar-right{
-    margin-left: auto; /* pushes the pill to the right when it drops to the next line */
-  }
+  .topbar-row0{ flex-wrap:wrap; }
+  .topbar-right{ width:100%; justify-content:stretch; }
+  .paw-seg,
+  .topbar-right.paw-seg{ width:100%; }
 }
-@media (max-width: 380px){
-  .topbar-right{
-    width: 100%;
-    justify-content: space-between; /* keeps both buttons readable */
-  }
-  .util-btn{
-    flex: 1 1 50%;
-    text-align: center;
-    padding: 0 10px; /* slight squeeze so labels fit without wrapping */
-  }
-}
-
 /* ===== Controls row ===== */
 .controls-row{
   display:flex;
