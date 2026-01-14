@@ -63,10 +63,38 @@ html[data-embed="1"] .frame{ max-width:none; background:transparent; }
 html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; background:transparent; }
 
 .panel-topbar{
+  /* Shared PAW tool header background.
+     IMPORTANT:
+     - Tools should NOT re-implement this per-page.
+     - The goal is a consistent “soft gradient” that visually flows into the next row
+       (Connect look), even when a tool has only a subtitle row (Assistant).
+  */
+  position: relative;
+  overflow: visible;
   background:
     radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.08), rgba(255,255,255,0) 55%),
     #fff;
 }
+
+/* Fade “bridge” that extends BELOW the topbar so the gradient blends into the next row.
+   This is the future-proof piece: any new tool automatically inherits the Connect-style fade.
+   Notes:
+   - This intentionally uses very light alpha so it won’t wash out controls/content.
+   - pointer-events: none so it never blocks clicks.
+*/
+.panel-topbar::after{
+  content:"";
+  position:absolute;
+  left:0; right:0;
+  top:100%;
+  height:54px;
+  pointer-events:none;
+  /* Subtle continuation of the brand tint + fade to transparent */
+  background:
+    radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.06), rgba(255,255,255,0) 60%),
+    linear-gradient(180deg, rgba(5,195,249,.04), rgba(255,255,255,0) 70%);
+}
+
 /* ===== Top bar ===== */
 .topbar-row0{
   display:flex;
@@ -181,7 +209,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   align-items:flex-end;
   gap:14px;
   padding:10px 14px 12px;
-  background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.98));
+  background:transparent;
   border-bottom:1px solid var(--border-soft);
 }
 .ctl{
@@ -263,7 +291,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 /* ===== Key facts ===== */
 .topbar-row2{
   padding:12px 14px 14px;
-  background:linear-gradient(180deg, rgba(5,195,249,.05), rgba(255,255,255,0) 120px), rgba(255,255,255,.92);
+  background:transparent;
 }
 .lock-grid{
   display:grid;
