@@ -95,6 +95,17 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
     linear-gradient(180deg, rgba(5,195,249,.04), rgba(255,255,255,0) 70%);
 }
 
+
+/* When a tool's header ends immediately (no secondary control rows),
+   the default ::after “fade bridge” would overlap the next content surface.
+   Add .has-bridge on .panel-topbar (used by Assistant) to allocate space
+   so the fade lives inside the header instead of tinting the first content row. */
+.panel-topbar.has-bridge{
+  padding-bottom:54px; /* must match .panel-topbar::after height */
+}
+.panel-topbar.has-bridge::after{
+  top:calc(100% - 54px);
+}
 /* ===== Top bar ===== */
 .topbar-row0{
   display:flex;
