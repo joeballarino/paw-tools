@@ -76,6 +76,10 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   padding:12px 14px 8px;
 }
 .tool-subtitle{
+  /* Allow the subtitle to yield/wrap so the right-side pill never gets clipped. */
+  flex:1 1 auto;
+  min-width:0;
+
   font-size:12px;
   color:rgba(15,23,42,.62);
   line-height:1.3;
@@ -97,7 +101,16 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   display:flex;
   align-items:center;
   justify-content:flex-end;
+
+  /* Desktop fix:
+     This area contains the segmented pill (Reset / Tips).
+     On wide screens, we never want the pill to "lose" a flex-width tug-of-war and clip its text.
+     So we prevent this right-side utilities area from shrinking.
+     (On mobile we intentionally override width/flow in the media query below.) */
+  flex:0 0 auto;
+  flex-shrink:0;
 }
+
 
 /* The pill / segmented control container */
 .paw-seg,
@@ -144,6 +157,17 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
    - allow the top row to wrap so the pill can drop below the subtitle
    - make the utilities area full width
 */
+
+/* Desktop sizing guard:
+   Ensure the segmented pill has enough width to show both labels without clipping.
+   Mobile behavior remains full-width via the media query below. */
+@media (min-width: 561px){
+  .paw-seg,
+  .topbar-right.paw-seg{
+    min-width:320px;
+  }
+}
+
 @media (max-width: 560px){
   .topbar-row0{ flex-wrap:wrap; }
   .topbar-right{ width:100%; justify-content:stretch; }
