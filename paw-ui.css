@@ -269,64 +269,6 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   min-width:96px;
   text-align:center;
 }
-
-
-/* ==========================================================
-   Listing tool — Mobile controls row layout (LOCKED)
-   ----------------------------------------------------------
-   WHY THIS EXISTS:
-   - The top setup fields (Type / Tone / Length / City / State) look good on desktop,
-     but inside Circle on mobile they must stack cleanly to avoid a “messy” feel.
-   - This restores the intended mobile presentation WITHOUT changing workflow or desktop.
-
-   PRODUCT CONTRACT (mobile only):
-   - Each control becomes: label (top) + field (full width).
-   - City + State are visually grouped as “Location” via a subtle divider.
-   - Desktop styling is unchanged.
-   - Scoped to Listing only via body.paw-listing to avoid side effects in other tools.
-   ========================================================== */
-@media (max-width: 560px){
-  body.paw-listing .controls-row{
-    flex-direction:column;
-    align-items:stretch;
-    gap:14px;
-  }
-  body.paw-listing .controls-row .ctl{
-    width:100%;
-    flex-direction:column;
-    align-items:stretch;
-    gap:6px;
-  }
-  body.paw-listing .controls-row .ctl label{
-    width:100%;
-    font-size:12px;
-    font-weight:800;
-    color:rgba(15,23,42,.80);
-  }
-
-  body.paw-listing .controls-row .select-wrap,
-  body.paw-listing .controls-row .input-wrap{
-    width:100%;
-    display:flex;
-  }
-  body.paw-listing .controls-row .select-wrap select,
-  body.paw-listing .controls-row .input-wrap input{
-    width:100%;
-    min-width:0;
-  }
-
-  body.paw-listing .controls-row .select-wrap.sm select{
-    min-width:0;
-    text-align:left;
-  }
-
-  /* Divider before City/State (Location) */
-  body.paw-listing .controls-row .ctl:nth-child(4){
-    padding-top:12px;
-    border-top:1px solid rgba(15,23,42,.08);
-    margin-top:2px;
-  }
-}
 /* ===== Key facts ===== */
 .topbar-row2{
   padding:12px 14px 14px;
@@ -523,9 +465,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .composer textarea{
   flex:1;
   min-height:46px;
-  max-height:var(--composer-max-height, 320px);
+  max-height:520px;
   resize:none;
-  overflow-y:hidden; /* auto-grow JS will enable scrolling after max */
   border-radius:16px;
   border:1px solid var(--field-border);
   background:rgba(255,255,255,.92);
@@ -547,15 +488,65 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   justify-content:center;
   cursor:pointer;
   position:relative;
-  transition: transform .15s ease, filter .15s ease;
+
+  /* Brand depth (resting state): keep subtle but always present. */
+  box-shadow:
+    0 10px 22px rgba(15,23,42,.14),
+    0 18px 40px rgba(5,195,249,.16);
+
+  transition: transform .15s ease, box-shadow .18s ease;
 }
+
+/* Soft brand glow layer (always circular). */
+.send::before{
+  content:"";
+  position:absolute;
+  inset:-10px;
+  border-radius:999px;
+  background:
+    radial-gradient(closest-side, rgba(5,195,249,.30), rgba(5,195,249,0) 70%);
+  opacity:0;
+  transform: scale(.92);
+  transition: opacity .18s ease, transform .18s ease;
+  pointer-events:none;
+}
+
+/* Hover: elevate the same object (no square drop-shadow artifacts). */
 .send:hover{
   transform: translateY(-1px) scale(1.03);
-  filter: drop-shadow(0 20px 38px rgba(5,195,249,.26));
+  box-shadow:
+    0 14px 30px rgba(15,23,42,.16),
+    0 26px 58px rgba(5,195,249,.22);
 }
+.send:hover::before{
+  opacity:1;
+  transform: scale(1);
+}
+
+/* Active press: grounded, tighter shadow. */
 .send:active{
   transform: translateY(1px) scale(.97);
-  filter: drop-shadow(0 12px 22px rgba(5,195,249,.18));
+  box-shadow:
+    0 8px 18px rgba(15,23,42,.14),
+    0 16px 34px rgba(5,195,249,.16);
+}
+
+/* Keyboard submit / click acknowledgement (brief, premium pop). */
+.send.paw-ack::before{
+  opacity:1;
+  animation: pawAckPop .42s ease-out both;
+}
+@keyframes pawAckPop{
+  0%{ transform:scale(.88); opacity:.15; }
+  40%{ transform:scale(1.05); opacity:.45; }
+  100%{ transform:scale(1.00); opacity:.20; }
+}
+
+/* While busy, keep a gentle glow on so “working” is obvious even without hover. */
+.send.is-loading::before,
+.send[aria-busy="true"]::before{
+  opacity:1;
+  transform: scale(1);
 }
 /* Keyboard accessibility ring (separate from drop-shadow) */
 .send:focus-visible{
