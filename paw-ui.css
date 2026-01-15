@@ -66,45 +66,45 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   /* Shared PAW tool header background.
      IMPORTANT:
      - Tools should NOT re-implement this per-page.
-     - The goal is a consistent “soft gradient” that visually flows into the next row
-       (Connect look), even when a tool has only a subtitle row (Assistant).
+     - The goal is a consistent, subtle header tint that fades to clean white
+       before any tool content begins.
+
+     Why this matters (Circle embed):
+     - Circle provides the outer card and page background.
+     - Inside the embed we want ONE intentional header tint, and a flat body.
+     - Any gradients below the header row read as “accidental” and create the
+       messy bands seen on mobile/desktop.
   */
   position: relative;
-  overflow: visible;
+  /* Keep the header tint contained to the header area. */
+  overflow: hidden;
   background:
     radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.08), rgba(255,255,255,0) 55%),
+    /* Subtle vertical fade to white so the body below stays perfectly flat. */
+    linear-gradient(180deg, rgba(5,195,249,.04), rgba(255,255,255,0) 70%),
     #fff;
 }
 
-/* Fade “bridge” that extends BELOW the topbar so the gradient blends into the next row.
-   This is the future-proof piece: any new tool automatically inherits the Connect-style fade.
-   Notes:
-   - This intentionally uses very light alpha so it won’t wash out controls/content.
-   - pointer-events: none so it never blocks clicks.
+/* Optional header “bridge” (Assistant-style).
+   ------------------------------------------------------------
+   Use ONLY when a tool has no additional header rows below row0.
+   It creates a little breathing room so the header tint does not end abruptly.
+
+   IMPORTANT:
+   - This bridge is contained inside .panel-topbar (no spill into body).
+   - Tools with controls rows (Connect / Listing) do NOT need this.
 */
-.panel-topbar::after{
+.panel-topbar.has-bridge{ padding-bottom:54px; }
+.panel-topbar.has-bridge::after{
   content:"";
   position:absolute;
   left:0; right:0;
-  top:100%;
+  bottom:0;
   height:54px;
   pointer-events:none;
-  /* Subtle continuation of the brand tint + fade to transparent */
   background:
     radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.06), rgba(255,255,255,0) 60%),
     linear-gradient(180deg, rgba(5,195,249,.04), rgba(255,255,255,0) 70%);
-}
-
-
-/* When a tool's header ends immediately (no secondary control rows),
-   the default ::after “fade bridge” would overlap the next content surface.
-   Add .has-bridge on .panel-topbar (used by Assistant) to allocate space
-   so the fade lives inside the header instead of tinting the first content row. */
-.panel-topbar.has-bridge{
-  padding-bottom:54px; /* must match .panel-topbar::after height */
-}
-.panel-topbar.has-bridge::after{
-  top:calc(100% - 54px);
 }
 /* ===== Top bar ===== */
 .topbar-row0{
@@ -222,6 +222,78 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   padding:10px 14px 12px;
   background:transparent;
   border-bottom:1px solid var(--border-soft);
+}
+
+/* ==========================================================
+   Connect tool — control pills row
+   ----------------------------------------------------------
+   Goal:
+   - Keep Connect's "Choose one / Send via / Use as" controls visually consistent
+     with other tools, while allowing a better mobile layout.
+   - Styles live in paw-ui.css (future-proof) and are scoped to the Connect tool
+     via body.paw-connect.
+   ========================================================== */
+
+body.paw-connect .connect-controls{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:12px 14px 12px;
+  border-bottom:1px solid var(--border-soft);
+}
+body.paw-connect .connect-row{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap; /* desktop: wraps naturally if Circle iframe is narrow */
+  gap:14px;
+}
+body.paw-connect .connect-block{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding-right:18px;
+  margin-right:18px;
+  border-right:1px solid var(--border-soft);
+}
+body.paw-connect .connect-block:last-child{
+  padding-right:0;
+  margin-right:0;
+  border-right:0;
+}
+body.paw-connect .connect-label{
+  font-size:12px;
+  font-weight:800;
+  color:var(--muted);
+  white-space:nowrap;
+  letter-spacing:-0.01em;
+}
+body.paw-connect .connect-group{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+/* Slightly tighter pills than the default .btn for compactness */
+body.paw-connect .connect-pill.btn{
+  height:32px;
+  padding:0 12px;
+  font-weight:800;
+}
+
+/* Mobile: stacked, clean groups (no horizontal scrolling). */
+@media (max-width: 540px){
+  body.paw-connect .connect-controls{ padding:10px 12px; }
+  body.paw-connect .connect-row{ flex-direction:column; align-items:stretch; gap:10px; }
+  body.paw-connect .connect-block{
+    width:100%;
+    padding-right:0;
+    margin-right:0;
+    border-right:0;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--border-soft);
+    align-items:flex-start;
+  }
+  body.paw-connect .connect-block:last-child{ border-bottom:0; padding-bottom:0; }
+  body.paw-connect .connect-label{ width:100%; margin-bottom:6px; }
 }
 .ctl{
   display:flex;
@@ -443,7 +515,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   gap:12px;
   padding:12px 12px;
   border-bottom:1px solid rgba(15,23,42,.08);
-  background: linear-gradient(180deg, rgba(5,195,249,.10), rgba(255,255,255,0));
+  /* No gradients below the header row (Circle embed rule). */
+  background: rgba(5,195,249,.08);
 }
 .deliverable-title{
   font-size:14px;
@@ -489,7 +562,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .composer{
   padding:12px 14px 14px;
   border-top:1px solid var(--border-soft);
-  background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.85));
+  /* No gradients below the header row (Circle embed rule). */
+  background:#fff;
   display:flex;
   gap:12px;
   align-items:flex-end;
