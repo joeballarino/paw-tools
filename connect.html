@@ -57,49 +57,108 @@
         * resume modal + autosave (if we decide to keep it consistent with Listing)
   -->
   <style>
-    /* Connect-only UI helpers.
-       Keep minimal to avoid impacting other tools. */
+    /* ==========================================================
+       PAW Connect — Segmented Controls (v2)
+       ----------------------------------------------------------
+       GOAL:
+       - Make each binary choice feel like ONE connected control
+         (Choose one / Send via / Use as)
+       - Desktop: label inline with segmented control
+       - Mobile: label stacked above full-width segmented control
+       - Scoped to Connect only (no shared CSS changes yet)
+
+       NOTE FOR FUTURE ASSISTANTS:
+       - If we decide to standardize this across tools, migrate these
+         styles into paw-ui.css as a reusable component (e.g. .paw-seg2).
+       ========================================================== */
+
     .connect-controls{
       display:flex;
       flex-direction:column;
-      gap:8px;
-      padding: 12px 14px 12px;
+      gap:10px;
+      padding:12px 14px 12px;
+      border-bottom:1px solid var(--border-soft);
     }
-    .connect-block{display:flex; align-items:center; gap:10px; padding-right:18px; margin-right:18px; border-right:1px solid var(--border-soft);}
-    .connect-block:last-child{padding-right:0; margin-right:0; border-right:0;}
+
     .connect-row{
       display:flex;
       align-items:center;
+      gap:18px;
       flex-wrap:nowrap;
-      gap:0;
       overflow-x:auto;
       -webkit-overflow-scrolling: touch;
     }
+
+    .connect-block{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      white-space:nowrap;
+    }
+
     .connect-label{
       font-size:12px;
-      font-weight:700;
-      color:var(--text-muted);
-      white-space:nowrap;
+      font-weight:800;
+      color:rgba(15,23,42,.72);
       letter-spacing:-0.01em;
       margin-right:2px;
     }
-    .connect-group{
+
+    /* Segmented pill container */
+    .connect-seg{
       display:flex;
-      gap:8px;
-      flex-wrap:wrap;
+      align-items:center;
+      gap:0;
+      border:1px solid rgba(15,23,42,.12);
+      background:rgba(255,255,255,.86);
+      border-radius:999px;
+      overflow:hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
     }
-    /* Slightly tighter pills than the default .btn for compactness */
-    .connect-pill.btn{
+
+    .connect-seg-btn{
+      flex:1 1 0;
+      min-width:0;
       height:32px;
-      padding:0 12px;
+      padding:0 14px;
+      border:0;
+      background:transparent;
+      color:rgba(15,23,42,.78);
       font-weight:800;
+      font-size:13px;
+      cursor:pointer;
+      white-space:nowrap;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition: background .15s ease, color .15s ease;
     }
-    @media (max-width: 540px){
-      .connect-controls{ padding: 10px 12px; }
-      .connect-row{ align-items:flex-start; flex-wrap:wrap; overflow-x:visible; }
-      .connect-block{padding-right:0; margin-right:0; border-right:0; width:100%;}
-      .connect-group{ flex-wrap:wrap; }
-      .connect-label{ width:100%; }
+    .connect-seg-btn:hover{ background:rgba(15,23,42,.05); }
+    .connect-seg-btn + .connect-seg-btn{ border-left:1px solid rgba(15,23,42,.10); }
+
+    /* Active state uses the same .primary convention as other PAW controls */
+    .connect-seg-btn.primary{
+      background: rgba(5,195,249,.18);
+      color: rgba(15,23,42,.92);
+    }
+
+    /* Mobile: stack each block, full-width segmented control */
+    @media (max-width: 560px){
+      .connect-controls{ padding:10px 12px 12px; }
+      .connect-row{
+        flex-direction:column;
+        align-items:stretch;
+        gap:12px;
+        overflow-x:visible;
+      }
+      .connect-block{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:6px;
+        width:100%;
+      }
+      .connect-seg{ width:100%; }
+      .connect-seg-btn{ flex:1 1 0; }
     }
 </style>
 </head>
@@ -122,32 +181,34 @@
             </div>
           </div>
 
-          <!-- Settings (2 rows compressed into 1 row; labels inline) -->
+          <!-- Settings (connected segmented controls) -->
 <div class="connect-controls" aria-label="Connect settings">
   <div class="connect-row" aria-label="Connect settings">
+
     <div class="connect-block">
       <div class="connect-label">Choose one</div>
-      <div class="connect-group" role="group" aria-label="Type">
-        <button class="btn connect-pill" type="button" data-group="type" data-value="first_contact">First contact</button>
-        <button class="btn connect-pill" type="button" data-group="type" data-value="continue">Continue</button>
+      <div class="connect-seg" role="group" aria-label="Type">
+        <button class="connect-seg-btn" type="button" data-group="type" data-value="first_contact">First contact</button>
+        <button class="connect-seg-btn" type="button" data-group="type" data-value="continue">Continue</button>
       </div>
     </div>
 
     <div class="connect-block">
       <div class="connect-label">Send via</div>
-      <div class="connect-group" role="group" aria-label="Send via">
-        <button class="btn connect-pill" type="button" data-group="channel" data-value="email">Email</button>
-        <button class="btn connect-pill" type="button" data-group="channel" data-value="text">Text</button>
+      <div class="connect-seg" role="group" aria-label="Send via">
+        <button class="connect-seg-btn" type="button" data-group="channel" data-value="email">Email</button>
+        <button class="connect-seg-btn" type="button" data-group="channel" data-value="text">Text</button>
       </div>
     </div>
 
     <div class="connect-block">
       <div class="connect-label">Use as</div>
-      <div class="connect-group" role="group" aria-label="Use as">
-        <button class="btn connect-pill" type="button" data-group="use" data-value="once">Send once</button>
-        <button class="btn connect-pill" type="button" data-group="use" data-value="template">Template</button>
+      <div class="connect-seg" role="group" aria-label="Use as">
+        <button class="connect-seg-btn" type="button" data-group="use" data-value="once">Send once</button>
+        <button class="connect-seg-btn" type="button" data-group="use" data-value="template">Template</button>
       </div>
     </div>
+
   </div>
 </div>
 <!-- Message feed (same structure as Listing/Ask so tool-shell can manage it later) -->
@@ -197,7 +258,7 @@
       };
 
       const $ = (sel) => document.querySelector(sel);
-      const pills = Array.from(document.querySelectorAll(".connect-pill"));
+      const pills = Array.from(document.querySelectorAll(".connect-seg-btn"));
 
       // Visual selection: this UI previously used the "primary" class (not "is-active").
       // We keep that convention so the selected pill is obvious.
