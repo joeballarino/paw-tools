@@ -6,6 +6,8 @@
  * - This file only handles UI wiring + API calls.
  */
 
+/* TOOL-SHELL VERSION: 2026-01-15-gold1 (autogrow + submit-bump + reset-resize) */
+
 (function () {
   "use strict";
 
@@ -298,6 +300,7 @@ function removeNode(node) {
 
       const $messages = $("messages");
       const $input = $("input") || $("prompt");
+      setupAutoGrowTextarea($input);
       const $send = $("send") || $("submitBtn");
       const $reset = $("reset");
       const $tips = $("tips");
@@ -334,7 +337,62 @@ function setSendLoading(on){
       $send.removeAttribute("aria-busy");
     }
   }catch(_){}
+
+
+// ==========================================================
+// Composer auto-grow (ChatGPT-style) — shared across tools
+// ----------------------------------------------------------
+// Contract:
+// - The textarea grows with content up to CSS --composer-max-height (default 320px)
+// - After max, it becomes internally scrollable
+// - Reset returns it to its baseline height
+// ==========================================================
+function setupAutoGrowTextarea($ta){
+  try{
+    if (!$ta) return;
+    const cs = window.getComputedStyle($ta);
+    // Prefer a shared CSS variable (set in paw-ui.css). Fallback to 320.
+    let maxPx = 320;
+    try{
+      const v = cs.getPropertyValue("--composer-max-height") || "";
+      const n = parseFloat(String(v).trim());
+      if (!isNaN(n) && n > 0) maxPx = n;
+    }catch(_){}
+
+    function resize(){
+      try{
+        // If the tool page hides the composer, do nothing.
+        if (!$ta || !$ta.isConnected) return;
+        $ta.style.height = "auto";
+        const full = $ta.scrollHeight || 0;
+        const cap = Math.min(full, maxPx);
+        $ta.style.height = cap + "px";
+        $ta.style.overflowY = full > maxPx ? "auto" : "hidden";
+      }catch(_){}
+    }
+
+    // Expose for reset/other internal uses
+    $ta.__pawAutoGrowResize = resize;
+
+    // Run now + as the user types
+    resize();
+    $ta.addEventListener("input", resize, { passive: true });
+    $ta.addEventListener("change", resize, { passive: true });
+
+    // Keep sane on viewport changes (mobile rotation, etc.)
+    window.addEventListener("resize", function(){ try{ resize(); }catch(_){} }, { passive: true });
+  }catch(_){}
 }
+
+function resetAutoGrowTextarea($ta){
+  try{
+    if (!$ta) return;
+    // Clear explicit height; then resize once to baseline.
+    $ta.style.height = "";
+    $ta.style.overflowY = "hidden";
+    if (typeof $ta.__pawAutoGrowResize === "function") $ta.__pawAutoGrowResize();
+  }catch(_){}
+}}
 
       const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : null;
       const getExtraPayload =
@@ -383,6 +441,7 @@ function setSendLoading(on){
       function clearComposer(opts) {
         opts = opts || {};
         if ($input) $input.value = "";
+          resetAutoGrowTextarea($input);
           try { setSendLoading(false); } catch (_) {}
           try { if ($send) $send.classList.remove("paw-bump"); } catch (_) {}
         if ($input && opts.keepFocus) {

@@ -5,6 +5,9 @@
    - This file is SHARED across ALL tools (ask.html, listing.html, etc).
    ========================================================== */
 
+/* PAW-UI VERSION: 2026-01-15-gold1 (autogrow + listing-mobile + paw-brand) */
+
+
 :root{
   --bg:#ffffff;
 
@@ -207,6 +210,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 }
 .select-wrap{
   position:relative;
+  will-change: transform, box-shadow;
   display:inline-flex;
   align-items:center;
 }
@@ -268,6 +272,64 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .select-wrap.sm select{
   min-width:96px;
   text-align:center;
+}
+
+
+/* ==========================================================
+   Listing tool — Mobile controls row layout (LOCKED)
+   ----------------------------------------------------------
+   WHY THIS EXISTS:
+   - The top setup fields (Type / Tone / Length / City / State) look good on desktop,
+     but inside Circle on mobile they must stack cleanly to avoid a “messy” feel.
+   - This restores the intended mobile presentation WITHOUT changing workflow or desktop.
+
+   PRODUCT CONTRACT (mobile only):
+   - Each control becomes: label (top) + field (full width).
+   - City + State are visually grouped as “Location” via a subtle divider.
+   - Desktop styling is unchanged.
+   - Scoped to Listing only via body.paw-listing to avoid side effects in other tools.
+   ========================================================== */
+@media (max-width: 560px){
+  body.paw-listing .controls-row{
+    flex-direction:column;
+    align-items:stretch;
+    gap:14px;
+  }
+  body.paw-listing .controls-row .ctl{
+    width:100%;
+    flex-direction:column;
+    align-items:stretch;
+    gap:6px;
+  }
+  body.paw-listing .controls-row .ctl label{
+    width:100%;
+    font-size:12px;
+    font-weight:800;
+    color:rgba(15,23,42,.80);
+  }
+
+  body.paw-listing .controls-row .select-wrap,
+  body.paw-listing .controls-row .input-wrap{
+    width:100%;
+    display:flex;
+  }
+  body.paw-listing .controls-row .select-wrap select,
+  body.paw-listing .controls-row .input-wrap input{
+    width:100%;
+    min-width:0;
+  }
+
+  body.paw-listing .controls-row .select-wrap.sm select{
+    min-width:0;
+    text-align:left;
+  }
+
+  /* Divider before City/State (Location) */
+  body.paw-listing .controls-row .ctl:nth-child(4){
+    padding-top:12px;
+    border-top:1px solid rgba(15,23,42,.08);
+    margin-top:2px;
+  }
 }
 /* ===== Key facts ===== */
 .topbar-row2{
@@ -465,8 +527,15 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .composer textarea{
   flex:1;
   min-height:46px;
-  max-height:520px;
+
+  /* ChatGPT-style auto-grow (shared):
+     - JS grows height with content
+     - CSS caps growth to avoid taking over the screen
+     - after max, JS enables vertical scroll inside the box */
+  max-height:var(--composer-max-height, 320px);
   resize:none;
+  overflow-y:hidden;
+
   border-radius:16px;
   border:1px solid var(--field-border);
   background:rgba(255,255,255,.92);
@@ -475,6 +544,10 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   font-weight:650;
   color:var(--text-strong);
   outline:none;
+}
+
+@media (max-width: 560px){
+  :root{ --composer-max-height: 240px; }
 }
 .send{
   width:60px;
@@ -541,16 +614,19 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 
 @keyframes pawGlowPop{
   0%{
+    transform: scale(1);
     box-shadow:
       0 10px 22px rgba(15,23,42,.14),
       0 16px 34px rgba(5,195,249,.14);
   }
   45%{
+    transform: scale(1.045);
     box-shadow:
       0 16px 34px rgba(15,23,42,.18),
       0 28px 56px rgba(5,195,249,.30);
   }
   100%{
+    transform: scale(1);
     box-shadow:
       0 10px 22px rgba(15,23,42,.14),
       0 16px 34px rgba(5,195,249,.14);
