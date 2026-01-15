@@ -269,6 +269,64 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   min-width:96px;
   text-align:center;
 }
+
+
+/* ==========================================================
+   Listing tool — Mobile controls row layout (LOCKED)
+   ----------------------------------------------------------
+   WHY THIS EXISTS:
+   - The top setup fields (Type / Tone / Length / City / State) look good on desktop,
+     but inside Circle on mobile they must stack cleanly to avoid a “messy” feel.
+   - This restores the intended mobile presentation WITHOUT changing workflow or desktop.
+
+   PRODUCT CONTRACT (mobile only):
+   - Each control becomes: label (top) + field (full width).
+   - City + State are visually grouped as “Location” via a subtle divider.
+   - Desktop styling is unchanged.
+   - Scoped to Listing only via body.paw-listing to avoid side effects in other tools.
+   ========================================================== */
+@media (max-width: 560px){
+  body.paw-listing .controls-row{
+    flex-direction:column;
+    align-items:stretch;
+    gap:14px;
+  }
+  body.paw-listing .controls-row .ctl{
+    width:100%;
+    flex-direction:column;
+    align-items:stretch;
+    gap:6px;
+  }
+  body.paw-listing .controls-row .ctl label{
+    width:100%;
+    font-size:12px;
+    font-weight:800;
+    color:rgba(15,23,42,.80);
+  }
+
+  body.paw-listing .controls-row .select-wrap,
+  body.paw-listing .controls-row .input-wrap{
+    width:100%;
+    display:flex;
+  }
+  body.paw-listing .controls-row .select-wrap select,
+  body.paw-listing .controls-row .input-wrap input{
+    width:100%;
+    min-width:0;
+  }
+
+  body.paw-listing .controls-row .select-wrap.sm select{
+    min-width:0;
+    text-align:left;
+  }
+
+  /* Divider before City/State (Location) */
+  body.paw-listing .controls-row .ctl:nth-child(4){
+    padding-top:12px;
+    border-top:1px solid rgba(15,23,42,.08);
+    margin-top:2px;
+  }
+}
 /* ===== Key facts ===== */
 .topbar-row2{
   padding:12px 14px 14px;
