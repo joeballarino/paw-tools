@@ -66,8 +66,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   /* Shared PAW tool header background.
      IMPORTANT:
      - Tools should NOT re-implement this per-page.
-     - The goal is a consistent “soft gradient” that visually flows into the next row
-       (Connect look), even when a tool has only a subtitle row (Assistant).
+     - The goal is a consistent “soft gradient” behind the tool title area (no extra gradient bands elsewhere).
   */
   position: relative;
   overflow: visible;
@@ -76,36 +75,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
     #fff;
 }
 
-/* Fade “bridge” that extends BELOW the topbar so the gradient blends into the next row.
-   This is the future-proof piece: any new tool automatically inherits the Connect-style fade.
-   Notes:
-   - This intentionally uses very light alpha so it won’t wash out controls/content.
-   - pointer-events: none so it never blocks clicks.
-*/
-.panel-topbar::after{
-  content:"";
-  position:absolute;
-  left:0; right:0;
-  top:100%;
-  height:54px;
-  pointer-events:none;
-  /* Subtle continuation of the brand tint + fade to transparent */
-  background:
-    radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.06), rgba(255,255,255,0) 60%),
-    linear-gradient(180deg, rgba(5,195,249,.04), rgba(255,255,255,0) 70%);
-}
 
-
-/* When a tool's header ends immediately (no secondary control rows),
-   the default ::after “fade bridge” would overlap the next content surface.
-   Add .has-bridge on .panel-topbar (used by Assistant) to allocate space
-   so the fade lives inside the header instead of tinting the first content row. */
-.panel-topbar.has-bridge{
-  padding-bottom:54px; /* must match .panel-topbar::after height */
-}
-.panel-topbar.has-bridge::after{
-  top:calc(100% - 54px);
-}
 /* ===== Top bar ===== */
 .topbar-row0{
   display:flex;
