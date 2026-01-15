@@ -653,3 +653,57 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 @keyframes pawDotPulse{
   0%, 80%, 100%{ transform:translateY(0); opacity:.25; }
 }
+
+
+/* ===== Listing tool: mobile-first controls cleanup =====
+   ----------------------------------------------------------
+   Goal:
+   - Keep desktop layout as-is
+   - On mobile, make Type/Tone/Length/City/State read cleanly:
+       label on top, field full-width, consistent spacing
+   - Light grouping: a subtle divider before City/State so Location feels like one idea
+   NOTE:
+   - This targets shared classes used by Listing (.controls-row, .ctl, .select-wrap, .input-wrap).
+   - Scoped to small screens only to avoid impacting desktop.
+*/
+@media (max-width: 560px){
+  .controls-row{
+    flex-direction:column;
+    align-items:stretch;
+    gap:12px;
+  }
+  .ctl{
+    width:100%;
+    flex-direction:column;
+    align-items:stretch;
+    gap:6px;
+  }
+  .ctl label{
+    width:100%;
+  }
+  .select-wrap,
+  .input-wrap{
+    width:100%;
+    display:flex;
+  }
+  .select-wrap select,
+  .input-wrap input{
+    width:100%;
+    min-width:0;
+  }
+
+  /* State select: on mobile it should behave like a normal full-width field */
+  .select-wrap.sm select{
+    min-width:0;
+    text-align:left;
+    padding-left:12px;
+  }
+
+  /* Gentle visual grouping: Location starts here (City + State) */
+  .controls-row .ctl:nth-child(4){
+    margin-top:4px;
+    padding-top:10px;
+    border-top:1px solid var(--border-soft);
+  }
+}
+
