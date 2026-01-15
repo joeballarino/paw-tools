@@ -298,6 +298,67 @@ function removeNode(node) {
 
       const $messages = $("messages");
       const $input = $("input") || $("prompt");
+
+// ==========================================================
+// Composer textarea auto-grow (ChatGPT-style)
+// ----------------------------------------------------------
+// Product goal:
+// - Across ALL tools, the main message box should expand as the user types,
+//   up to a sensible max-height, then become scrollable.
+//
+// Why it lives here:
+// - tool-shell.js is shared by all tools, so one change upgrades all tools
+//   without per-page wiring.
+//
+// Safety:
+// - This ONLY touches the textarea height/overflow. It does NOT touch the
+//   paw submit button (#send) layout, styles, or behavior.
+// ==========================================================
+function setupAutoGrowTextarea(el){
+  if (!el) return;
+  const computeMaxPx = () => {
+    try {
+      const mh = window.getComputedStyle(el).maxHeight;
+      const v = parseFloat(mh || "");
+      return Number.isFinite(v) && v > 0 ? v : 99999;
+    } catch (_) { return 99999; }
+  };
+
+  const resizeNow = () => {
+    try {
+      // Reset first so scrollHeight reflects the full content.
+      el.style.height = "auto";
+
+      const maxPx = computeMaxPx();
+      const next = Math.min(el.scrollHeight, maxPx);
+
+      el.style.height = next + "px";
+
+      // Hide the scrollbar until we hit the max.
+      el.style.overflowY = (el.scrollHeight > maxPx + 1) ? "auto" : "hidden";
+    } catch (_) {}
+  };
+
+  // Keep a reference so other shell actions (setState/reset) can force a resize.
+  el.__pawAutoGrowResize = resizeNow;
+
+  // Resize on typing and on paste.
+  el.addEventListener("input", resizeNow, { passive: true });
+  el.addEventListener("change", resizeNow, { passive: true });
+
+  // Resize if the device rotates or viewport changes.
+  // (Use a light throttle to avoid spam on mobile.)
+  let t = null;
+  const onViewport = () => {
+    if (t) return;
+    t = setTimeout(() => { t = null; resizeNow(); }, 80);
+  };
+  window.addEventListener("resize", onViewport, { passive: true });
+  window.addEventListener("orientationchange", onViewport, { passive: true });
+
+  // Initial sync
+  resizeNow();
+}
       const $send = $("send") || $("submitBtn");
       const $reset = $("reset");
       const $tips = $("tips");
@@ -325,6 +386,9 @@ function removeNode(node) {
       const inputPlaceholder = safeText(config.inputPlaceholder);
       if ($input && inputPlaceholder) $input.setAttribute("placeholder", inputPlaceholder);
 
+      // Auto-grow input across tools (ChatGPT-style)
+      setupAutoGrowTextarea($input);
+
       const sendHistoryItems =
         typeof config.sendHistoryItems === "number" ? config.sendHistoryItems : 10;
       const maxHistoryItems =
@@ -350,6 +414,7 @@ function removeNode(node) {
       function clearComposer(opts) {
         opts = opts || {};
         if ($input) $input.value = "";
+        try { if ($input && $input.__pawAutoGrowResize) $input.__pawAutoGrowResize(); } catch (_) {}
         if ($input && opts.keepFocus) {
           try { $input.focus(); } catch (_) {}
         }
@@ -713,6 +778,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           }
 
           if ($input) $input.value = typeof st.input === "string" ? st.input : "";
+          try { if ($input && $input.__pawAutoGrowResize) $input.__pawAutoGrowResize(); } catch (_) {}
 
           // Ensure we're not showing "Working..." after a restore.
           try { hideWorkingBar(); } catch (_) {}
