@@ -66,46 +66,22 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   /* Shared PAW tool header background.
      IMPORTANT:
      - Tools should NOT re-implement this per-page.
-     - The goal is a consistent, subtle header tint that fades to clean white
-       before any tool content begins.
-
-     Why this matters (Circle embed):
-     - Circle provides the outer card and page background.
-     - Inside the embed we want ONE intentional header tint, and a flat body.
-     - Any gradients below the header row read as “accidental” and create the
-       messy bands seen on mobile/desktop.
+     - The goal is a consistent, subtle header tint.
+     - In Circle embed, gradients MUST NOT bleed into the body.
   */
   position: relative;
-  /* Keep the header tint contained to the header area. */
   overflow: hidden;
+  /* Tint + fade to white INSIDE the header (no pseudo-element bridge). */
   background:
     radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.08), rgba(255,255,255,0) 55%),
-    /* Subtle vertical fade to white so the body below stays perfectly flat. */
     linear-gradient(180deg, rgba(5,195,249,.04), rgba(255,255,255,0) 70%),
     #fff;
 }
-
-/* Optional header “bridge” (Assistant-style).
-   ------------------------------------------------------------
-   Use ONLY when a tool has no additional header rows below row0.
-   It creates a little breathing room so the header tint does not end abruptly.
-
-   IMPORTANT:
-   - This bridge is contained inside .panel-topbar (no spill into body).
-   - Tools with controls rows (Connect / Listing) do NOT need this.
-*/
-.panel-topbar.has-bridge{ padding-bottom:54px; }
-.panel-topbar.has-bridge::after{
-  content:"";
-  position:absolute;
-  left:0; right:0;
-  bottom:0;
-  height:54px;
-  pointer-events:none;
-  background:
-    radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.06), rgba(255,255,255,0) 60%),
-    linear-gradient(180deg, rgba(5,195,249,.04), rgba(255,255,255,0) 70%);
-}
+/* Legacy note:
+   We previously used a ::after "bridge" that extended below the header.
+   That created the extra gradient band users flagged.
+   Rule now: NO gradient below header. */
+.panel-topbar.has-bridge{ padding-bottom:0; }
 /* ===== Top bar ===== */
 .topbar-row0{
   display:flex;
@@ -221,79 +197,10 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   gap:14px;
   padding:10px 14px 12px;
   background:transparent;
-  border-bottom:1px solid var(--border-soft);
-}
-
-/* ==========================================================
-   Connect tool — control pills row
-   ----------------------------------------------------------
-   Goal:
-   - Keep Connect's "Choose one / Send via / Use as" controls visually consistent
-     with other tools, while allowing a better mobile layout.
-   - Styles live in paw-ui.css (future-proof) and are scoped to the Connect tool
-     via body.paw-connect.
-   ========================================================== */
-
-body.paw-connect .connect-controls{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  padding:12px 14px 12px;
-  border-bottom:1px solid var(--border-soft);
-}
-body.paw-connect .connect-row{
-  display:flex;
-  align-items:center;
-  flex-wrap:wrap; /* desktop: wraps naturally if Circle iframe is narrow */
-  gap:14px;
-}
-body.paw-connect .connect-block{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding-right:18px;
-  margin-right:18px;
-  border-right:1px solid var(--border-soft);
-}
-body.paw-connect .connect-block:last-child{
-  padding-right:0;
-  margin-right:0;
-  border-right:0;
-}
-body.paw-connect .connect-label{
-  font-size:12px;
-  font-weight:800;
-  color:var(--muted);
-  white-space:nowrap;
-  letter-spacing:-0.01em;
-}
-body.paw-connect .connect-group{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-/* Slightly tighter pills than the default .btn for compactness */
-body.paw-connect .connect-pill.btn{
-  height:32px;
-  padding:0 12px;
-  font-weight:800;
-}
-
-/* Mobile: stacked, clean groups (no horizontal scrolling). */
-@media (max-width: 540px){
-  body.paw-connect .connect-controls{ padding:10px 12px; }
-  body.paw-connect .connect-row{ flex-direction:column; align-items:stretch; gap:10px; }
-  body.paw-connect .connect-block{
-    width:100%;
-    padding-right:0;
-    margin-right:0;
-    border-right:0;
-    padding-bottom:10px;
-    border-bottom:1px solid var(--border-soft);
-    align-items:flex-start;
-  }
-  body.paw-connect .connect-block:last-child{ border-bottom:0; padding-bottom:0; }
-  body.paw-connect .connect-label{ width:100%; margin-bottom:6px; }
+  /* Divider policy:
+     - Use ONE subtle divider only, and it sits ABOVE the composer.
+     - So we do NOT add section dividers under header controls rows. */
+  border-bottom:0;
 }
 .ctl{
   display:flex;
@@ -515,8 +422,8 @@ body.paw-connect .connect-pill.btn{
   gap:12px;
   padding:12px 12px;
   border-bottom:1px solid rgba(15,23,42,.08);
-  /* No gradients below the header row (Circle embed rule). */
-  background: rgba(5,195,249,.08);
+  /* Body must remain flat; keep this as a subtle solid tint instead of a gradient. */
+  background: rgba(5,195,249,.06);
 }
 .deliverable-title{
   font-size:14px;
@@ -562,11 +469,107 @@ body.paw-connect .connect-pill.btn{
 .composer{
   padding:12px 14px 14px;
   border-top:1px solid var(--border-soft);
-  /* No gradients below the header row (Circle embed rule). */
+  /* Single divider lives above composer; keep the surface flat (no gradients). */
   background:#fff;
   display:flex;
   gap:12px;
   align-items:flex-end;
+}
+
+/* ==========================================================
+   Connect — mobile segmented pairs
+   ----------------------------------------------------------
+   Goal:
+   - On mobile, choice buttons should read as paired options.
+   - Use connected segmented controls (side-by-side) to reduce height
+     and improve scanability.
+   ========================================================== */
+
+.connect-controls{
+  padding:10px 14px 12px;
+}
+
+.connect-row{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:14px;
+}
+
+.connect-block{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.connect-label{
+  font-size:12px;
+  font-weight:700;
+  color:rgba(15,23,42,.70);
+  white-space:nowrap;
+}
+
+.connect-group{
+  display:flex;
+  gap:0;
+  border:1px solid rgba(15,23,42,.14);
+  border-radius:999px;
+  background:rgba(255,255,255,.86);
+  overflow:hidden;
+}
+
+.connect-group .connect-pill{
+  border:0;
+  border-radius:0;
+  height:34px;
+  padding:0 12px;
+}
+
+.connect-group .connect-pill + .connect-pill{
+  border-left:1px solid rgba(15,23,42,.10);
+}
+
+@media (max-width: 560px){
+  /* Mobile: each setting becomes a compact block:
+     label on top, followed by a full-width segmented pair. */
+  .connect-row{ flex-direction:column; align-items:stretch; }
+  .connect-block{ width:100%; flex-direction:column; align-items:stretch; gap:6px; }
+  .connect-label{ font-size:12px; }
+  .connect-group{ width:100%; }
+  .connect-group .connect-pill{ flex:1 1 0; justify-content:center; }
+}
+
+/* ==========================================================
+   Listing — mobile 2-column alignment for Type/Tone/Length/City/State
+   ----------------------------------------------------------
+   Goal:
+   - Keep controls tidy on mobile without going fully single-column.
+   - Grid areas provide stable alignment and avoid "messy" stagger.
+   ========================================================== */
+
+@media (max-width: 560px){
+  .paw-listing .controls-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "type tone"
+      "length state"
+      "city city";
+    align-items:end;
+    gap:12px;
+  }
+  .paw-listing .controls-row .ctl{ width:100%; }
+  .paw-listing .controls-row .ctl:nth-child(1){ grid-area:type; }
+  .paw-listing .controls-row .ctl:nth-child(2){ grid-area:tone; }
+  .paw-listing .controls-row .ctl:nth-child(3){ grid-area:length; }
+  .paw-listing .controls-row .ctl:nth-child(4){ grid-area:city; }
+  .paw-listing .controls-row .ctl:nth-child(5){ grid-area:state; }
+
+  /* Let selects/inputs fill their grid cell cleanly */
+  .paw-listing .controls-row .select-wrap,
+  .paw-listing .controls-row .input-wrap{ width:100%; }
+  .paw-listing .controls-row .select-wrap select,
+  .paw-listing .controls-row .input-wrap input{ min-width:0; width:100%; }
 }
 .composer textarea{
   flex:1;
