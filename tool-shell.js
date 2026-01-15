@@ -304,44 +304,34 @@ function removeNode(node) {
       const $toolForm = $("toolForm");
 
 
-/* ==========================================================
-   PAW Brand Moment — Send Button Feedback (LOCKED)
-   ----------------------------------------------------------
-   GOAL:
-   - The paw button is the brand anchor. Whether the user clicks it OR presses Enter,
-     the button should acknowledge the action and immediately communicate “working”.
-   - This is visual-only: no workflow changes, no API changes.
-
-   BEHAVIOR:
-   - On submit: add a very brief .paw-ack class (press + glow pop).
-   - While sending: set aria-busy="true" and add .is-loading so shared CSS can render
-     the circular brand ring/glow consistently.
-   - On reset: ensure the button returns to its base visual state.
-
-   IMPORTANT:
-   - Do NOT change the paw button size or color here.
-   - This is intentionally centralized so all tools inherit the same brand behavior.
-   ========================================================== */
-function pawFlashAck(){
+// ==========================================================
+// Brand feedback: Paw submit button state (LOCKED)
+// ----------------------------------------------------------
+// Goal:
+// - Keep the paw button as the brand “hero” even when users submit via Enter.
+// - Provide a brief, obvious “I’m working” cue without changing behavior.
+//
+// Contract:
+// - .paw-bump is a short glow pop (CSS animation) applied on submit.
+// - data-loading="1" + aria-busy="true" keep a subtle working ring active while sending.
+// - This must NEVER change button size, icon, or request logic.
+// ==========================================================
+function bumpSendButton(){
   try{
-    if(!$send) return;
-    $send.classList.add("paw-ack");
-    // Short, snappy acknowledgement (kept under ~200ms so it feels premium, not “pulsing”)
-    window.setTimeout(function(){
-      try{ $send.classList.remove("paw-ack"); }catch(_){}
-    }, 180);
+    if (!$send) return;
+    $send.classList.add("paw-bump");
+    window.setTimeout(function(){ try{ $send.classList.remove("paw-bump"); }catch(_){} }, 320);
   }catch(_){}
 }
-
-function pawSetBusy(isBusy){
+function setSendLoading(on){
   try{
-    if(!$send) return;
-    if(isBusy){
+    if (!$send) return;
+    if (on){
+      $send.setAttribute("data-loading","1");
       $send.setAttribute("aria-busy","true");
-      $send.classList.add("is-loading");
-    }else{
+    } else {
+      $send.removeAttribute("data-loading");
       $send.removeAttribute("aria-busy");
-      $send.classList.remove("is-loading");
     }
   }catch(_){}
 }
@@ -393,6 +383,8 @@ function pawSetBusy(isBusy){
       function clearComposer(opts) {
         opts = opts || {};
         if ($input) $input.value = "";
+          try { setSendLoading(false); } catch (_) {}
+          try { if ($send) $send.classList.remove("paw-bump"); } catch (_) {}
         if ($input && opts.keepFocus) {
           try { $input.focus(); } catch (_) {}
         }
@@ -553,9 +545,9 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
 
         const echoUser = options.echoUser !== false;
 
-        pawFlashAck();
-        pawSetBusy(true);
         isSending = true;
+        setSendLoading(true);
+        bumpSendButton();
         let thinkingNode = null;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
@@ -599,7 +591,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
         } finally {
           isSending = false;
-          pawSetBusy(false);
+          setSendLoading(false);
           hideWorkingBar();
         }
       }
@@ -626,6 +618,8 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         }
 
         isSending = true;
+        setSendLoading(true);
+        bumpSendButton();
         let thinkingNode = null;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
@@ -666,7 +660,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
         } finally {
           isSending = false;
-          pawSetBusy(false);
+          setSendLoading(false);
           hideWorkingBar();
         }
       }
@@ -683,8 +677,8 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           history = [];
           if ($messages) $messages.innerHTML = "";
           if ($input) $input.value = "";
-          try { pawSetBusy(false); } catch (_) {}
-          try { if ($send) $send.classList.remove("paw-ack"); } catch (_) {}
+          try { setSendLoading(false); } catch (_) {}
+          try { if ($send) $send.classList.remove("paw-bump"); } catch (_) {}
 
           // Hide the fixed "Working..." strip if it is visible.
           try { hideWorkingBar(); } catch (_) {}

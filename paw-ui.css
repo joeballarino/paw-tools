@@ -489,71 +489,73 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   cursor:pointer;
   position:relative;
 
-  /* Brand depth (resting state): keep subtle but always present. */
+  /* Brand presence (resting):
+     - Always-on, soft circular depth (not a square outline)
+     - Slight brand-tinted glow + a neutral lift shadow */
   box-shadow:
     0 10px 22px rgba(15,23,42,.14),
-    0 18px 40px rgba(5,195,249,.16);
+    0 16px 34px rgba(5,195,249,.14);
 
   transition: transform .15s ease, box-shadow .18s ease;
 }
 
-/* Soft brand glow layer (always circular). */
-.send::before{
-  content:"";
-  position:absolute;
-  inset:-10px;
-  border-radius:999px;
-  background:
-    radial-gradient(closest-side, rgba(5,195,249,.30), rgba(5,195,249,0) 70%);
-  opacity:0;
-  transform: scale(.92);
-  transition: opacity .18s ease, transform .18s ease;
-  pointer-events:none;
-}
-
-/* Hover: elevate the same object (no square drop-shadow artifacts). */
+/* Hover: elevate + brighten (still circular) */
 .send:hover{
   transform: translateY(-1px) scale(1.03);
   box-shadow:
-    0 14px 30px rgba(15,23,42,.16),
-    0 26px 58px rgba(5,195,249,.22);
-}
-.send:hover::before{
-  opacity:1;
-  transform: scale(1);
+    0 14px 28px rgba(15,23,42,.16),
+    0 22px 46px rgba(5,195,249,.22);
 }
 
-/* Active press: grounded, tighter shadow. */
+/* Press: grounded (still premium) */
 .send:active{
   transform: translateY(1px) scale(.97);
   box-shadow:
-    0 8px 18px rgba(15,23,42,.14),
-    0 16px 34px rgba(5,195,249,.16);
+    0 10px 20px rgba(15,23,42,.16),
+    0 16px 34px rgba(5,195,249,.18);
 }
 
-/* Keyboard submit / click acknowledgement (brief, premium pop). */
-.send.paw-ack::before{
-  opacity:1;
-  animation: pawAckPop .42s ease-out both;
-}
-@keyframes pawAckPop{
-  0%{ transform:scale(.88); opacity:.15; }
-  40%{ transform:scale(1.05); opacity:.45; }
-  100%{ transform:scale(1.00); opacity:.20; }
-}
+/* IMPORTANT:
+   Some browsers draw a default focus outline after click (often a square “halo”).
+   We explicitly remove it and replace with a brand-forward circular ring. */
+.send:focus{ outline:none; }
 
-/* While busy, keep a gentle glow on so “working” is obvious even without hover. */
-.send.is-loading::before,
-.send[aria-busy="true"]::before{
-  opacity:1;
-  transform: scale(1);
-}
-/* Keyboard accessibility ring (separate from drop-shadow) */
+/* Brand-forward focus ring (keyboard users):
+   - Outer PAW blue glow + inner crisp white ring so it reads on any background.
+   - Keeps accessibility while looking intentional. */
 .send:focus-visible{
   outline:none;
-  box-shadow: 0 0 0 4px rgba(5,195,249,.22);
+  box-shadow:
+    0 0 0 4px rgba(255,255,255,.75),
+    0 0 0 9px rgba(5,195,249,.40),
+    0 14px 28px rgba(15,23,42,.16),
+    0 22px 46px rgba(5,195,249,.22);
 }
 
+/* Submit acknowledgement (click OR Enter):
+   - A brief glow “pop” so the paw still feels like the hero even for keyboard users.
+   - NOTE: JS toggles .paw-bump for ~250ms on submit. */
+.send.paw-bump{
+  animation: pawGlowPop .28s ease-out 1;
+}
+
+@keyframes pawGlowPop{
+  0%{
+    box-shadow:
+      0 10px 22px rgba(15,23,42,.14),
+      0 16px 34px rgba(5,195,249,.14);
+  }
+  45%{
+    box-shadow:
+      0 16px 34px rgba(15,23,42,.18),
+      0 28px 56px rgba(5,195,249,.30);
+  }
+  100%{
+    box-shadow:
+      0 10px 22px rgba(15,23,42,.14),
+      0 16px 34px rgba(5,195,249,.14);
+  }
+}
 
 /* ===== Send button icon (PAW paw) =====
    Base sizing for the paw icon inside the primary action button.
