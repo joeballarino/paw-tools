@@ -702,6 +702,14 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           if ($messages) $messages.innerHTML = "";
           if ($input) $input.value = "";
 
+          // If the composer textarea uses auto-grow, force it back to its baseline height.
+          // Without this, Reset clears the text but can leave the textarea visually “tall” until a page refresh.
+          try {
+            if ($input && typeof $input.__pawAutoGrowResize === "function") {
+              $input.__pawAutoGrowResize();
+            }
+          } catch (_) {}
+
           // Hide the fixed "Working..." strip if it is visible.
           try { hideWorkingBar(); } catch (_) {}
 
