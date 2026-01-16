@@ -641,12 +641,6 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   transition: opacity .18s ease;
 }
 
-  50%{ transform:scale(1.06); opacity:.35; }
-  100%{ transform:scale(1); opacity:.75; }
-}
-
-
-
 /* ===== Tips modal ===== */
 .modal{
   position:fixed;
