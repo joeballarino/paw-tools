@@ -515,7 +515,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .msg .bubble p{ margin:0; white-space:pre-wrap; }
 
 .composer{
-  padding:12px 14px 14px;
+  padding:12px 14px 26px;
   background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.85));
   display:flex;
   gap:12px;
@@ -561,23 +561,22 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 
   /* Brand presence at rest (soft circular depth) */
   box-shadow:
-    0 14px 30px rgba(15,23,42,.16),
-    0 5px 14px rgba(15,23,42,.10);
+    0 10px 22px rgba(15,23,42,.14),
+    0 6px 14px rgba(5,195,249,.18);
 
   transition: transform .15s ease, box-shadow .15s ease;
 }
 .send:hover{
-  transform: translateY(-2px);
+  transform: translateY(-1px) scale(1.03);
   box-shadow:
-    0 18px 36px rgba(15,23,42,.18),
-    0 6px 14px rgba(15,23,42,.10),
-    0 0 0 7px rgba(5,195,249,.14);
+    0 16px 34px rgba(15,23,42,.18),
+    0 14px 30px rgba(5,195,249,.22);
 }
 .send:active{
-  transform: translateY(1px) scale(.975);
+  transform: translateY(1px) scale(.97);
   box-shadow:
     0 10px 22px rgba(15,23,42,.16),
-    0 4px 10px rgba(15,23,42,.10);
+    0 8px 18px rgba(5,195,249,.20);
 }
 /* Brand-forward focus ring (accessibility-safe)
    - Avoids browser default square outlines
@@ -585,11 +584,11 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .send:focus{ outline:none; }
 .send:focus-visible{
   outline:none;
-  transform: translateY(-1px);
   box-shadow:
-    0 0 0 6px rgba(5,195,249,.20),
-    0 18px 36px rgba(15,23,42,.18),
-    0 6px 14px rgba(15,23,42,.10);
+    0 0 0 5px rgba(5,195,249,.28),
+    0 0 0 10px rgba(5,195,249,.14),
+    0 16px 34px rgba(15,23,42,.18),
+    0 14px 30px rgba(5,195,249,.22);
 }
 
 /* ===== Send button icon (PAW paw) =====
@@ -612,44 +611,9 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .send.paw-bump{
   animation: pawBump .18s ease-out;
 }
-
-/* Submit confirmation (click or Enter)
-   - Tiny press-in + brief glow handoff.
-   - Fast, noticeable, never noisy. */
-.send.paw-confirm,
-.send.paw-bump{
-  /* keep class compatibility: older JS may still use paw-bump */
-  animation: pawConfirm .42s ease-out;
-}
-
-/* One-shot glow overlay that hands off into the working ring (if busy) */
-.send.paw-confirm::before,
-.send.paw-bump::before{
-  content:"";
-  position:absolute;
-  inset:-10px;
-  border-radius:999px;
-  pointer-events:none;
-  opacity:0;
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,.18),
-    0 0 0 10px rgba(5,195,249,.22);
-  animation: pawGlowHandoff .55s ease-out;
-}
-
-@keyframes pawConfirm{
-  0%   { transform: translateY(0) scale(1); }
-  35%  { transform: translateY(1px) scale(.975); }
-  100% { transform: translateY(0) scale(1); }
-}
-@keyframes pawGlowHandoff{
-  0%   { opacity:0; transform: scale(.98); }
-  25%  { opacity:.95; transform: scale(1); }
-  100% { opacity:0; transform: scale(1.04); }
-}
-
-45%{transform:scale(.97)} 100%{transform:scale(1)} }
-60%{ transform: translateY(-1px) scale(1.04); }
+@keyframes pawBump{
+  0%{ transform: translateY(0) scale(1); }
+  60%{ transform: translateY(-1px) scale(1.04); }
   100%{ transform: translateY(0) scale(1); }
 }
 
@@ -660,19 +624,27 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .send.loading::after,
 .send[aria-busy="true"]::after,
 .send[data-loading="1"]::after{
-  /* Calm working state: static circular ring (NO pulsing/looping) */
+  /* Calm “working” ring — static (NO looping pulse) */
   content:"";
   position:absolute;
   inset:-8px;
   border-radius:999px;
-  pointer-events:none;
 
-  /* Neutral ring + faint brand halo */
+  /* Soft brand-tinted + neutral mix */
+  border:2px solid rgba(255,255,255,.22);
   box-shadow:
-    0 0 0 2px rgba(255,255,255,.22),
-    0 0 0 8px rgba(5,195,249,.14);
+    0 0 0 5px rgba(5,195,249,.14),
+    0 0 0 10px rgba(5,195,249,.06);
+
   opacity:.85;
+  pointer-events:none;
+  transition: opacity .18s ease;
 }
+
+  50%{ transform:scale(1.06); opacity:.35; }
+  100%{ transform:scale(1); opacity:.75; }
+}
+
 
 
 /* ===== Tips modal ===== */
