@@ -50,14 +50,21 @@
 
     body.paw-contracts .contracts-controls{
       display:flex;
-      flex-wrap:wrap;
-      align-items:flex-end;
-      gap:12px;
+      flex-direction:column;
+      gap:10px;
       padding:10px 14px 12px;
       border-bottom:1px solid var(--border-soft);
       background:transparent;
     }
 
+    /* Two-row layout: Stage row then Upload row (keeps chat closer to fold on mobile) */
+    body.paw-contracts .controls-row{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:flex-end;
+      gap:14px;
+    }
+    
     body.paw-contracts .contracts-block{
       display:flex;
       flex-direction:column;
@@ -109,9 +116,16 @@
     /* Upload row */
     body.paw-contracts .upload-row{
       display:flex;
-      gap:10px;
+      gap:12px;
       align-items:center;
       flex-wrap:wrap;
+    }
+
+    body.paw-contracts .upload-status{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:260px;
     }
 
     body.paw-contracts .file-pill{
@@ -181,6 +195,7 @@
       body.paw-contracts .stage-seg{ width:100%; }
       body.paw-contracts .stage-btn{ flex:1 1 0; }
       body.paw-contracts .upload-row{ width:100%; }
+      body.paw-contracts .upload-status{ width:100%; }
       body.paw-contracts .file-pill{ width:100%; justify-content:center; }
       body.paw-contracts .mini-btn{ width:100%; }
       body.paw-contracts .file-name{ max-width: 100%; }
@@ -208,34 +223,40 @@
           <!-- Controls: Stage + Upload (optional) -->
           <div class="contracts-controls" aria-label="Contracts controls">
 
+            <div class="controls-row controls-row--stage">
+
             <div class="contracts-block">
               <div class="contracts-label">Stage (for uploads)</div>
               <div class="stage-seg" role="group" aria-label="Contract stage">
                 <button class="stage-btn" type="button" data-stage="blank">Blank</button>
                 <button class="stage-btn" type="button" data-stage="draft">Draft</button>
-                <button class="stage-btn primary" type="button" data-stage="executed">Executed</button>
+                <button class="stage-btn primary" type="button" data-stage="executed">Executed</b            </div>
+
+            <div class="controls-row controls-row--upload">
+
+utton>
               </div>
             </div>
 
             <div class="contracts-block" style="flex:1 1 420px;">
               <div class="contracts-label">Upload contract (PDF)</div>
               <div class="upload-row">
+                <div class="upload-status">
+                  <div id="fileName" class="file-name" style="opacity:.70;">No file selected</div>
+                  <div class="file-sub">Digitally generated PDFs only. Scanned documents are rejected.</div>
+                </div>
+
                 <div class="file-pill" title="Choose a PDF file">
                   Choose PDF…
                   <input id="file" type="file" accept="application/pdf" />
-                </div>
-
-                <button id="analyze" class="mini-btn primary" type="button" disabled>Analyze</button>
-
-                <div style="display:flex; flex-direction:column; gap:2px; min-width:240px;">
-                  <div id="fileName" class="file-name" style="opacity:.70;">No file selected</div>
-                  <div class="file-sub">Digitally generated PDFs only. Scanned documents are rejected.</div>
                 </div>
               </div>
             </div>
 
           </div>
-        </div>
+                    </div>
+
+</div>
 
         <div id="messages" class="messages" aria-live="polite"></div>
 
@@ -258,7 +279,7 @@
      * ------------------------------------------------------------
      * This file provides:
      *  - Chat UI (always available)
-     *  - Optional PDF upload + Analyze action (sends file to Worker)
+     *  - Optional PDF upload (auto-analyzes on selection; sends file to Worker)
      *  - Stage selector (Blank/Draft/Executed) that labels the upload intent
      *
      * IMPORTANT:
@@ -333,7 +354,6 @@ Good to know
 
       const $file = document.getElementById("file");
       const $fileName = document.getElementById("fileName");
-      const $analyze = document.getElementById("analyze");
       const stageBtns = Array.from(document.querySelectorAll(".stage-btn"));
 
       let currentFile = null;
@@ -359,12 +379,10 @@ Good to know
         if (!file) {
           $fileName.textContent = "No file selected";
           $fileName.style.opacity = ".70";
-          $analyze.disabled = true;
           return;
         }
         $fileName.textContent = file.name + " (" + Math.ceil(file.size/1024) + " KB)";
         $fileName.style.opacity = "1";
-        $analyze.disabled = false;
       }
 
       function clearFile(){
@@ -394,7 +412,9 @@ Good to know
 
           currentFile = f;
           setFileUI(f);
-          try { if (shell && shell.toast) shell.toast("Ready. Click Analyze to add this contract to the conversation."); } catch (_) {}
+
+          // Immediately analyze on upload (no Analyze button in v1)
+          uploadAndAnalyze(f);
         });
       }
 
@@ -415,6 +435,65 @@ Good to know
             reader.readAsDataURL(file);
           }catch(e){ reject(e); }
         });
+      }
+
+
+      // Auto-analyze on upload (v1)
+      // - We only allow ONE file. Selecting a file immediately sends it to the Worker.
+      // - The Worker decides if the PDF is digitally generated. If it's scanned, it rejects it.
+      let uploading = false;
+
+      async function uploadAndAnalyze(file){
+        if (!file || uploading) return;
+        uploading = true;
+
+        // Reset prior contract context whenever a new file is selected
+        contractSessionId = "";
+
+        // UI: show an "analyzing" state (chat still works)
+        try{
+          $fileName.textContent = "Analyzing…";
+          $fileName.style.opacity = "1";
+        }catch(_){}
+
+        try { if (shell && shell.toast) shell.toast("Analyzing contract…"); } catch (_) {}
+
+        try{
+          const b64 = await readFileAsBase64(file);
+
+          // NOTE: The Worker must:
+          // - validate PDF is not scanned (reject if scanned)
+          // - enforce page limits
+          // - create/return contract_session_id for ongoing chat context
+          await shell.sendExtra(
+            "Analyze this contract.",
+            {
+              action: "contract_upload",
+              contract_stage: stageState.stage,
+              file: {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                base64: b64
+              }
+            },
+            { echoUser: false }
+          );
+
+          // If the Worker returned a session_id, onResponse will capture it.
+          // Otherwise, the conversation still continues normally.
+          try{
+            // restore filename once upload completes
+            $fileName.textContent = file.name + " (" + Math.ceil(file.size/1024) + " KB)";
+            $fileName.style.opacity = "1";
+          }catch(_){}
+        }catch(e){
+          // If something fails, clear file so the user can try again.
+          clearFile();
+          try { if (shell && shell.toast) shell.toast("Could not analyze that file. Please try again."); } catch (_) {}
+        }finally{
+          uploading = false;
+        }
       }
 
       // Init tool shell
@@ -465,47 +544,6 @@ Good to know
           }catch(_){}
         }
       });
-
-      // Analyze click sends the file (no echo)
-      if ($analyze) {
-        $analyze.addEventListener("click", async () => {
-          try{
-            if (!currentFile) return;
-
-            // Read file bytes for the Worker
-            $analyze.disabled = true;
-            const b64 = await readFileAsBase64(currentFile);
-
-            // NOTE: The Worker must:
-            // - validate PDF is not scanned (reject if scanned)
-            // - enforce page limits
-            // - create/return contract_session_id for ongoing chat context
-            //
-            // We send file bytes ONLY for Analyze. Follow-up chat should use session_id.
-            await shell.sendExtra(
-              "Analyze this contract.",
-              {
-                action: "contract_upload",
-                contract_stage: stageState.stage,
-                file: {
-                  name: currentFile.name,
-                  type: currentFile.type,
-                  size: currentFile.size,
-                  base64: b64
-                }
-              },
-              { echoUser: false }
-            );
-
-            // Keep the file selected, but disable the button until they re-select or reset.
-            // (User can still chat; context is now in session_id if the Worker returned it.)
-            $analyze.disabled = true;
-          }catch(e){
-            try { if (shell && shell.toast) shell.toast("Upload failed. Please try again."); } catch (_) {}
-            $analyze.disabled = !currentFile;
-          }
-        });
-      }
 
       // Reset should clear file + local draft (but keep shell reset behavior)
       function fullReset(){
