@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!--
+    PAW Embed Guard (required):
+    These tool pages are built for Circle embedding.
+    If someone opens this page directly (not in an iframe), redirect to proagentworks.com.
+    Keep this lightweight; no dependencies.
+  -->
+  <script>
+    (function () {
+      try {
+        if (window.top === window.self) {
+          window.location.replace("https://proagentworks.com");
+        }
+      } catch (e) {
+        // If cross-origin framing prevents access to window.top, fail closed.
+        window.location.replace("https://proagentworks.com");
+      }
+    })();
+  </script>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Contracts</title>
+
+  <!--
+    NOTE: paw-ui.css is SHARED across tools.
+    Keep header markup consistent:
+    panel-topbar > topbar-row0 > tool-subtitle + topbar-right (utility-pair).
+    Changing shared classes affects multiple tools.
+  -->
+  <link rel="stylesheet" href="./paw-ui.css">
+
+  <style>
+    /* ==========================================================
+       PAW — Contracts (Circle-embedded tool page)
+       ----------------------------------------------------------
+       DESIGN GOALS (v1):
+       - Chat-first (works with or without a document)
+       - Optional contract upload (PDF) for more precise analysis
+       - Stage selector (Blank / Draft / Executed) applies to uploads
+       - Scanned PDFs are NOT supported (we reject and ask for a digital PDF)
+
+       IMPORTANT PRODUCT RULES:
+       - No AI logic lives here. All "secret sauce" prompting is in the Worker.
+       - Do NOT store uploaded contracts in localStorage.
+         We only store chat history + stage selection as a local draft (optional).
+       ========================================================== */
+
+    body.paw-contracts .contracts-controls{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:flex-end;
+      gap:12px;
+      padding:10px 14px 12px;
+      border-bottom:1px solid var(--border-soft);
+      background:transparent;
+    }
+
+    body.paw-contracts .contracts-block{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width: 220px;
+    }
+
+    body.paw-contracts .contracts-label{
+      font-size:12px;
+      font-weight:800;
+      color:rgba(15,23,42,.72);
+      letter-spacing:-0.01em;
+    }
+
+    /* Stage segmented control (scoped to Contracts only) */
+    body.paw-contracts .stage-seg{
+      display:flex;
+      align-items:center;
+      gap:0;
+      border:1px solid rgba(15,23,42,.12);
+      background:rgba(255,255,255,.86);
+      border-radius:999px;
+      overflow:hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+      width: fit-content;
+    }
+    body.paw-contracts .stage-btn{
+      height:32px;
+      padding:0 14px;
+      border:0;
+      background:transparent;
+      color:rgba(15,23,42,.78);
+      font-weight:800;
+      font-size:13px;
+      cursor:pointer;
+      white-space:nowrap;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition: background .15s ease, color .15s ease;
+    }
+    body.paw-contracts .stage-btn:hover{ background:rgba(15,23,42,.05); }
+    body.paw-contracts .stage-btn + .stage-btn{ border-left:1px solid rgba(15,23,42,.10); }
+    body.paw-contracts .stage-btn.primary{
+      background: rgba(5,195,249,.18);
+      color: rgba(15,23,42,.92);
+    }
+
+    /* Upload row */
+    body.paw-contracts .upload-row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    body.paw-contracts .file-pill{
+      position:relative;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      height:34px;
+      padding:0 12px;
+      border-radius:999px;
+      border:1px solid var(--field-border);
+      background:rgba(255,255,255,.92);
+      font-weight:800;
+      font-size:13px;
+      color:var(--text-strong);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+    }
+    body.paw-contracts .file-pill input[type="file"]{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      cursor:pointer;
+      width:100%;
+      height:100%;
+    }
+    body.paw-contracts .file-name{
+      font-size:13px;
+      font-weight:750;
+      color:rgba(15,23,42,.82);
+      max-width: 360px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    body.paw-contracts .file-sub{
+      font-size:12px;
+      color:rgba(15,23,42,.60);
+      line-height:1.2;
+    }
+
+    body.paw-contracts .mini-btn{
+      height:34px;
+      padding:0 12px;
+      border-radius:999px;
+      border:1px solid rgba(15,23,42,.14);
+      background:rgba(255,255,255,.92);
+      font-weight:800;
+      font-size:13px;
+      cursor:pointer;
+      transition: background .15s ease, border-color .15s ease, transform .06s ease;
+    }
+    body.paw-contracts .mini-btn:hover{ background:#fff; border-color: rgba(15,23,42,.18); }
+    body.paw-contracts .mini-btn:active{ transform: translateY(1px); }
+    body.paw-contracts .mini-btn.primary{
+      border-color: rgba(5,195,249,.55);
+      background: rgba(5,195,249,.16);
+      color: rgba(15,23,42,.92);
+    }
+
+    /* Mobile: stack nicely */
+    @media (max-width: 560px){
+      body.paw-contracts .contracts-controls{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      body.paw-contracts .contracts-block{ min-width: 0; width:100%; }
+      body.paw-contracts .stage-seg{ width:100%; }
+      body.paw-contracts .stage-btn{ flex:1 1 0; }
+      body.paw-contracts .upload-row{ width:100%; }
+      body.paw-contracts .file-pill{ width:100%; justify-content:center; }
+      body.paw-contracts .mini-btn{ width:100%; }
+      body.paw-contracts .file-name{ max-width: 100%; }
+    }
+  </style>
+</head>
+
+<body class="paw-contracts">
+  <div class="app">
+    <div class="frame">
+      <div class="panel">
+
+        <div class="panel-topbar">
+          <div class="topbar-row0">
+            <div class="tool-subtitle">Understand contracts, summarize key terms, and talk through negotiation scenarios.</div>
+
+            <div class="topbar-right">
+              <div class="utility-pair paw-seg" role="group" aria-label="Tool utilities">
+                <button id="reset" class="util-btn paw-seg__btn" type="button">Reset</button>
+                <button id="tips" class="util-btn paw-seg__btn" type="button">Tips &amp; How To</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controls: Stage + Upload (optional) -->
+          <div class="contracts-controls" aria-label="Contracts controls">
+
+            <div class="contracts-block">
+              <div class="contracts-label">Stage (for uploads)</div>
+              <div class="stage-seg" role="group" aria-label="Contract stage">
+                <button class="stage-btn" type="button" data-stage="blank">Blank</button>
+                <button class="stage-btn" type="button" data-stage="draft">Draft</button>
+                <button class="stage-btn primary" type="button" data-stage="executed">Executed</button>
+              </div>
+            </div>
+
+            <div class="contracts-block" style="flex:1 1 420px;">
+              <div class="contracts-label">Upload contract (PDF)</div>
+              <div class="upload-row">
+                <div class="file-pill" title="Choose a PDF file">
+                  Choose PDF…
+                  <input id="file" type="file" accept="application/pdf" />
+                </div>
+
+                <button id="analyze" class="mini-btn primary" type="button" disabled>Analyze</button>
+
+                <div style="display:flex; flex-direction:column; gap:2px; min-width:240px;">
+                  <div id="fileName" class="file-name" style="opacity:.70;">No file selected</div>
+                  <div class="file-sub">Digitally generated PDFs only. Scanned documents are rejected.</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div id="messages" class="messages" aria-live="polite"></div>
+
+        <div class="composer">
+          <textarea id="input" placeholder="Ask a question about a contract or talk through a negotiation scenario…"></textarea>
+          <button id="send" class="send" aria-label="Send" type="button">
+            <img src="https://paw-tools.pages.dev/paw.png" class="send-icon" alt="">
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="./tool-shell.js"></script>
+
+  <script>
+    /**
+     * PAW Contracts (Circle-embedded tool page)
+     * ------------------------------------------------------------
+     * This file provides:
+     *  - Chat UI (always available)
+     *  - Optional PDF upload + Analyze action (sends file to Worker)
+     *  - Stage selector (Blank/Draft/Executed) that labels the upload intent
+     *
+     * IMPORTANT:
+     *  - This page DOES NOT attempt OCR or PDF text extraction.
+     *    The Worker will validate whether the PDF is digitally generated.
+     *    If the Worker indicates "scanned", this UI rejects the file and asks the
+     *    user to upload a digital PDF (DocuSign/Dotloop/SkySlope, etc.).
+     *
+     * PRIVACY / STORAGE (locked):
+     *  - We do NOT store uploaded contract bytes in localStorage.
+     *  - We only store chat history + the selected stage as a local draft.
+     */
+    (function () {
+      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+
+      // Upload constraints (v1)
+      const MAX_FILE_MB = 10;              // hard cap to prevent accidental giant files
+      const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+
+      // NOTE: Page limits are enforced in the Worker (it can reliably count pages after parsing).
+      // We keep the UI copy minimal and let the Worker return a friendly message if the page
+      // count is too high.
+
+      const TIPS_TEXT =
+`What you can do here
+• Upload a contract to get a clear summary, key terms, and important dates
+• Ask questions about specific clauses or timelines
+• Talk through negotiation scenarios with or without a document
+
+Contract stages (for uploads)
+• Blank: Learn what a form is for and how it’s typically completed
+• Draft: Review filled-in terms before sharing with a client
+• Executed: Summarize the deal and organize next steps
+
+File uploads
+• Use digitally generated PDFs (DocuSign, Dotloop, SkySlope, etc.)
+• Scanned or photographed documents aren’t supported
+• Files are processed and discarded after analysis
+
+Good to know
+• PAW explains what’s written — it doesn’t provide legal advice
+• Always confirm final decisions with your broker or attorney`;
+
+      // ------------------------------------------------------------
+      // Local draft (chat only) — same "never silent restore" pattern
+      // ------------------------------------------------------------
+      const DRAFT_KEY = "paw:contracts:draft:v1";
+      const MAX_DRAFT_HISTORY_ITEMS = 30;
+      const MAX_DRAFT_SHELL_INPUT_CHARS = 8000;
+
+      function trunc(s, max){
+        s = (s == null) ? "" : String(s);
+        if (!max || max <= 0) return "";
+        return s.length > max ? s.slice(0, max) : s;
+      }
+      function storageGet(key){
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (_) { return null; }
+      }
+      function storageSet(key, val){
+        try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (_) { return false; }
+      }
+      function storageDel(key){
+        try { localStorage.removeItem(key); return true; } catch (_) { return false; }
+      }
+
+      // Stage state (default Executed)
+      const stageState = { stage: "executed" }; // blank | draft | executed
+
+      const $file = document.getElementById("file");
+      const $fileName = document.getElementById("fileName");
+      const $analyze = document.getElementById("analyze");
+      const stageBtns = Array.from(document.querySelectorAll(".stage-btn"));
+
+      let currentFile = null;
+
+      // Optional session handle returned by the Worker after Analyze
+      // (Worker can use this to keep contract context without resending the file.)
+      let contractSessionId = "";
+
+      function setStage(next){
+        stageState.stage = next;
+        stageBtns.forEach(btn => {
+          const on = btn.dataset.stage === next;
+          btn.classList.toggle("primary", on);
+          btn.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+      }
+
+      stageBtns.forEach(btn => {
+        btn.addEventListener("click", () => setStage(btn.dataset.stage || "executed"));
+      });
+
+      function setFileUI(file){
+        if (!file) {
+          $fileName.textContent = "No file selected";
+          $fileName.style.opacity = ".70";
+          $analyze.disabled = true;
+          return;
+        }
+        $fileName.textContent = file.name + " (" + Math.ceil(file.size/1024) + " KB)";
+        $fileName.style.opacity = "1";
+        $analyze.disabled = false;
+      }
+
+      function clearFile(){
+        currentFile = null;
+        contractSessionId = ""; // new upload resets context
+        try { if ($file) $file.value = ""; } catch (_) {}
+        setFileUI(null);
+      }
+
+      // File selection
+      if ($file) {
+        $file.addEventListener("change", () => {
+          const f = ($file.files && $file.files[0]) ? $file.files[0] : null;
+          if (!f) { clearFile(); return; }
+
+          if (f.type !== "application/pdf") {
+            clearFile();
+            try { if (shell && shell.toast) shell.toast("Please upload a PDF."); } catch (_) {}
+            return;
+          }
+
+          if (f.size > MAX_FILE_BYTES) {
+            clearFile();
+            try { if (shell && shell.toast) shell.toast("File is too large. Please upload a smaller PDF (max " + MAX_FILE_MB + "MB)."); } catch (_) {}
+            return;
+          }
+
+          currentFile = f;
+          setFileUI(f);
+          try { if (shell && shell.toast) shell.toast("Ready. Click Analyze to add this contract to the conversation."); } catch (_) {}
+        });
+      }
+
+      // Helper: read file as base64 (without data: prefix)
+      function readFileAsBase64(file){
+        return new Promise((resolve, reject) => {
+          try{
+            const reader = new FileReader();
+            reader.onload = () => {
+              try{
+                const result = String(reader.result || "");
+                // result is a data URL: "data:application/pdf;base64,...."
+                const comma = result.indexOf(",");
+                resolve(comma >= 0 ? result.slice(comma + 1) : result);
+              }catch(e){ reject(e); }
+            };
+            reader.onerror = () => reject(reader.error || new Error("File read failed"));
+            reader.readAsDataURL(file);
+          }catch(e){ reject(e); }
+        });
+      }
+
+      // Init tool shell
+      const shell = window.PAWToolShell.init({
+        apiEndpoint: API_ENDPOINT,
+        toolId: "contracts",
+        inputPlaceholder: "Ask a question about a contract or talk through a negotiation scenario…",
+        tipsText: TIPS_TEXT,
+
+        // Contracts behaves like Assistant (chat-first), not a deliverable modal.
+        deliverableMode: false,
+
+        // Preferences always sent (Worker decides how to use them)
+        getPrefs: () => ({
+          contract_stage: stageState.stage,
+          contract_session_id: contractSessionId ? contractSessionId : "",
+          has_contract_context: !!contractSessionId
+        }),
+
+        // Extra payload included on each user message (lightweight)
+        getExtraPayload: () => ({
+          contract_session_id: contractSessionId ? contractSessionId : ""
+        }),
+
+        // Interpret special Worker responses for contract uploads:
+        // - Worker may return:
+        //   { reply: "...", contract: { session_id:"...", scanned:true/false, pages:12 } }
+        onResponse: (data) => {
+          try{
+            const c = data && data.contract ? data.contract : null;
+            if (c && typeof c === "object") {
+              // If Worker flags scanned, reject and clear the selected file.
+              if (c.scanned === true) {
+                clearFile();
+                try { if (shell && shell.toast) shell.toast("Scanned PDF detected. Please upload a digitally generated PDF (DocuSign/Dotloop/SkySlope)."); } catch (_) {}
+              }
+
+              // Capture session id if provided.
+              if (c.session_id) {
+                contractSessionId = String(c.session_id || "");
+                // Nudge the chat placeholder after analysis so it feels contextual.
+                try{
+                  const $input = document.getElementById("input");
+                  if ($input) $input.placeholder = "Ask about timelines, contingencies, or next steps…";
+                }catch(_){}
+              }
+            }
+          }catch(_){}
+        }
+      });
+
+      // Analyze click sends the file (no echo)
+      if ($analyze) {
+        $analyze.addEventListener("click", async () => {
+          try{
+            if (!currentFile) return;
+
+            // Read file bytes for the Worker
+            $analyze.disabled = true;
+            const b64 = await readFileAsBase64(currentFile);
+
+            // NOTE: The Worker must:
+            // - validate PDF is not scanned (reject if scanned)
+            // - enforce page limits
+            // - create/return contract_session_id for ongoing chat context
+            //
+            // We send file bytes ONLY for Analyze. Follow-up chat should use session_id.
+            await shell.sendExtra(
+              "Analyze this contract.",
+              {
+                action: "contract_upload",
+                contract_stage: stageState.stage,
+                file: {
+                  name: currentFile.name,
+                  type: currentFile.type,
+                  size: currentFile.size,
+                  base64: b64
+                }
+              },
+              { echoUser: false }
+            );
+
+            // Keep the file selected, but disable the button until they re-select or reset.
+            // (User can still chat; context is now in session_id if the Worker returned it.)
+            $analyze.disabled = true;
+          }catch(e){
+            try { if (shell && shell.toast) shell.toast("Upload failed. Please try again."); } catch (_) {}
+            $analyze.disabled = !currentFile;
+          }
+        });
+      }
+
+      // Reset should clear file + local draft (but keep shell reset behavior)
+      function fullReset(){
+        try { storageDel(DRAFT_KEY); } catch (_) {}
+        clearFile();
+        setStage("executed");
+        try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+        try{
+          const $input = document.getElementById("input");
+          if ($input) $input.placeholder = "Ask a question about a contract or talk through a negotiation scenario…";
+        }catch(_){}
+      }
+
+      // Intercept Reset so we can confirm and clear draft+file.
+      try {
+        const $reset = document.getElementById("reset");
+        if ($reset) {
+          $reset.addEventListener("click", (e) => {
+            try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
+            try {
+              const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+              const hasAny =
+                (rawShellState && Array.isArray(rawShellState.history) && rawShellState.history.length) ||
+                (rawShellState && typeof rawShellState.input === "string" && rawShellState.input.trim().length) ||
+                !!currentFile ||
+                !!contractSessionId;
+
+              if (hasAny) {
+                const ok = window.confirm("Reset will clear this session and start fresh. Continue?");
+                if (!ok) return;
+              }
+            } catch (_) {}
+            fullReset();
+          }, true);
+        }
+      } catch (_) {}
+
+      // -------------------------
+      // Draft autosave (chat only)
+      // -------------------------
+      let __draftSaveT = null;
+      function scheduleDraftSave(){
+        try {
+          if (__draftSaveT) clearTimeout(__draftSaveT);
+          __draftSaveT = setTimeout(saveDraftNow, 350);
+        } catch (_) {}
+      }
+
+      function saveDraftNow(){
+        try {
+          const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+          const st = {
+            history: Array.isArray(rawShellState.history) ? rawShellState.history.slice(-MAX_DRAFT_HISTORY_ITEMS) : [],
+            input: trunc(rawShellState.input, MAX_DRAFT_SHELL_INPUT_CHARS)
+          };
+
+          const hasAny = (st.input && st.input.trim()) || (Array.isArray(st.history) && st.history.length);
+          if (!hasAny) { storageDel(DRAFT_KEY); return; }
+
+          storageSet(DRAFT_KEY, {
+            v: 1,
+            updatedAt: new Date().toISOString(),
+            toolId: "contracts",
+            stage: stageState.stage,
+            shell: st
+          });
+        } catch (_) {}
+      }
+
+      // Autosave on composer input
+      try {
+        const $input = document.getElementById("input");
+        if ($input) {
+          $input.addEventListener("input", scheduleDraftSave);
+          $input.addEventListener("change", scheduleDraftSave);
+        }
+      } catch (_) {}
+      window.addEventListener("beforeunload", () => { try { saveDraftNow(); } catch (_) {} });
+
+      // Resume prompt (simple confirm, no modal)
+      const existing = storageGet(DRAFT_KEY);
+      if (existing && existing.shell) {
+        const ok = window.confirm("Resume your previous Contracts session on this device?");
+        if (ok) {
+          try {
+            setStage(existing.stage || "executed");
+            if (shell && shell.setState) shell.setState(existing.shell);
+          } catch (_) {}
+        } else {
+          try { storageDel(DRAFT_KEY); } catch (_) {}
+        }
+      }
+
+    })();
+  </script>
+</body>
+</html>
