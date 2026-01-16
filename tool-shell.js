@@ -362,7 +362,11 @@ if ($input) {
 
       function clearComposer(opts) {
         opts = opts || {};
-        if ($input) $input.value = "";
+        if ($input) {
+            $input.value = "";
+            // Auto-grow: return to baseline height when reset clears the composer
+            try { resetAutoGrowTextarea($input); } catch (_) {}
+          }
         // Auto-grow: return to baseline height when cleared
         resetAutoGrowTextarea($input);
 
@@ -786,7 +790,14 @@ try {
             });
           }
 
-          if ($input) $input.value = typeof st.input === "string" ? st.input : "";
+          if ($input) {
+            $input.value = typeof st.input === "string" ? st.input : "";
+            // Auto-grow: re-measure after restore so height matches restored content
+            try {
+              if ($input.value) autoGrowTextarea($input);
+              else resetAutoGrowTextarea($input);
+            } catch (_) {}
+          }
 
           // Ensure we're not showing "Working..." after a restore.
           try { hideWorkingBar(); } catch (_) {}
