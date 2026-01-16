@@ -514,25 +514,37 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 }
 .msg .bubble p{ margin:0; white-space:pre-wrap; }
 
+/* ==========================================================
+   PAW Composer + Paw Submit Contract (LOCKED)
+   ----------------------------------------------------------
+   Goal:
+   - One shared input + paw submit interaction across ALL tools.
+   - Never clips, never squares off, feels responsive on click OR Enter.
+
+   Contract (tool pages must follow):
+   - Composer wrapper: <div class="composer">
+   - Textarea: <textarea id="input"> OR <textarea id="prompt">
+   - Submit: <button id="send" class="send"> with child .send-icon
+
+   Behavior hooks (set by tool-shell.js):
+   - Click/Enter feedback: .send.paw-bump
+   - Working state: aria-busy="true" and/or data-loading="1"
+   ========================================================== */
+
 .composer{
-  padding:12px 14px 26px;
+  /* Extra breathing room so hover/press shadows never get clipped by the panel radius */
+  padding:16px 18px 30px;
   background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.85));
   display:flex;
-  gap:12px;
+  gap:14px;
   align-items:flex-end;
 }
 .composer textarea{
   flex:1;
-  min-height:46px;
+  min-height:54px;
 
-  /* ==========================================================
-     Auto-grow textarea (LOCKED)
-     ----------------------------------------------------------
-     Goal:
-     - ChatGPT-style expanding input across all tools.
-     - JS handles the live resizing; CSS provides safe bounds.
-     - When the max is reached, JS will switch overflow to auto.
-     ========================================================== */
+  /* Auto-grow textarea (LOCKED)
+     - JS handles live resizing; CSS provides safe bounds. */
   max-height:var(--composer-max-height, 320px);
   resize:none;
   overflow-y:hidden;
@@ -540,12 +552,14 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   border-radius:16px;
   border:1px solid var(--field-border);
   background:rgba(255,255,255,.92);
-  padding:12px 12px;
+  padding:14px 14px;
   font-size:14px;
   font-weight:650;
+  line-height:1.35;
   color:var(--text-strong);
   outline:none;
 }
+
 .send{
   width:60px;
   height:60px;
@@ -559,25 +573,28 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   cursor:pointer;
   position:relative;
 
-  /* Brand presence at rest (soft circular depth) */
+  /* Controlled depth (avoid oversized shadow that clips on hover) */
   box-shadow:
-    0 10px 22px rgba(15,23,42,.14),
-    0 6px 14px rgba(5,195,249,.18);
+    0 8px 18px rgba(15,23,42,.12),
+    0 4px 10px rgba(5,195,249,.16);
 
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: transform .14s ease, box-shadow .14s ease;
 }
 .send:hover{
-  transform: translateY(-1px) scale(1.03);
+  /* Subtle lift only (no aggressive scale) */
+  transform: translateY(-1px);
   box-shadow:
-    0 16px 34px rgba(15,23,42,.18),
-    0 14px 30px rgba(5,195,249,.22);
+    0 12px 26px rgba(15,23,42,.14),
+    0 8px 18px rgba(5,195,249,.18);
 }
 .send:active{
-  transform: translateY(1px) scale(.97);
+  /* Tactile press */
+  transform: translateY(1px) scale(.98);
   box-shadow:
-    0 10px 22px rgba(15,23,42,.16),
-    0 8px 18px rgba(5,195,249,.20);
+    0 6px 14px rgba(15,23,42,.12),
+    0 4px 10px rgba(5,195,249,.16);
 }
+
 /* Brand-forward focus ring (accessibility-safe)
    - Avoids browser default square outlines
    - Stays circular and on-brand inside iframes */

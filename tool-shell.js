@@ -346,6 +346,46 @@ if ($input) {
       let history = [];
       let isSending = false;
 
+      // ==========================================================
+      // PAW Composer + Paw Submit Contract (LOCKED)
+      // ----------------------------------------------------------
+      // Goal:
+      // - Every tool gets the same paw submit interaction.
+      // - Click and Enter behave identically.
+      //
+      // Visual/behavior hooks (shared CSS in paw-ui.css):
+      // - .send.paw-bump               (instant submit acknowledgement)
+      // - aria-busy="true" + data-loading="1"  (working ring)
+      //
+      // Tool page contract:
+      // - Submit button must be: <button id="send" class="send">
+      // - Composer textarea must be: #input or #prompt
+      // ==========================================================
+
+      function pawSubmitBump(){
+        try {
+          if (!$send) return;
+          $send.classList.remove("paw-bump");
+          // Force reflow so repeated submits retrigger the animation
+          void $send.offsetWidth;
+          $send.classList.add("paw-bump");
+          setTimeout(function(){ try{ $send.classList.remove("paw-bump"); }catch(_){ } }, 220);
+        } catch (_) {}
+      }
+
+      function pawSetBusy(on){
+        try {
+          if (!$send) return;
+          if (on) {
+            $send.setAttribute("aria-busy", "true");
+            $send.setAttribute("data-loading", "1");
+          } else {
+            $send.removeAttribute("aria-busy");
+            $send.removeAttribute("data-loading");
+          }
+        } catch (_) {}
+      }
+
       function pushHistory(role, content) {
         const item = {
           role: role === "assistant" ? "assistant" : "user",
@@ -572,20 +612,10 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         const echoUser = options.echoUser !== false;
 
         isSending = true;
-// Brand feedback: brief “pop” on submit (click or Enter)
-try {
-  if ($send) {
-    $send.classList.remove("paw-bump");
-    // force reflow so repeated submits retrigger animation
-    void $send.offsetWidth;
-    $send.classList.add("paw-bump");
-    setTimeout(function(){ try{ $send.classList.remove("paw-bump"); }catch(_){ } }, 220);
 
-    // also mark busy for CSS hooks (existing loading ring listens to these)
-    $send.setAttribute("aria-busy", "true");
-    $send.setAttribute("data-loading", "1");
-  }
-} catch (_) {}
+        // Brand feedback: instant acknowledgement + working ring (click or Enter)
+        pawSubmitBump();
+        pawSetBusy(true);
 
 
         let thinkingNode = null;
@@ -631,7 +661,7 @@ try {
           appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
         } finally {
           isSending = false;
-          try{ if($send){ $send.removeAttribute('aria-busy'); $send.removeAttribute('data-loading'); } }catch(_){ }
+          pawSetBusy(false);
           hideWorkingBar();
         }
       }
@@ -658,6 +688,11 @@ try {
         }
 
         isSending = true;
+
+        // Brand feedback: instant acknowledgement + working ring (click or Enter)
+        pawSubmitBump();
+        pawSetBusy(true);
+
         let thinkingNode = null;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
@@ -698,6 +733,7 @@ try {
           appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
         } finally {
           isSending = false;
+          pawSetBusy(false);
           hideWorkingBar();
         }
       }
