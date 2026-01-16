@@ -6,8 +6,6 @@
  * - This file only handles UI wiring + API calls.
  */
 
-/* TOOL-SHELL VERSION: 2026-01-15-gold1 (autogrow + submit-bump + reset-resize) */
-
 (function () {
   "use strict";
 
@@ -300,99 +298,23 @@ function removeNode(node) {
 
       const $messages = $("messages");
       const $input = $("input") || $("prompt");
-      setupAutoGrowTextarea($input);
       const $send = $("send") || $("submitBtn");
       const $reset = $("reset");
       const $tips = $("tips");
       const $toolForm = $("toolForm");
 
+// Auto-grow: wire the main composer textarea (works for #input or #prompt)
+if ($input) {
+  // Run once on load (handles restored drafts/resume flows)
+  autoGrowTextarea($input);
 
-// ==========================================================
-// Brand feedback: Paw submit button state (LOCKED)
-// ----------------------------------------------------------
-// Goal:
-// - Keep the paw button as the brand “hero” even when users submit via Enter.
-// - Provide a brief, obvious “I’m working” cue without changing behavior.
-//
-// Contract:
-// - .paw-bump is a short glow pop (CSS animation) applied on submit.
-// - data-loading="1" + aria-busy="true" keep a subtle working ring active while sending.
-// - This must NEVER change button size, icon, or request logic.
-// ==========================================================
-function bumpSendButton(){
-  try{
-    if (!$send) return;
-    $send.classList.add("paw-bump");
-    window.setTimeout(function(){ try{ $send.classList.remove("paw-bump"); }catch(_){} }, 320);
-  }catch(_){}
+  $input.addEventListener("input", function(){
+    autoGrowTextarea($input);
+  });
+
+  // Some browsers change layout after fonts load; one more pass is cheap.
+  setTimeout(function(){ autoGrowTextarea($input); }, 0);
 }
-function setSendLoading(on){
-  try{
-    if (!$send) return;
-    if (on){
-      $send.setAttribute("data-loading","1");
-      $send.setAttribute("aria-busy","true");
-    } else {
-      $send.removeAttribute("data-loading");
-      $send.removeAttribute("aria-busy");
-    }
-  }catch(_){}
-
-
-// ==========================================================
-// Composer auto-grow (ChatGPT-style) — shared across tools
-// ----------------------------------------------------------
-// Contract:
-// - The textarea grows with content up to CSS --composer-max-height (default 320px)
-// - After max, it becomes internally scrollable
-// - Reset returns it to its baseline height
-// ==========================================================
-function setupAutoGrowTextarea($ta){
-  try{
-    if (!$ta) return;
-    const cs = window.getComputedStyle($ta);
-    // Prefer a shared CSS variable (set in paw-ui.css). Fallback to 320.
-    let maxPx = 320;
-    try{
-      const v = cs.getPropertyValue("--composer-max-height") || "";
-      const n = parseFloat(String(v).trim());
-      if (!isNaN(n) && n > 0) maxPx = n;
-    }catch(_){}
-
-    function resize(){
-      try{
-        // If the tool page hides the composer, do nothing.
-        if (!$ta || !$ta.isConnected) return;
-        $ta.style.height = "auto";
-        const full = $ta.scrollHeight || 0;
-        const cap = Math.min(full, maxPx);
-        $ta.style.height = cap + "px";
-        $ta.style.overflowY = full > maxPx ? "auto" : "hidden";
-      }catch(_){}
-    }
-
-    // Expose for reset/other internal uses
-    $ta.__pawAutoGrowResize = resize;
-
-    // Run now + as the user types
-    resize();
-    $ta.addEventListener("input", resize, { passive: true });
-    $ta.addEventListener("change", resize, { passive: true });
-
-    // Keep sane on viewport changes (mobile rotation, etc.)
-    window.addEventListener("resize", function(){ try{ resize(); }catch(_){} }, { passive: true });
-  }catch(_){}
-}
-
-function resetAutoGrowTextarea($ta){
-  try{
-    if (!$ta) return;
-    // Clear explicit height; then resize once to baseline.
-    $ta.style.height = "";
-    $ta.style.overflowY = "hidden";
-    if (typeof $ta.__pawAutoGrowResize === "function") $ta.__pawAutoGrowResize();
-  }catch(_){}
-}}
 
       const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : null;
       const getExtraPayload =
@@ -441,13 +363,54 @@ function resetAutoGrowTextarea($ta){
       function clearComposer(opts) {
         opts = opts || {};
         if ($input) $input.value = "";
-          resetAutoGrowTextarea($input);
-          try { setSendLoading(false); } catch (_) {}
-          try { if ($send) $send.classList.remove("paw-bump"); } catch (_) {}
+        // Auto-grow: return to baseline height when cleared
+        resetAutoGrowTextarea($input);
+
         if ($input && opts.keepFocus) {
           try { $input.focus(); } catch (_) {}
         }
       }
+
+// ==========================================================
+// Auto-grow textarea (LOCKED)
+// ----------------------------------------------------------
+// Goal: ChatGPT-style expanding input across all tools.
+// Contract:
+// - CSS sets max-height and overflow-y:hidden by default.
+// - JS expands height to fit content until max-height, then enables scroll.
+// - Reset/clear returns textarea to its baseline height.
+// ==========================================================
+function autoGrowTextarea($ta){
+  try{
+    if(!$ta) return;
+    // Reset to auto so scrollHeight reflects true content height
+    $ta.style.height = "auto";
+
+    // Max height from computed styles (falls back to 320px via CSS var)
+    const cs = window.getComputedStyle($ta);
+    const maxH = parseFloat(cs.maxHeight || "0") || 320;
+
+    const next = Math.min($ta.scrollHeight, maxH);
+    $ta.style.height = next + "px";
+
+    // If we hit max height, allow scrolling within textarea
+    if ($ta.scrollHeight > maxH + 1){
+      $ta.style.overflowY = "auto";
+    } else {
+      $ta.style.overflowY = "hidden";
+    }
+  } catch(_){}
+}
+
+function resetAutoGrowTextarea($ta){
+  try{
+    if(!$ta) return;
+    $ta.style.height = "";
+    $ta.style.overflowY = "";
+  }catch(_){}
+}
+
+
 
       function getPostUrl() {
         // IMPORTANT FIX: Worker is at the root, NOT /api
@@ -605,8 +568,22 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         const echoUser = options.echoUser !== false;
 
         isSending = true;
-        setSendLoading(true);
-        bumpSendButton();
+// Brand feedback: brief “pop” on submit (click or Enter)
+try {
+  if ($send) {
+    $send.classList.remove("paw-bump");
+    // force reflow so repeated submits retrigger animation
+    void $send.offsetWidth;
+    $send.classList.add("paw-bump");
+    setTimeout(function(){ try{ $send.classList.remove("paw-bump"); }catch(_){ } }, 220);
+
+    // also mark busy for CSS hooks (existing loading ring listens to these)
+    $send.setAttribute("aria-busy", "true");
+    $send.setAttribute("data-loading", "1");
+  }
+} catch (_) {}
+
+
         let thinkingNode = null;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
@@ -650,7 +627,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
         } finally {
           isSending = false;
-          setSendLoading(false);
+          try{ if($send){ $send.removeAttribute('aria-busy'); $send.removeAttribute('data-loading'); } }catch(_){ }
           hideWorkingBar();
         }
       }
@@ -677,8 +654,6 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         }
 
         isSending = true;
-        setSendLoading(true);
-        bumpSendButton();
         let thinkingNode = null;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
@@ -719,7 +694,6 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
         } finally {
           isSending = false;
-          setSendLoading(false);
           hideWorkingBar();
         }
       }
@@ -736,8 +710,6 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           history = [];
           if ($messages) $messages.innerHTML = "";
           if ($input) $input.value = "";
-          try { setSendLoading(false); } catch (_) {}
-          try { if ($send) $send.classList.remove("paw-bump"); } catch (_) {}
 
           // Hide the fixed "Working..." strip if it is visible.
           try { hideWorkingBar(); } catch (_) {}

@@ -5,9 +5,6 @@
    - This file is SHARED across ALL tools (ask.html, listing.html, etc).
    ========================================================== */
 
-/* PAW-UI VERSION: 2026-01-15-gold1 (autogrow + listing-mobile + paw-brand) */
-
-
 :root{
   --bg:#ffffff;
 
@@ -210,7 +207,6 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 }
 .select-wrap{
   position:relative;
-  will-change: transform, box-shadow;
   display:inline-flex;
   align-items:center;
 }
@@ -331,6 +327,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
     margin-top:2px;
   }
 }
+
 /* ===== Key facts ===== */
 .topbar-row2{
   padding:12px 14px 14px;
@@ -528,10 +525,14 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   flex:1;
   min-height:46px;
 
-  /* ChatGPT-style auto-grow (shared):
-     - JS grows height with content
-     - CSS caps growth to avoid taking over the screen
-     - after max, JS enables vertical scroll inside the box */
+  /* ==========================================================
+     Auto-grow textarea (LOCKED)
+     ----------------------------------------------------------
+     Goal:
+     - ChatGPT-style expanding input across all tools.
+     - JS handles the live resizing; CSS provides safe bounds.
+     - When the max is reached, JS will switch overflow to auto.
+     ========================================================== */
   max-height:var(--composer-max-height, 320px);
   resize:none;
   overflow-y:hidden;
@@ -544,10 +545,6 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   font-weight:650;
   color:var(--text-strong);
   outline:none;
-}
-
-@media (max-width: 560px){
-  :root{ --composer-max-height: 240px; }
 }
 .send{
   width:60px;
@@ -562,75 +559,36 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   cursor:pointer;
   position:relative;
 
-  /* Brand presence (resting):
-     - Always-on, soft circular depth (not a square outline)
-     - Slight brand-tinted glow + a neutral lift shadow */
+  /* Brand presence at rest (soft circular depth) */
   box-shadow:
     0 10px 22px rgba(15,23,42,.14),
-    0 16px 34px rgba(5,195,249,.14);
+    0 6px 14px rgba(5,195,249,.18);
 
-  transition: transform .15s ease, box-shadow .18s ease;
+  transition: transform .15s ease, box-shadow .15s ease;
 }
-
-/* Hover: elevate + brighten (still circular) */
 .send:hover{
   transform: translateY(-1px) scale(1.03);
   box-shadow:
-    0 14px 28px rgba(15,23,42,.16),
-    0 22px 46px rgba(5,195,249,.22);
+    0 16px 34px rgba(15,23,42,.18),
+    0 14px 30px rgba(5,195,249,.22);
 }
-
-/* Press: grounded (still premium) */
 .send:active{
   transform: translateY(1px) scale(.97);
   box-shadow:
-    0 10px 20px rgba(15,23,42,.16),
-    0 16px 34px rgba(5,195,249,.18);
+    0 10px 22px rgba(15,23,42,.16),
+    0 8px 18px rgba(5,195,249,.20);
 }
-
-/* IMPORTANT:
-   Some browsers draw a default focus outline after click (often a square “halo”).
-   We explicitly remove it and replace with a brand-forward circular ring. */
+/* Brand-forward focus ring (accessibility-safe)
+   - Avoids browser default square outlines
+   - Stays circular and on-brand inside iframes */
 .send:focus{ outline:none; }
-
-/* Brand-forward focus ring (keyboard users):
-   - Outer PAW blue glow + inner crisp white ring so it reads on any background.
-   - Keeps accessibility while looking intentional. */
 .send:focus-visible{
   outline:none;
   box-shadow:
-    0 0 0 4px rgba(255,255,255,.75),
-    0 0 0 9px rgba(5,195,249,.40),
-    0 14px 28px rgba(15,23,42,.16),
-    0 22px 46px rgba(5,195,249,.22);
-}
-
-/* Submit acknowledgement (click OR Enter):
-   - A brief glow “pop” so the paw still feels like the hero even for keyboard users.
-   - NOTE: JS toggles .paw-bump for ~250ms on submit. */
-.send.paw-bump{
-  animation: pawGlowPop .28s ease-out 1;
-}
-
-@keyframes pawGlowPop{
-  0%{
-    transform: scale(1);
-    box-shadow:
-      0 10px 22px rgba(15,23,42,.14),
-      0 16px 34px rgba(5,195,249,.14);
-  }
-  45%{
-    transform: scale(1.045);
-    box-shadow:
-      0 16px 34px rgba(15,23,42,.18),
-      0 28px 56px rgba(5,195,249,.30);
-  }
-  100%{
-    transform: scale(1);
-    box-shadow:
-      0 10px 22px rgba(15,23,42,.14),
-      0 16px 34px rgba(5,195,249,.14);
-  }
+    0 0 0 5px rgba(5,195,249,.28),
+    0 0 0 10px rgba(5,195,249,.14),
+    0 16px 34px rgba(15,23,42,.18),
+    0 14px 30px rgba(5,195,249,.22);
 }
 
 /* ===== Send button icon (PAW paw) =====
@@ -647,6 +605,17 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
    Safe in shared CSS because it only applies when HTML opts in via class="send-icon". */
 /* Icon micro-motion
    (Reserved for future subtle animation hooks.) */
+
+/* Submit acknowledgement (click or Enter)
+   - A brief “pop” so the user feels the brand respond immediately. */
+.send.paw-bump{
+  animation: pawBump .18s ease-out;
+}
+@keyframes pawBump{
+  0%{ transform: translateY(0) scale(1); }
+  60%{ transform: translateY(-1px) scale(1.04); }
+  100%{ transform: translateY(0) scale(1); }
+}
 
 /* Loading pulse (brand ring)
    Hooked to common state flags. No JS changes required.
