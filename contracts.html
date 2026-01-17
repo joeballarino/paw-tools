@@ -20,6 +20,26 @@
     })();
   </script>
 
+  <script>
+    // PAW Embed Mode Guard
+    // -------------------
+    // Circle provides the outer card. The embedded tool must render "flat".
+    // We rely on paw-ui.css rules that activate when html[data-embed="1"] is present.
+    // tool-shell.js will set this when initialized, but Contracts UI should not
+    // depend on shell init (or any later script) to render correctly.
+    (function(){
+      try{
+        var params = new URLSearchParams(window.location.search);
+        var isEmbedParam = params.get('embed') === '1';
+        var isInIframe = (function(){ try{ return window.self !== window.top; } catch(e){ return true; } })();
+        if(isEmbedParam || isInIframe){
+          document.documentElement.setAttribute('data-embed','1');
+        }
+      }catch(e){}
+    })();
+  </script>
+
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Contracts</title>
@@ -44,24 +64,35 @@
        DESIGN GOALS (v1):
        - Chat-first (works with or without a document)
        - Optional contract upload (PDF) for more precise analysis
-       - Stage selector (Blank / Draft / Executed) applies to uploads
+       - Contract type selector (Purchase / Listing / Lease) labels the user's intent
        - Scanned PDFs are NOT supported (we reject and ask for a digital PDF)
 
        IMPORTANT PRODUCT RULES:
        - No AI logic lives here. All "secret sauce" prompting is in the Worker.
        - Do NOT store uploaded contracts in localStorage.
-         We only store chat history + stage selection as a local draft (optional).
+         We only store chat history + contract type selection as a local draft (optional).
        ========================================================== */
 
     body.paw-contracts .contracts-controls{
       display:flex;
-      flex-wrap:wrap;
-      align-items:flex-end;
-      gap:12px;
+      flex-direction:column;
+      gap:10px;
       padding:10px 14px 12px;
       border-bottom:1px solid var(--border-soft);
       background:transparent;
     }
+
+    body.paw-contracts .contracts-row{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:12px;
+    }
+
+    body.paw-contracts .contracts-row--meta{
+      min-height:18px; /* reserved blank row for file details */
+    }
+
 
     body.paw-contracts .contracts-block{
       display:flex;
@@ -78,7 +109,8 @@
     }
 
     /* Stage segmented control (scoped to Contracts only) */
-    body.paw-contracts .stage-seg{
+    body.paw-contracts .stage-seg,
+    body.paw-contracts .type-seg{
       display:flex;
       align-items:center;
       gap:0;
@@ -89,7 +121,8 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
       width: fit-content;
     }
-    body.paw-contracts .stage-btn{
+    body.paw-contracts .stage-btn,
+    body.paw-contracts .type-btn{
       height:32px;
       padding:0 14px;
       border:0;
@@ -106,7 +139,8 @@
     }
     body.paw-contracts .stage-btn:hover{ background:rgba(15,23,42,.05); }
     body.paw-contracts .stage-btn + .stage-btn{ border-left:1px solid rgba(15,23,42,.10); }
-    body.paw-contracts .stage-btn.primary{
+    body.paw-contracts .stage-btn.primary,
+    body.paw-contracts .type-btn.primary{
       background: rgba(5,195,249,.18);
       color: rgba(15,23,42,.92);
     }
@@ -157,6 +191,12 @@
       line-height:1.2;
     }
 
+    body.paw-contracts .file-hint{
+      font-size:12px;
+      color:rgba(15,23,42,.65);
+      white-space:nowrap;
+    }
+
     body.paw-contracts .mini-btn{
       height:34px;
       padding:0 12px;
@@ -183,8 +223,10 @@
         align-items:stretch;
       }
       body.paw-contracts .contracts-block{ min-width: 0; width:100%; }
-      body.paw-contracts .stage-seg{ width:100%; }
-      body.paw-contracts .stage-btn{ flex:1 1 0; }
+      body.paw-contracts .stage-seg,
+    body.paw-contracts .type-seg{ width:100%; }
+      body.paw-contracts .stage-btn,
+    body.paw-contracts .type-btn{ flex:1 1 0; }
       body.paw-contracts .upload-row{ width:100%; }
       body.paw-contracts .file-pill{ width:100%; justify-content:center; }
       body.paw-contracts .mini-btn{ width:100%; }
@@ -210,36 +252,37 @@
             </div>
           </div>
 
-          <!-- Controls: Stage + Upload (optional) -->
+                    <!-- Controls: Contract Type + Upload (optional) -->
           <div class="contracts-controls" aria-label="Contracts controls">
 
-            <div class="contracts-block">
-              <div class="contracts-label">Choose upload file stage:</div>
-              <div class="stage-seg" role="group" aria-label="Contract stage">
-                <button class="stage-btn" type="button" data-stage="blank">Blank</button>
-                <button class="stage-btn" type="button" data-stage="draft">Draft</button>
-                <button class="stage-btn primary" type="button" data-stage="executed">Executed</button>
+            <!-- Row A: Contract Type -->
+            <div class="contracts-row" aria-label="Contract type row">
+              <div class="contracts-label">Contract Type:</div>
+              <div class="type-seg" role="group" aria-label="Contract type">
+                <button class="type-btn primary" type="button" data-type="purchase" aria-pressed="true">Purchase</button>
+                <button class="type-btn" type="button" data-type="listing" aria-pressed="false">Listing</button>
+                <button class="type-btn" type="button" data-type="lease" aria-pressed="false">Lease</button>
               </div>
             </div>
 
-            <div class="contracts-block" style="flex:1 1 420px;">
-              <div class="contracts-label">File Upload:</div>
-              <div class="upload-row">
-  <div style="display:flex; align-items:center; gap:14px; flex:1 1 auto; min-width:240px;">
-    <div id="fileName" class="file-name" style="opacity:.75;">Optional — upload a contract PDF</div>
-  </div>
+            <!-- Row B: Contract Upload -->
+            <div class="contracts-row" aria-label="Contract upload row">
+              <div class="contracts-label">Contract Upload:</div>
+              <div class="upload-row" style="flex:1 1 420px;">
+                <div class="file-pill" title="Choose a PDF file">
+                  <label class="file-pill__label" for="file">Choose PDF…</label>
+                  <input id="file" type="file" accept="application/pdf" />
+                </div>
+                <div class="file-hint">Digitally generated PDFs only</div>
+              </div>
+            </div>
 
-  <div class="file-pill" title="Choose a PDF file">
-    Choose PDF…
-    <input id="file" type="file" accept="application/pdf" />
-  </div>
-</div>
-
-<div class="file-sub" style="margin-top:6px;">Digitally generated PDFs only. Scanned documents are rejected.</div>
+            <!-- Row C: Reserved space for upload details (populates after file selection) -->
+            <div id="fileMetaRow" class="contracts-row contracts-row--meta" aria-label="Upload details row">
+              <div id="fileName" class="file-name" aria-live="polite"></div>
             </div>
 
           </div>
-        </div>
 
         <div id="messages" class="messages" aria-live="polite"></div>
 
@@ -263,7 +306,7 @@
      * This file provides:
      *  - Chat UI (always available)
      *  - Optional PDF upload + Analyze action (sends file to Worker)
-     *  - Stage selector (Blank/Draft/Executed) that labels the upload intent
+     *  - Contract type selector (Purchase/Listing/Lease) that labels the upload intent
      *
      * IMPORTANT:
      *  - This page DOES NOT attempt OCR or PDF text extraction.
@@ -273,7 +316,7 @@
      *
      * PRIVACY / STORAGE (locked):
      *  - We do NOT store uploaded contract bytes in localStorage.
-     *  - We only store chat history + the selected stage as a local draft.
+     *  - We only store chat history + the selected contract type as a local draft.
      */
     (function () {
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
@@ -292,10 +335,10 @@
 • Ask questions about specific clauses or timelines
 • Talk through negotiation scenarios with or without a document
 
-Contract stages (for uploads)
-• Blank: Learn what a form is for and how it’s typically completed
-• Draft: Review filled-in terms before sharing with a client
-• Executed: Summarize the deal and organize next steps
+Contract types (for uploads)
+• Purchase: Review offers, contingencies, and timelines
+• Listing: Review listing terms, obligations, and protections
+• Lease: Review lease terms, responsibilities, and renewals
 
 File uploads
 • Use digitally generated PDFs (DocuSign, Dotloop, SkySlope, etc.)
@@ -305,6 +348,7 @@ File uploads
 Good to know
 • PAW explains what’s written — it doesn’t provide legal advice
 • Always confirm final decisions with your broker or attorney`;
+
 
       // ------------------------------------------------------------
       // Local draft (chat only) — same "never silent restore" pattern
@@ -332,12 +376,12 @@ Good to know
         try { localStorage.removeItem(key); return true; } catch (_) { return false; }
       }
 
-      // Stage state (default Executed)
-      const stageState = { stage: "executed" }; // blank | draft | executed
+      // Contract Type state (default Purchase)
+      const typeState = { type: "purchase" }; // purchase | listing | lease
 
       const $file = document.getElementById("file");
       const $fileName = document.getElementById("fileName");
-const stageBtns = Array.from(document.querySelectorAll(".stage-btn"));
+const typeBtns = Array.from(document.querySelectorAll(".type-btn"));
 
       let currentFile = null;
 
@@ -345,40 +389,41 @@ const stageBtns = Array.from(document.querySelectorAll(".stage-btn"));
       // (Worker can use this to keep contract context without resending the file.)
       let contractSessionId = "";
 
-      function setStage(next){
-        stageState.stage = next;
-        stageBtns.forEach(btn => {
-          const on = btn.dataset.stage === next;
+      function setContractType(next){
+        typeState.type = next;
+        typeBtns.forEach(btn => {
+          const on = btn.dataset.type === next;
           btn.classList.toggle("primary", on);
           btn.setAttribute("aria-pressed", on ? "true" : "false");
         });
       }
 
-      stageBtns.forEach(btn => {
-        btn.addEventListener("click", () => setStage(btn.dataset.stage || "executed"));
+      typeBtns.forEach(btn => {
+        btn.addEventListener("click", () => setContractType(btn.dataset.type || "purchase"));
+      });
       });
 
       function setFileUI(file, status){
-  // status: "", "analyzing", "ready"
-  if (!file) {
-    $fileName.textContent = "Optional — upload a contract PDF";
-    $fileName.style.opacity = ".75";
-    return;
-  }
-  const kb = Math.ceil(file.size/1024);
-  const base = file.name + " (" + kb + " KB)";
-  if (status === "analyzing") {
-    $fileName.textContent = "Analyzing… " + base;
-  } else {
-    $fileName.textContent = base;
-  }
-  $fileName.style.opacity = "1";
-}
-        $fileName.textContent = file.name + " (" + Math.ceil(file.size/1024) + " KB)";
-        $fileName.style.opacity = "1";
+        // status: "", "analyzing", "ready"
+        // NOTE: Row C ("Upload details") stays blank until a file is selected.
+        if (!file) {
+          $fileName.textContent = "";
+          $fileName.style.opacity = "1";
+          return;
         }
 
-      function clearFile(){
+        const kb = Math.ceil(file.size / 1024);
+        const base = file.name + " (" + kb + " KB)";
+        if (status === "analyzing") {
+          $fileName.textContent = "Analyzing… " + base;
+        } else {
+          $fileName.textContent = base;
+        }
+        $fileName.style.opacity = "1";
+      }
+
+
+function clearFile(){
         currentFile = null;
         contractSessionId = ""; // new upload resets context
         try { if ($file) $file.value = ""; } catch (_) {}
@@ -406,7 +451,7 @@ const stageBtns = Array.from(document.querySelectorAll(".stage-btn"));
           currentFile = f;
           setFileUI(f, "analyzing");
           void analyzeSelectedFile();
-});
+        });
       }
 
       // Helper: read file as base64 (without data: prefix)
@@ -449,7 +494,7 @@ async function analyzeSelectedFile(){
       "Analyze this contract.",
       {
         action: "contract_upload",
-        contract_stage: stageState.stage,
+        contract_type: typeState.type,
         file: {
           name: currentFile.name,
           type: currentFile.type,
@@ -482,7 +527,7 @@ async function analyzeSelectedFile(){
 
         // Preferences always sent (Worker decides how to use them)
         getPrefs: () => ({
-          contract_stage: stageState.stage,
+          contract_type: typeState.type,
           contract_session_id: contractSessionId ? contractSessionId : "",
           has_contract_context: !!contractSessionId
         }),
@@ -580,7 +625,7 @@ async function analyzeSelectedFile(){
             v: 1,
             updatedAt: new Date().toISOString(),
             toolId: "contracts",
-            stage: stageState.stage,
+            contract_type: typeState.type,
             shell: st
           });
         } catch (_) {}
