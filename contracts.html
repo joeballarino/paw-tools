@@ -407,7 +407,6 @@ const typeBtns = Array.from(document.querySelectorAll(".type-btn"));
       typeBtns.forEach(btn => {
         btn.addEventListener("click", () => setContractType(btn.dataset.type || "purchase"));
       });
-      });
 
       function setFileUI(file, status){
         // status: "", "analyzing", "ready"
@@ -573,7 +572,7 @@ async function analyzeSelectedFile(){
       function fullReset(){
         try { storageDel(DRAFT_KEY); } catch (_) {}
         clearFile();
-        setStage("executed");
+        setContractType("purchase");
         try { if (shell && shell.reset) shell.reset(); } catch (_) {}
         try{
           const $input = document.getElementById("input");
@@ -653,7 +652,8 @@ async function analyzeSelectedFile(){
         const ok = window.confirm("Resume your previous Contracts session on this device?");
         if (ok) {
           try {
-            setStage(existing.stage || "executed");
+            // Restore contract type + chat draft (never restore uploaded files)
+            setContractType(existing.contract_type || "purchase");
             if (shell && shell.setState) shell.setState(existing.shell);
           } catch (_) {}
         } else {
