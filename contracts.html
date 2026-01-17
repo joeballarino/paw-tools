@@ -429,6 +429,8 @@ Good to know
         const base = file.name + " (" + kb + " KB)";
         if (status === "analyzing") {
           $fileName.textContent = "Analyzing… " + base;
+        } else if (status === "ready") {
+          $fileName.textContent = "Ready to analyze — " + base;
         } else {
           $fileName.textContent = base;
         }
@@ -462,8 +464,9 @@ function clearFile(){
           }
 
           currentFile = f;
-          setFileUI(f, "analyzing");
-          void analyzeSelectedFile();
+          // File is staged. Analysis starts only when the user clicks PAW or presses Enter.
+          setFileUI(f, "ready");
+          try { if (shell && shell.toast) shell.toast("File ready. Add a note (optional), then press PAW to analyze."); } catch (_) {}
         });
       }
 
@@ -534,6 +537,45 @@ async function analyzeSelectedFile(){
         toolId: "contracts",
         inputPlaceholder: "Ask a question about a contract or talk through a negotiation scenario…",
         tipsText: TIPS_TEXT,
+
+        // Gate sending so the first PAW/Enter triggers analysis when a file is staged.
+        // Enter submits; Shift+Enter adds a newline (handled by tool-shell.js).
+        beforeSend: async (trimmed, { sendExtra, clearComposer }) => {
+          try{
+            // If a file is staged and we don't yet have a contract session, upload + analyze first.
+            if (currentFile && !contractSessionId) {
+              setFileUI(currentFile, "analyzing");
+              const b64 = await readFileAsBase64(currentFile);
+
+              await sendExtra(
+                trimmed || "Analyze this contract.",
+                {
+                  action: "contract_upload",
+                  contract_review: reviewState.mode,
+                  file: {
+                    name: currentFile.name,
+                    type: currentFile.type,
+                    size: currentFile.size,
+                    base64: b64
+                  },
+                  contract_session_id: ""
+                },
+                { echoUser: true }
+              );
+
+              // Clear composer after the upload-based send.
+              try { if (typeof clearComposer === "function") clearComposer({ keepFocus: true }); } catch (_) {}
+              setFileUI(currentFile, "ready");
+              return { cancel: true };
+            }
+          }catch(e){
+            // Keep generic so we don't leak backend details in UI.
+            try { if (shell && shell.toast) shell.toast("Couldn’t analyze that file. Please upload a digitally generated PDF."); } catch (_) {}
+            clearFile();
+            return { cancel: true };
+          }
+          return { cancel: false };
+        },
 
         // Contracts behaves like Assistant (chat-first), not a deliverable modal.
         deliverableMode: false,
