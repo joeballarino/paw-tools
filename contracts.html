@@ -78,8 +78,15 @@
       flex-direction:column;
       gap:10px;
       padding:10px 14px 12px;
-      border-bottom:1px solid var(--border-soft);
+      border-bottom:none; /* removed: line between upload + chat */
       background:transparent;
+    }
+
+
+    /* Contracts-only: When there are no messages yet, collapse the empty message area
+       so the composer (input box) sits directly under the upload controls. */
+    body.paw-contracts #messages:empty{
+      display:none;
     }
 
     body.paw-contracts .contracts-row{
