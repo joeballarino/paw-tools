@@ -64,7 +64,7 @@
        DESIGN GOALS (v1):
        - Chat-first (works with or without a document)
        - Optional contract upload (PDF) for more precise analysis
-       - Contract review selector (Blank / Draft / Executed) sets tone and output style
+       - Contract type selector (Purchase / Listing / Lease) labels the user's intent
        - Scanned PDFs are NOT supported (we reject and ask for a digital PDF)
 
        IMPORTANT PRODUCT RULES:
@@ -146,6 +146,7 @@
     }
     body.paw-contracts .stage-btn:hover{ background:rgba(15,23,42,.05); }
     body.paw-contracts .stage-btn + .stage-btn{ border-left:1px solid rgba(15,23,42,.10); }
+    body.paw-contracts .type-btn + .type-btn{ border-left:1px solid rgba(15,23,42,.10); }
     body.paw-contracts .stage-btn.primary,
     body.paw-contracts .type-btn.primary{
       background: rgba(5,195,249,.18);
@@ -240,7 +241,7 @@
       body.paw-contracts .file-name{ max-width: 100%; }
     }
   
-    /* Extra breathing room between Contract Review and Contract Upload */
+    /* Extra breathing room between Contract Type and Contract Upload */
     body.paw-contracts .contracts-controls > .contracts-row:first-of-type{
       margin-bottom: 18px;
     }
@@ -265,16 +266,16 @@
             </div>
           </div>
 
-                    <!-- Controls: Contract Review + Upload (optional) -->
+                    <!-- Controls: Contract Type + Upload (optional) -->
           <div class="contracts-controls" aria-label="Contracts controls">
 
-            <!-- Row A: Contract Review -->
-            <div class="contracts-row" aria-label="Contract review row">
-              <div class="contracts-label">Contract Review:</div>
-              <div class="type-seg" role="group" aria-label="Contract review">
-                <button class="type-btn" type="button" data-review="blank" aria-pressed="false">Blank</button>
-                <button class="type-btn" type="button" data-review="draft" aria-pressed="false">Draft</button>
-                <button class="type-btn primary" type="button" data-review="executed" aria-pressed="true">Executed</button>
+            <!-- Row A: Contract Type -->
+            <div class="contracts-row" aria-label="Contract type row">
+              <div class="contracts-label">Contract Type:</div>
+              <div class="type-seg" role="group" aria-label="Contract type">
+                <button class="type-btn primary" type="button" data-type="purchase" aria-pressed="true">Purchase</button>
+                <button class="type-btn" type="button" data-type="listing" aria-pressed="false">Listing</button>
+                <button class="type-btn" type="button" data-type="lease" aria-pressed="false">Lease</button>
               </div>
             </div>
 
@@ -319,7 +320,7 @@
      * This file provides:
      *  - Chat UI (always available)
      *  - Optional PDF upload + Analyze action (sends file to Worker)
-     *  - Contract review selector (Blank/Draft/Executed) that labels the user's intent
+     *  - Contract type selector (Purchase/Listing/Lease) that labels the upload intent
      *
      * IMPORTANT:
      *  - This page DOES NOT attempt OCR or PDF text extraction.
@@ -329,7 +330,7 @@
      *
      * PRIVACY / STORAGE (locked):
      *  - We do NOT store uploaded contract bytes in localStorage.
-     *  - We only store chat history + the selected contract review mode as a local draft.
+     *  - We only store chat history + the selected contract type as a local draft.
      */
     (function () {
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
@@ -348,10 +349,10 @@
 • Ask questions about specific clauses or timelines
 • Talk through negotiation scenarios with or without a document
 
-Contract review modes
-• Blank: Learn what the form does and what fields matter
-• Draft: Confirm what’s filled in before sharing with a client
-• Executed: Create a client-ready summary and timeline from what’s signed
+Contract types (for uploads)
+• Purchase: Review offers, contingencies, and timelines
+• Listing: Review listing terms, obligations, and protections
+• Lease: Review lease terms, responsibilities, and renewals
 
 File uploads
 • Use digitally generated PDFs (DocuSign, Dotloop, SkySlope, etc.)
@@ -389,12 +390,12 @@ Good to know
         try { localStorage.removeItem(key); return true; } catch (_) { return false; }
       }
 
-      // Contract Review state (default Executed)
-      const reviewState = { mode: "executed" }; // blank | draft | executed
+      // Contract Type state (default Purchase)
+      const typeState = { type: "purchase" }; // purchase | listing | lease
 
       const $file = document.getElementById("file");
       const $fileName = document.getElementById("fileName");
-      const reviewBtns = Array.from(document.querySelectorAll(".type-btn"));
+const typeBtns = Array.from(document.querySelectorAll(".type-btn"));
 
       let currentFile = null;
 
@@ -402,17 +403,17 @@ Good to know
       // (Worker can use this to keep contract context without resending the file.)
       let contractSessionId = "";
 
-      function setContractReview(next){
-        reviewState.mode = next;
-        reviewBtns.forEach(btn => {
-          const on = btn.dataset.review === next;
+      function setContractType(next){
+        typeState.type = next;
+        typeBtns.forEach(btn => {
+          const on = btn.dataset.type === next;
           btn.classList.toggle("primary", on);
           btn.setAttribute("aria-pressed", on ? "true" : "false");
         });
       }
 
-      reviewBtns.forEach(btn => {
-        btn.addEventListener("click", () => setContractReview(btn.dataset.review || "executed"));
+      typeBtns.forEach(btn => {
+        btn.addEventListener("click", () => setContractType(btn.dataset.type || "purchase"));
       });
 
       function setFileUI(file, status){
@@ -506,7 +507,7 @@ async function analyzeSelectedFile(){
       "Analyze this contract.",
       {
         action: "contract_upload",
-        contract_review: reviewState.mode,
+        contract_type: typeState.type,
         file: {
           name: currentFile.name,
           type: currentFile.type,
@@ -539,7 +540,7 @@ async function analyzeSelectedFile(){
 
         // Preferences always sent (Worker decides how to use them)
         getPrefs: () => ({
-          contract_review: reviewState.mode,
+          contract_type: typeState.type,
           contract_session_id: contractSessionId ? contractSessionId : "",
           has_contract_context: !!contractSessionId
         }),
@@ -579,7 +580,7 @@ async function analyzeSelectedFile(){
       function fullReset(){
         try { storageDel(DRAFT_KEY); } catch (_) {}
         clearFile();
-        setContractReview("executed");
+        setContractType("purchase");
         try { if (shell && shell.reset) shell.reset(); } catch (_) {}
         try{
           const $input = document.getElementById("input");
@@ -637,7 +638,7 @@ async function analyzeSelectedFile(){
             v: 1,
             updatedAt: new Date().toISOString(),
             toolId: "contracts",
-            contract_review: reviewState.mode,
+            contract_type: typeState.type,
             shell: st
           });
         } catch (_) {}
@@ -660,7 +661,7 @@ async function analyzeSelectedFile(){
         if (ok) {
           try {
             // Restore contract type + chat draft (never restore uploaded files)
-            setContractReview(existing.contract_review || "executed");
+            setContractType(existing.contract_type || "purchase");
             if (shell && shell.setState) shell.setState(existing.shell);
           } catch (_) {}
         } else {
