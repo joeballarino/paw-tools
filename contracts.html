@@ -336,7 +336,7 @@
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
 
       // Upload constraints (v1)
-      const MAX_FILE_MB = 10;              // hard cap to prevent accidental giant files
+      const MAX_FILE_MB = 25;              // hard cap to prevent accidental giant files
       const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
       // NOTE: Page limits are enforced in the Worker (it can reliably count pages after parsing).
@@ -475,41 +475,11 @@ function clearFile(){
         return new Promise((resolve, reject) => {
           try{
 
-            // Allow PAW/Enter with empty input to still run when a contract session exists.
-            // This triggers a lightweight "continue" review without re-uploading the PDF.
-            if (!trimmed && contractSessionId && !currentFile) {
-              await sendExtra(
-                "Continue reviewing this contract.",
-                {
-                  action: "contract_chat",
-                  contract_review: reviewState.mode,
-                  contract_session_id: contractSessionId
-                },
-                { echoUser: false }
-              );
-              return { cancel: true };
-            }
-
             const reader = new FileReader();
             reader.onload = () => {
               try{
 
-            // Allow PAW/Enter with empty input to still run when a contract session exists.
-            // This triggers a lightweight "continue" review without re-uploading the PDF.
-            if (!trimmed && contractSessionId && !currentFile) {
-              await sendExtra(
-                "Continue reviewing this contract.",
-                {
-                  action: "contract_chat",
-                  contract_review: reviewState.mode,
-                  contract_session_id: contractSessionId
-                },
-                { echoUser: false }
-              );
-              return { cancel: true };
-            }
-
-                const result = String(reader.result || "");
+            const result = String(reader.result || "");
                 // result is a data URL: "data:application/pdf;base64,...."
                 const comma = result.indexOf(",");
                 resolve(comma >= 0 ? result.slice(comma + 1) : result);
@@ -644,23 +614,7 @@ async function analyzeSelectedFile(){
         // - Worker may return:
         //   { reply: "...", contract: { session_id:"...", scanned:true/false, pages:12 } }
         onResponse: (data) => {
-          try{
-
-            // Allow PAW/Enter with empty input to still run when a contract session exists.
-            // This triggers a lightweight "continue" review without re-uploading the PDF.
-            if (!trimmed && contractSessionId && !currentFile) {
-              await sendExtra(
-                "Continue reviewing this contract.",
-                {
-                  action: "contract_chat",
-                  contract_review: reviewState.mode,
-                  contract_session_id: contractSessionId
-                },
-                { echoUser: false }
-              );
-              return { cancel: true };
-            }
-
+          try {
             const c = data && data.contract ? data.contract : null;
             if (c && typeof c === "object") {
               // If Worker flags scanned, reject and clear the selected file.
@@ -669,33 +623,16 @@ async function analyzeSelectedFile(){
                 try { if (shell && shell.toast) shell.toast("Scanned PDF detected. Please upload a digitally generated PDF (DocuSign/Dotloop/SkySlope)."); } catch (_) {}
               }
 
-              // Capture session id if provided.
+              // Capture session id if provided (enables follow-ups without re-upload).
               if (c.session_id) {
                 contractSessionId = String(c.session_id || "");
-                // Nudge the chat placeholder after analysis so it feels contextual.
-                try{
-
-            // Allow PAW/Enter with empty input to still run when a contract session exists.
-            // This triggers a lightweight "continue" review without re-uploading the PDF.
-            if (!trimmed && contractSessionId && !currentFile) {
-              await sendExtra(
-                "Continue reviewing this contract.",
-                {
-                  action: "contract_chat",
-                  contract_review: reviewState.mode,
-                  contract_session_id: contractSessionId
-                },
-                { echoUser: false }
-              );
-              return { cancel: true };
-            }
-
+                try {
                   const $input = document.getElementById("input");
                   if ($input) $input.placeholder = "Ask about timelines, contingencies, or next steps…";
-                }catch(_){}
+                } catch (_) {}
               }
             }
-          }catch(_){}
+          } catch (_) {}
         }
       });
       // Reset should clear file + local draft (but keep shell reset behavior)
