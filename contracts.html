@@ -634,7 +634,8 @@ async function analyzeSelectedFile(){
             }
           } catch (_) {}
         }
-      
+      });
+
       // ------------------------------------------------------------
       // Contracts-only: allow "empty submit" when context exists
       // ------------------------------------------------------------
@@ -706,7 +707,7 @@ async function analyzeSelectedFile(){
         }, true);
       })();
 
-});
+
       // Reset should clear file + local draft (but keep shell reset behavior)
       function fullReset(){
         try { storageDel(DRAFT_KEY); } catch (_) {}
