@@ -634,7 +634,79 @@ async function analyzeSelectedFile(){
             }
           } catch (_) {}
         }
-      });
+      
+      // ------------------------------------------------------------
+      // Contracts-only: allow "empty submit" when context exists
+      // ------------------------------------------------------------
+      // tool-shell.js intentionally ignores empty messages (it returns early).
+      // For Contracts, we NEED "press PAW with no typed message" to work when:
+      //  - a PDF is staged (initial analysis), OR
+      //  - a contract session exists (continue reviewing without re-upload).
+      //
+      // We intercept the Send button click + Enter key BEFORE tool-shell runs,
+      // and we call shell.sendExtra() directly with echoUser:false so the chat
+      // doesn't show a fake user message like "analyze".
+      (function attachEmptySubmitInterceptors(){
+        const $input = document.getElementById("input");
+        const $send = document.getElementById("send");
+        if (!$input || !$send || !shell || typeof shell.sendExtra !== "function") return;
+
+        async function runEmptySubmit(){
+          // If a file is staged, run the initial analysis.
+          if (currentFile && !contractSessionId) {
+            await analyzeSelectedFile();
+            return true;
+          }
+
+          // If we already have a session (and no new file staged), continue the review.
+          if (contractSessionId && !currentFile) {
+            await shell.sendExtra(
+              "Continue reviewing this contract.",
+              {
+                action: "contract_chat",
+                contract_review: reviewState.mode,
+                contract_session_id: contractSessionId
+              },
+              { echoUser: false }
+            );
+            return true;
+          }
+
+          // If both exist (rare, but possible if user staged a new file after analysis),
+          // we do nothing here (Phase 3 will define the multi-file behavior).
+          return false;
+        }
+
+        function isEmptyComposer(){
+          try { return !String($input.value || "").trim(); } catch (_) { return true; }
+        }
+
+        // Click submit (capture so we run before tool-shell's listener)
+        $send.addEventListener("click", async (e) => {
+          if (!isEmptyComposer()) return;
+          if (!currentFile && !contractSessionId) return;
+
+          try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
+          try { await runEmptySubmit(); } catch (_) {
+            try { if (shell && shell.toast) shell.toast("Couldn’t run that yet. Try again, or add a short note and press PAW."); } catch (_) {}
+          }
+        }, true);
+
+        // Enter submit (capture so we run before tool-shell's listener)
+        $input.addEventListener("keydown", async (e) => {
+          const isEnter = (e.key === "Enter" || e.keyCode === 13);
+          if (!isEnter || e.shiftKey) return;
+          if (!isEmptyComposer()) return;
+          if (!currentFile && !contractSessionId) return;
+
+          try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
+          try { await runEmptySubmit(); } catch (_) {
+            try { if (shell && shell.toast) shell.toast("Couldn’t run that yet. Try again, or add a short note and press PAW."); } catch (_) {}
+          }
+        }, true);
+      })();
+
+});
       // Reset should clear file + local draft (but keep shell reset behavior)
       function fullReset(){
         try { storageDel(DRAFT_KEY); } catch (_) {}
