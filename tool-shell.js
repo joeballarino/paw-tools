@@ -303,13 +303,53 @@ function removeNode(node) {
       const $tips = $("tips");
       const $toolForm = $("toolForm");
 
+
+
+      // -------------------------
+      // Global composer guardrails
+      // -------------------------
+      // Consistent PAW UX across all tools:
+      // - If the input is empty, the PAW button is disabled and Enter does nothing (sendMessage() already no-ops).
+      // - As soon as the user types, PAW becomes enabled.
+      // NOTE: Tools that need "no-text actions" (e.g., Analyze after upload) should add a dedicated UI button
+      //       rather than relying on empty-submit behavior.
+      function ensureSendDisabledStyles() {
+        if (window.__pawSendDisabledStyleInjected) return;
+        window.__pawSendDisabledStyleInjected = true;
+        try {
+          const style = document.createElement("style");
+          style.setAttribute("data-paw", "send-disabled");
+          style.textContent = `
+            /* Disabled PAW button state (applies to #send or #submitBtn across tools) */
+            #send[disabled], #submitBtn[disabled]{
+              opacity: .45 !important;
+              cursor: not-allowed !important;
+              pointer-events: none !important;
+            }
+          `;
+          document.head.appendChild(style);
+        } catch (_) {}
+      }
+
+      function updateSendEnabled() {
+        try {
+          if (!$send || !$input) return;
+          ensureSendDisabledStyles();
+          const hasText = !!safeText($input.value);
+          // Prefer a real disabled attribute for consistent click/keyboard behavior.
+          try { $send.disabled = !hasText; } catch (_) {}
+          try { $send.setAttribute("aria-disabled", String(!hasText)); } catch (_) {}
+        } catch (_) {}
+      }
 // Auto-grow: wire the main composer textarea (works for #input or #prompt)
 if ($input) {
   // Run once on load (handles restored drafts/resume flows)
   autoGrowTextarea($input);
+  updateSendEnabled();
 
   $input.addEventListener("input", function(){
     autoGrowTextarea($input);
+    updateSendEnabled();
   });
 
   // Some browsers change layout after fonts load; one more pass is cheap.
@@ -406,7 +446,8 @@ if ($input) {
             $input.value = "";
             // Auto-grow: return to baseline height when reset clears the composer
             try { resetAutoGrowTextarea($input); } catch (_) {}
-          }
+            try { updateSendEnabled(); } catch (_) {}
+   }
         // Auto-grow: return to baseline height when cleared
         resetAutoGrowTextarea($input);
 

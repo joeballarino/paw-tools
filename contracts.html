@@ -246,7 +246,14 @@
       margin-bottom: 18px;
     }
 
-  </style>
+  
+    /* Analyze button (Contracts-specific) */
+    body.paw-contracts #analyzeBtn[disabled]{
+      opacity:.45;
+      cursor:not-allowed;
+      pointer-events:none;
+    }
+</style>
 </head>
 
 <body class="paw-contracts">
@@ -287,6 +294,7 @@
                   <label class="file-pill__label" for="file">Choose PDF…</label>
                   <input id="file" type="file" accept="application/pdf" />
                 </div>
+                <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled>Analyze</button>
                 <div class="file-hint">Digitally generated PDFs only</div>
               </div>
             </div>
@@ -395,6 +403,7 @@ Good to know
 
       const $file = document.getElementById("file");
       const $fileName = document.getElementById("fileName");
+      const $analyzeBtn = document.getElementById("analyzeBtn");
       const reviewBtns = Array.from(document.querySelectorAll(".type-btn"));
 
       let currentFile = null;
@@ -421,7 +430,20 @@ Good to know
         // NOTE: Row C ("Upload details") stays blank until a file is selected.
         if (!file) {
           $fileName.textContent = "";
-          $fileName.style.opacity = "1";
+          try {
+          if ($analyzeBtn) {
+            if (status === "analyzing") {
+              $analyzeBtn.disabled = true;
+              $analyzeBtn.textContent = "Analyzing…";
+            } else {
+              $analyzeBtn.disabled = false;
+              $analyzeBtn.textContent = "Analyze";
+            }
+          }
+        } catch (_) {}
+
+        $fileName.style.opacity = "1";
+          try { if ($analyzeBtn) { $analyzeBtn.disabled = true; $analyzeBtn.textContent = "Analyze"; } } catch (_) {}
           return;
         }
 
@@ -434,6 +456,18 @@ Good to know
         } else {
           $fileName.textContent = base;
         }
+        try {
+          if ($analyzeBtn) {
+            if (status === "analyzing") {
+              $analyzeBtn.disabled = true;
+              $analyzeBtn.textContent = "Analyzing…";
+            } else {
+              $analyzeBtn.disabled = false;
+              $analyzeBtn.textContent = "Analyze";
+            }
+          }
+        } catch (_) {}
+
         $fileName.style.opacity = "1";
       }
 
@@ -464,13 +498,25 @@ function clearFile(){
           }
 
           currentFile = f;
-          // File is staged. Analysis starts only when the user clicks PAW or presses Enter.
+          // File is staged. Analysis starts only when the user clicks **Analyze**.
           setFileUI(f, "ready");
-          try { if (shell && shell.toast) shell.toast("File ready. Add a note (optional), then press PAW to analyze."); } catch (_) {}
+          try { if (shell && shell.toast) shell.toast("File ready. Click Analyze to review."); } catch (_) {}
         });
       }
 
-      // Helper: read file as base64 (without data: prefix)
+      
+      // Analyze button (explicit action — avoids empty-submit inconsistencies)
+      if ($analyzeBtn) {
+        $analyzeBtn.addEventListener("click", async () => {
+          if (!currentFile) {
+            try { if (shell && shell.toast) shell.toast("Choose a PDF first."); } catch (_) {}
+            return;
+          }
+          await analyzeSelectedFile();
+        });
+      }
+
+// Helper: read file as base64 (without data: prefix)
       function readFileAsBase64(file){
         return new Promise((resolve, reject) => {
           try{
@@ -540,61 +586,6 @@ async function analyzeSelectedFile(){
         inputPlaceholder: "Ask a question about a contract or talk through a negotiation scenario…",
         tipsText: TIPS_TEXT,
 
-        // Gate sending so the first PAW/Enter triggers analysis when a file is staged.
-        // Enter submits; Shift+Enter adds a newline (handled by tool-shell.js).
-        beforeSend: async (trimmed, { sendExtra, clearComposer }) => {
-          try{
-
-            // Allow PAW/Enter with empty input to still run when a contract session exists.
-            // This triggers a lightweight "continue" review without re-uploading the PDF.
-            if (!trimmed && contractSessionId && !currentFile) {
-              await sendExtra(
-                "Continue reviewing this contract.",
-                {
-                  action: "contract_chat",
-                  contract_review: reviewState.mode,
-                  contract_session_id: contractSessionId
-                },
-                { echoUser: false }
-              );
-              return { cancel: true };
-            }
-
-            // If a file is staged and we don't yet have a contract session, upload + analyze first.
-            if (currentFile && !contractSessionId) {
-              setFileUI(currentFile, "analyzing");
-              const b64 = await readFileAsBase64(currentFile);
-
-              await sendExtra(
-                trimmed || "Analyze this contract.",
-                {
-                  action: "contract_upload",
-                  contract_review: reviewState.mode,
-                  file: {
-                    name: currentFile.name,
-                    type: currentFile.type,
-                    size: currentFile.size,
-                    base64: b64
-                  },
-                  contract_session_id: ""
-                },
-                { echoUser: true }
-              );
-
-              // Clear composer after the upload-based send.
-              try { if (typeof clearComposer === "function") clearComposer({ keepFocus: true }); } catch (_) {}
-              setFileUI(currentFile, "ready");
-              return { cancel: true };
-            }
-          }catch(e){
-            // Keep generic so we don't leak backend details in UI.
-            try { if (shell && shell.toast) shell.toast("Couldn’t analyze that file. Please upload a digitally generated PDF."); } catch (_) {}
-            clearFile();
-            return { cancel: true };
-          }
-          return { cancel: false };
-        },
-
         // Contracts behaves like Assistant (chat-first), not a deliverable modal.
         deliverableMode: false,
 
@@ -647,67 +638,6 @@ async function analyzeSelectedFile(){
       // We intercept the Send button click + Enter key BEFORE tool-shell runs,
       // and we call shell.sendExtra() directly with echoUser:false so the chat
       // doesn't show a fake user message like "analyze".
-      (function attachEmptySubmitInterceptors(){
-        const $input = document.getElementById("input");
-        const $send = document.getElementById("send");
-        if (!$input || !$send || !shell || typeof shell.sendExtra !== "function") return;
-
-        async function runEmptySubmit(){
-          // If a file is staged, run the initial analysis.
-          if (currentFile && !contractSessionId) {
-            await analyzeSelectedFile();
-            return true;
-          }
-
-          // If we already have a session (and no new file staged), continue the review.
-          if (contractSessionId && !currentFile) {
-            await shell.sendExtra(
-              "Continue reviewing this contract.",
-              {
-                action: "contract_chat",
-                contract_review: reviewState.mode,
-                contract_session_id: contractSessionId
-              },
-              { echoUser: false }
-            );
-            return true;
-          }
-
-          // If both exist (rare, but possible if user staged a new file after analysis),
-          // we do nothing here (Phase 3 will define the multi-file behavior).
-          return false;
-        }
-
-        function isEmptyComposer(){
-          try { return !String($input.value || "").trim(); } catch (_) { return true; }
-        }
-
-        // Click submit (capture so we run before tool-shell's listener)
-        $send.addEventListener("click", async (e) => {
-          if (!isEmptyComposer()) return;
-          if (!currentFile && !contractSessionId) return;
-
-          try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
-          try { await runEmptySubmit(); } catch (_) {
-            try { if (shell && shell.toast) shell.toast("Couldn’t run that yet. Try again, or add a short note and press PAW."); } catch (_) {}
-          }
-        }, true);
-
-        // Enter submit (capture so we run before tool-shell's listener)
-        $input.addEventListener("keydown", async (e) => {
-          const isEnter = (e.key === "Enter" || e.keyCode === 13);
-          if (!isEnter || e.shiftKey) return;
-          if (!isEmptyComposer()) return;
-          if (!currentFile && !contractSessionId) return;
-
-          try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
-          try { await runEmptySubmit(); } catch (_) {
-            try { if (shell && shell.toast) shell.toast("Couldn’t run that yet. Try again, or add a short note and press PAW."); } catch (_) {}
-          }
-        }, true);
-      })();
-
-
       // Reset should clear file + local draft (but keep shell reset behavior)
       function fullReset(){
         try { storageDel(DRAFT_KEY); } catch (_) {}
