@@ -230,29 +230,40 @@
         flex-direction:column;
         align-items:stretch;
       }
+      body.paw-contracts .contracts-action-row{
+        flex-direction:column;
+        align-items:stretch;
+      }
       body.paw-contracts .contracts-block{ min-width: 0; width:100%; }
       body.paw-contracts .stage-seg,
     body.paw-contracts .type-seg{ width:100%; }
       body.paw-contracts .stage-btn,
     body.paw-contracts .type-btn{ flex:1 1 0; }
-      body.paw-contracts .upload-row{ width:100%; }
       body.paw-contracts .file-pill{ width:100%; justify-content:center; }
-      body.paw-contracts .mini-btn{ width:100%; }
+      body.paw-contracts #analyzeBtn{ width:100%; }
       body.paw-contracts .file-name{ max-width: 100%; }
     }
-  
-    /* Extra breathing room between Contract Review and Contract Upload */
-    body.paw-contracts .contracts-controls > .contracts-row:first-of-type{
-      margin-bottom: 18px;
-    }
 
-  
-    /* Analyze button (Contracts-specific) */
-    body.paw-contracts #analyzeBtn[disabled]{
-      opacity:.45;
-      cursor:not-allowed;
-      pointer-events:none;
-    }
+    /* Contracts action row */
+body.paw-contracts .contracts-action-row{
+  gap:10px;
+  align-items:center;
+}
+
+/* Disabled segmented buttons (Contracts-only) */
+body.paw-contracts .type-btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+
+/* Analyze button (Contracts-specific) */
+body.paw-contracts #analyzeBtn[disabled]{
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+
 </style>
 </head>
 
@@ -276,30 +287,24 @@
                     <!-- Controls: Contract Review + Upload (optional) -->
           <div class="contracts-controls" aria-label="Contracts controls">
 
-            <!-- Row A: Contract Review -->
-            <div class="contracts-row" aria-label="Contract review row">
-              <div class="contracts-label">Contract Review:</div>
-              <div class="type-seg" role="group" aria-label="Contract review">
-                <button class="type-btn" type="button" data-review="blank" aria-pressed="false">Blank</button>
-                <button class="type-btn" type="button" data-review="draft" aria-pressed="false">Draft</button>
-                <button class="type-btn primary" type="button" data-review="executed" aria-pressed="true">Executed</button>
-              </div>
-            </div>
+            <!-- Row A+B: Action row (Choose PDF + Review state + Analyze) -->
+<div class="contracts-row contracts-action-row" aria-label="Contracts action row">
+  <div class="file-pill" title="Choose a PDF file">
+    <label class="file-pill__label" for="file">Choose PDF…</label>
+    <input id="file" type="file" accept="application/pdf" />
+  </div>
 
-            <!-- Row B: Contract Upload -->
-            <div class="contracts-row" aria-label="Contract upload row">
-              <div class="contracts-label">Contract Upload:</div>
-              <div class="upload-row" style="flex:1 1 420px;">
-                <div class="file-pill" title="Choose a PDF file">
-                  <label class="file-pill__label" for="file">Choose PDF…</label>
-                  <input id="file" type="file" accept="application/pdf" />
-                </div>
-                <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled>Analyze</button>
-                <div class="file-hint">Digitally generated PDFs only</div>
-              </div>
-            </div>
+  <div class="type-seg" role="group" aria-label="Contract review">
+    <button class="type-btn" type="button" data-review="blank" aria-pressed="false" disabled>Blank</button>
+    <button class="type-btn" type="button" data-review="draft" aria-pressed="false" disabled>Draft</button>
+    <button class="type-btn primary" type="button" data-review="executed" aria-pressed="true" disabled>Executed</button>
+  </div>
 
-            <!-- Row C: Reserved space for upload details (populates after file selection) -->
+  <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled>Analyze</button>
+</div>
+
+<!-- Row C: Reserved space for upload details (populates after file selection) -->
+
             <div id="fileMetaRow" class="contracts-row contracts-row--meta" aria-label="Upload details row">
               <div id="fileName" class="file-name" aria-live="polite"></div>
             </div>
@@ -404,7 +409,7 @@ Good to know
       const $file = document.getElementById("file");
       const $fileName = document.getElementById("fileName");
       const $analyzeBtn = document.getElementById("analyzeBtn");
-      const reviewBtns = Array.from(document.querySelectorAll(".type-btn"));
+      const reviewBtns = Array.from(document.querySelectorAll(".type-btn[data-review]"));
 
       let currentFile = null;
 
@@ -421,9 +426,19 @@ Good to know
         });
       }
 
+      function setReviewButtonsEnabled(enabled){
+        const on = !!enabled;
+        reviewBtns.forEach(btn => {
+          btn.disabled = !on;
+        });
+      }
+
       reviewBtns.forEach(btn => {
         btn.addEventListener("click", () => setContractReview(btn.dataset.review || "executed"));
       });
+
+      // Disabled by default; enabled after a PDF is selected.
+      setReviewButtonsEnabled(false);
 
       function setFileUI(file, status){
         // status: "", "analyzing", "ready"
@@ -472,10 +487,12 @@ Good to know
       }
 
 
-function clearFile(){
+      function clearFile(){
         currentFile = null;
         contractSessionId = ""; // new upload resets context
         try { if ($file) $file.value = ""; } catch (_) {}
+        setContractReview("executed");
+        setReviewButtonsEnabled(false);
         setFileUI(null);
       }
 
@@ -498,6 +515,7 @@ function clearFile(){
           }
 
           currentFile = f;
+          setReviewButtonsEnabled(true);
           // File is staged. Analysis starts only when the user clicks **Analyze**.
           setFileUI(f, "ready");
           try { if (shell && shell.toast) shell.toast("File ready. Click Analyze to review."); } catch (_) {}
