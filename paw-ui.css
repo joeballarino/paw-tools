@@ -539,6 +539,43 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   gap:14px;
   align-items:flex-end;
 }
+
+
+/* ==========================================================
+   Composer helper (mobile readability)
+   ----------------------------------------------------------
+   Placeholders are examples only. Instructions live above the
+   textarea so they are readable before the user taps.
+   ========================================================== */
+.composer-main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.composer-help{
+  font-size:12px;
+  font-weight:650;
+  line-height:1.25;
+  color:rgba(15,23,42,.66);
+  padding-left:2px;
+}
+.composer textarea::placeholder{
+  color:rgba(15,23,42,.48);
+  font-weight:600;
+}
+
+/* Mobile comfort: give the composer a little more room so example placeholders
+   never look clipped on small screens (especially iOS). */
+@media (max-width: 520px){
+  .composer{
+    padding:14px 14px 26px;
+  }
+  .composer-main{ gap:6px; }
+  .composer textarea{
+    min-height:86px;
+  }
+}
 .composer textarea{
   flex:1;
   min-height:54px;

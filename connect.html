@@ -216,8 +216,12 @@
 
         <!-- Composer -->
         <div class="composer">
-          <textarea id="prompt" class="prompt" rows="3"
-            placeholder="Add any context here, or paste a message if you’re replying"></textarea>
+          
+          <div class="composer-main">
+            <div class="composer-help">Paste their message + tell PAW what you want to happen.</div>
+            <textarea id="prompt" class="prompt" rows="3"
+            placeholder="e.g., They said “we’re waiting” — reply to book a call"></textarea>
+          </div>
 
           <button id="send" class="send" aria-label="Generate message" type="button">
             <img src="https://paw-tools.pages.dev/paw.png" class="send-icon" alt="">
@@ -323,14 +327,19 @@
 
       // Tips modal content (light, action-oriented)
       const tipsText =
-        "What to paste here:\n" +
-        "• The last message they sent (if you’re replying)\n" +
-        "• A quick note about who they are + what you want\n" +
-        "• Any relevant detail (property address, timeline, question)\n\n" +
-        "Best results when you include:\n" +
-        "• The relationship (lead, past client, friend, vendor)\n" +
-        "• The goal (book a showing, set a call, re-engage, confirm next step)\n" +
-        "• Any tone preference (shorter, warmer, more direct)";
+`What to paste here
+• The last message they sent (if you’re replying)
+• A quick note on who they are + what you want
+• Any relevant detail (address, timeline, question)
+
+Best results when you include
+• The relationship (lead, past client, friend, vendor)
+• The goal (book a showing, set a call, re-engage, confirm next step)
+• Any tone preference (shorter, warmer, more direct)
+
+Examples
+• “Reply to this text and propose two showing times: …”
+• “Write a short follow-up email that feels calm, not salesy: …”`;
 
       if (!window.PAWToolShell || typeof window.PAWToolShell.init !== "function") {
         console.error("PAWToolShell not found. Ensure tool-shell.js is loaded.");

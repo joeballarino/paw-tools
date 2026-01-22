@@ -316,7 +316,11 @@ body.paw-contracts #analyzeBtn[disabled]{
         <div id="messages" class="messages" aria-live="polite"></div>
 
         <div class="composer">
-          <textarea id="input" placeholder="Ask a question about a contract or talk through a negotiation scenario…"></textarea>
+          
+          <div class="composer-main">
+            <div class="composer-help">Ask about deadlines, contingencies, responsibilities, or risks.</div>
+            <textarea id="input" placeholder="e.g., What are the key deadlines and who owes what?"></textarea>
+          </div>
           <button id="send" class="send" aria-label="Send" type="button">
             <img src="https://paw-tools.pages.dev/paw.png" class="send-icon" alt="">
           </button>
@@ -361,7 +365,7 @@ body.paw-contracts #analyzeBtn[disabled]{
       const TIPS_TEXT =
 `What you can do here
 • Upload a contract to get a clear summary, key terms, and important dates
-• Ask questions about specific clauses or timelines
+• Ask questions about specific clauses, timelines, or responsibilities
 • Talk through negotiation scenarios with or without a document
 
 Contract review modes
@@ -374,9 +378,9 @@ File uploads
 • Scanned or photographed documents aren’t supported
 • Files are processed and discarded after analysis
 
-Good to know
-• PAW explains what’s written — it doesn’t provide legal advice
-• Always confirm final decisions with your broker or attorney`;
+Examples
+• “Summarize this executed contract for my buyer and list all deadlines.”
+• “If appraisal comes in low, what options exist in this contract language?”`;
 
 
       // ------------------------------------------------------------
@@ -603,7 +607,7 @@ async function analyzeSelectedFile(){
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "contracts",
-        inputPlaceholder: "Ask a question about a contract or talk through a negotiation scenario…",
+        inputPlaceholder: "e.g., What are the key deadlines and who owes what?",
         tipsText: TIPS_TEXT,
 
         // Contracts behaves like Assistant (chat-first), not a deliverable modal.

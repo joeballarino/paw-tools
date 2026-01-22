@@ -55,7 +55,11 @@
         <div id="messages" class="messages"></div>
 
         <div class="composer">
-          <textarea id="input" placeholder="How can I assist you today?"></textarea>
+          
+          <div class="composer-main">
+            <div class="composer-help">Ask anything, or paste text to rewrite.</div>
+            <textarea id="input" placeholder="e.g., Rewrite this to sound confident and friendly"></textarea>
+          </div>
           <button id="send" class="send" aria-label="Send" type="button">
             <img src="https://paw-tools.pages.dev/paw.png" class="send-icon" alt="">
           </button>
@@ -98,16 +102,24 @@
         /(fair housing|mls|compliance|legal|law|attorney|contract|offer|addendum|inspection|lien|title|short sale|agency|disclosure)/i;
 
       const TIPS_TEXT =
-`How to use this assistant
-• Ask questions in plain English
-• Paste an email, text, or draft and tell me what you want it to sound like
-• Use it to think through next steps, messaging, objections, or client situations
-• Use this as a thinking partner — final judgment always stays with you`;
+`What to paste
+• A question you want answered
+• An email, text, or draft you want rewritten
+• A situation + what you want to happen next
+
+Best results when you include
+• Who it’s for (lead, buyer, seller, past client)
+• The goal (book a call, set a showing, handle an objection)
+• Tone (shorter, warmer, more direct)
+
+Examples
+• “Rewrite this text to sound confident and friendly…”
+• “Give me 3 replies to this objection: …”`;
 
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "assistant",
-        inputPlaceholder: "How can I assist you today?",
+        inputPlaceholder: "e.g., Rewrite this to sound confident and friendly",
         tipsText: TIPS_TEXT,
 
         // One-time compliance note (shown only when trigger words appear in the user message)

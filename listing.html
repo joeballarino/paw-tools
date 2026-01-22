@@ -166,7 +166,7 @@
             <div class="lock-row2">
               <label class="field" style="width:100%;">
                 <div class="field-label" style="font-size:12px; font-weight:700; color:rgba(15,23,42,.82); margin-bottom:8px; letter-spacing:-0.01em;">Most Compelling Feature</div>
-                <input id="compellingInp" class="big-input" type="text" placeholder="Location, design, lifestyle, value, etc." />
+                <input id="compellingInp" class="big-input" type="text" placeholder="e.g. Lifestyle + location" />
               </label>
             </div>
 
@@ -176,7 +176,11 @@
         <div id="messages" class="messages"></div>
 
         <div class="composer">
-          <textarea id="input" placeholder="Add upgrades, finishes, neighborhood notes, disclosures, HOA details, or paste listing data here"></textarea>
+          
+          <div class="composer-main">
+            <div class="composer-help">Paste MLS data or notes. Include upgrades + what buyers will feel.</div>
+            <textarea id="input" placeholder="e.g., 2023 roof, quartz counters, walkable to shops"></textarea>
+          </div>
           <button id="send" class="send" aria-label="Send" type="button">
             <img src="https://paw-tools.pages.dev/paw.png" class="send-icon" alt="">
           </button>
@@ -238,11 +242,18 @@
 `What this tool does
 • Generates MLS-ready listing remarks that are accurate, motivating, and Fair Housing–safe.
 
-How to use it
-• Add any details above and/or paste notes/MLS data — messy is fine
-• Include city & state when you can (helps local context)
-• If something is unknown, leave it blank (or type “unknown”) and the tool will write conservatively
-• You can always refine the output after it generates`;
+What to paste
+• MLS data, property notes, upgrades, neighborhood highlights, HOA details
+• What’s new, what’s rare, and what a buyer will notice first
+
+Best results when you include
+• City & state (helps local context)
+• Anything sensitive as facts only (HOA/fees, known restrictions, disclosures)
+• If something is unknown, leave it blank (or type “unknown”) and PAW will write conservatively
+
+Examples
+• “Write this as a modern, upbeat MLS description: …”
+• “Make it shorter and more luxury-coded, but still accurate: …”`;
 
       const $type = document.getElementById("typeSel");
       const $tone = document.getElementById("toneSel");
