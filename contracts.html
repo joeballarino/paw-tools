@@ -466,7 +466,6 @@ Examples
         }catch(_){}
       }
 
-      }
 
       function setReviewButtonsEnabled(enabled){
         const on = !!enabled;
@@ -476,7 +475,7 @@ Examples
       }
 
       reviewBtns.forEach(btn => {
-        btn.addEventListener("click", () => setContractReview(btn.dataset.review || "executed"));
+        btn.addEventListener("click", () => setContractReview(btn.dataset.review || ""));
       });
 
       // Chat-only default: no file staged, so hide state + Analyze controls.
@@ -529,22 +528,13 @@ Examples
       }
 
 
-
-        currentFile = null;
-        contractSessionId = ""; // new upload resets context
-        try { if ($file) $file.value = ""; } catch (_) {}
-        setContractReview("");
-        setReviewButtonsEnabled(false);
-        setFileUI(null);
-      }
-
       // File selection
       if ($file) {
         $file.addEventListener("change", () => {
           const f = ($file.files && $file.files[0]) ? $file.files[0] : null;
           if (!f) { clearFile(); return; }
 
-          if (f.type !== "application/pdf") {
+          if (f.type !== "application/pdf" && !/\.pdf$/i.test(f.name || "")) {
             clearFile();
             try { if (shell && shell.toast) shell.toast("Please upload a PDF."); } catch (_) {}
             return;
