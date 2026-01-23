@@ -296,13 +296,13 @@ body.paw-contracts #analyzeBtn[disabled]{
     <input id="file" type="file" accept="application/pdf" />
   </div>
 
-  <div class="type-seg" role="group" aria-label="Contract review">
+  <div id="reviewSeg" class="type-seg" role="group" aria-label="Contract review" style="display:none">
     <button class="type-btn" type="button" data-review="blank" aria-pressed="false" disabled>Blank</button>
     <button class="type-btn" type="button" data-review="draft" aria-pressed="false" disabled>Draft</button>
-    <button class="type-btn primary" type="button" data-review="executed" aria-pressed="true" disabled>Executed</button>
+    <button class="type-btn" type="button" data-review="executed" aria-pressed="false" disabled>Executed</button>
   </div>
 
-  <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled>Analyze</button>
+  <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled style="display:none">Analyze</button>
 </div>
 
 <!-- Row C: Reserved space for upload details (populates after file selection) -->
@@ -409,12 +409,17 @@ Examples
         try { localStorage.removeItem(key); return true; } catch (_) { return false; }
       }
 
-      // Contract Review state (default Executed)
-      const reviewState = { mode: "executed" }; // blank | draft | executed
+      // Contract Review state (State-Before-Analyze model)
+      // ----------------------------------------------------
+      // IMPORTANT:
+      // - When a PDF is staged, the user MUST explicitly choose a state before Analyze is enabled.
+      // - We never default-select a state (no guessing).
+      const reviewState = { mode: "" }; // "" | "blank" | "draft" | "executed"
 
       const $file = document.getElementById("file");
       const $fileName = document.getElementById("fileName");
       const $analyzeBtn = document.getElementById("analyzeBtn");
+      const $reviewSeg = document.getElementById("reviewSeg");
       const reviewBtns = Array.from(document.querySelectorAll(".type-btn[data-review]"));
 
       let currentFile = null;
@@ -424,12 +429,43 @@ Examples
       let contractSessionId = "";
 
       function setContractReview(next){
-        reviewState.mode = next;
+        // next: "" | "blank" | "draft" | "executed"
+        const val = (next == null) ? "" : String(next);
+        reviewState.mode = val;
+
         reviewBtns.forEach(btn => {
-          const on = btn.dataset.review === next;
+          const on = (val && btn.dataset.review === val);
           btn.classList.toggle("primary", on);
           btn.setAttribute("aria-pressed", on ? "true" : "false");
         });
+
+        // Gate Analyze strictly: file + explicit state required.
+        updateAnalyzeEnabled();
+      }
+
+      function setReviewUIVisible(visible){
+        const v = !!visible;
+        try { if ($reviewSeg) $reviewSeg.style.display = v ? "" : "none"; } catch (_) {}
+        try { if ($analyzeBtn) $analyzeBtn.style.display = v ? "" : "none"; } catch (_) {}
+      }
+
+      let __isAnalyzing = false;
+      function updateAnalyzeEnabled(){
+        try{
+          if (!$analyzeBtn) return;
+
+          if (__isAnalyzing){
+            $analyzeBtn.disabled = true;
+            $analyzeBtn.textContent = "Analyzing…";
+            return;
+          }
+
+          const ready = !!currentFile && !!reviewState.mode;
+          $analyzeBtn.disabled = !ready;
+          $analyzeBtn.textContent = "Analyze";
+        }catch(_){}
+      }
+
       }
 
       function setReviewButtonsEnabled(enabled){
@@ -443,33 +479,28 @@ Examples
         btn.addEventListener("click", () => setContractReview(btn.dataset.review || "executed"));
       });
 
-      // Disabled by default; enabled after a PDF is selected.
+      // Chat-only default: no file staged, so hide state + Analyze controls.
       setReviewButtonsEnabled(false);
+      setReviewUIVisible(false);
+      setContractReview("");
+      updateAnalyzeEnabled();
 
       function setFileUI(file, status){
         // status: "", "analyzing", "ready"
         // NOTE: Row C ("Upload details") stays blank until a file is selected.
+
+        __isAnalyzing = (status === "analyzing");
+
         if (!file) {
           $fileName.textContent = "";
-          try {
-          if ($analyzeBtn) {
-            if (status === "analyzing") {
-              $analyzeBtn.disabled = true;
-              $analyzeBtn.textContent = "Analyzing…";
-            } else {
-              $analyzeBtn.disabled = false;
-              $analyzeBtn.textContent = "Analyze";
-            }
-          }
-        } catch (_) {}
-
-        $fileName.style.opacity = "1";
-          try { if ($analyzeBtn) { $analyzeBtn.disabled = true; $analyzeBtn.textContent = "Analyze"; } } catch (_) {}
+          $fileName.style.opacity = "1";
+          updateAnalyzeEnabled();
           return;
         }
 
         const kb = Math.ceil(file.size / 1024);
         const base = file.name + " (" + kb + " KB)";
+
         if (status === "analyzing") {
           $fileName.textContent = "Analyzing… " + base;
         } else if (status === "ready") {
@@ -477,27 +508,32 @@ Examples
         } else {
           $fileName.textContent = base;
         }
-        try {
-          if ($analyzeBtn) {
-            if (status === "analyzing") {
-              $analyzeBtn.disabled = true;
-              $analyzeBtn.textContent = "Analyzing…";
-            } else {
-              $analyzeBtn.disabled = false;
-              $analyzeBtn.textContent = "Analyze";
-            }
-          }
-        } catch (_) {}
 
         $fileName.style.opacity = "1";
+        updateAnalyzeEnabled();
       }
+
+
 
 
       function clearFile(){
         currentFile = null;
         contractSessionId = ""; // new upload resets context
         try { if ($file) $file.value = ""; } catch (_) {}
-        setContractReview("executed");
+
+        // Return to chat-only mode until a new PDF is staged.
+        setContractReview("");
+        setReviewButtonsEnabled(false);
+        setReviewUIVisible(false);
+        setFileUI(null, "");
+      }
+
+
+
+        currentFile = null;
+        contractSessionId = ""; // new upload resets context
+        try { if ($file) $file.value = ""; } catch (_) {}
+        setContractReview("");
         setReviewButtonsEnabled(false);
         setFileUI(null);
       }
@@ -521,10 +557,17 @@ Examples
           }
 
           currentFile = f;
+
+          // State-Before-Analyze:
+          // - Staging a file never triggers analysis.
+          // - The user must explicitly choose a contract state before Analyze is enabled.
+          setReviewUIVisible(true);
           setReviewButtonsEnabled(true);
+          setContractReview(""); // no default selection (no guessing)
+
           // File is staged. Analysis starts only when the user clicks **Analyze**.
           setFileUI(f, "ready");
-          try { if (shell && shell.toast) shell.toast("File ready. Click Analyze to review."); } catch (_) {}
+          try { if (shell && shell.toast) shell.toast("File ready. Select the contract state, then click Analyze."); } catch (_) {}
         });
       }
 
@@ -534,6 +577,10 @@ Examples
         $analyzeBtn.addEventListener("click", async () => {
           if (!currentFile) {
             try { if (shell && shell.toast) shell.toast("Choose a PDF first."); } catch (_) {}
+            return;
+          }
+          if (!reviewState.mode) {
+            try { if (shell && shell.toast) shell.toast("Select the contract state (Blank, Draft, or Executed) first."); } catch (_) {}
             return;
           }
           await analyzeSelectedFile();
@@ -565,6 +612,12 @@ Examples
 // Auto-analyze on upload (single-file workflow)
 async function analyzeSelectedFile(){
   if (!currentFile) return;
+  // Worker guardrail: analysis requests with a file MUST include an explicit state.
+  if (!reviewState.mode){
+    try { if (shell && shell.toast) shell.toast("Select the contract state before analyzing."); } catch (_) {}
+    updateAnalyzeEnabled();
+    return;
+  }
   try{
     // UI: show progress
     setFileUI(currentFile, "analyzing");
@@ -666,7 +719,7 @@ async function analyzeSelectedFile(){
       function fullReset(){
         try { storageDel(DRAFT_KEY); } catch (_) {}
         clearFile();
-        setContractReview("executed");
+        setContractReview("");
         try { if (shell && shell.reset) shell.reset(); } catch (_) {}
         try{
           const $input = document.getElementById("input");
@@ -746,8 +799,8 @@ async function analyzeSelectedFile(){
         const ok = window.confirm("Resume your previous Contracts session on this device?");
         if (ok) {
           try {
-            // Restore contract type + chat draft (never restore uploaded files)
-            setContractReview(existing.contract_review || "executed");
+            // Restore chat draft only (never restore uploaded files, never auto-select contract state)
+            setContractReview("");
             if (shell && shell.setState) shell.setState(existing.shell);
           } catch (_) {}
         } else {
