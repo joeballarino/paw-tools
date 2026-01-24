@@ -55,7 +55,7 @@
     // - Captures a snapshot (user input + AI output + tool id/title + time) without extra user work.
     if (role !== "user") {
       try {
-        attachBadResponseLink(wrap, {
+        attachBadResponseLink(bubble, {
           toolId: meta && meta.toolId,
           toolTitle: meta && meta.toolTitle,
           userMessage: meta && meta.userMessage,

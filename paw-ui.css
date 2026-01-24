@@ -813,9 +813,12 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
    ========================================================== */
 
 .paw-report-row{
-  margin-top:6px;
-  padding-left:6px;
+  margin-top:8px;
+  display:flex;
+  justify-content:flex-end;
+  width:100%;
 }
+
 
 .paw-report-link{
   font-size:12px;
