@@ -323,6 +323,79 @@ function removeNode(node) {
       const $toolForm = $("toolForm");
 
 
+      // -------------------------
+      // PAW: Ensure "Bad response?" link exists under every AI bubble.
+      // Why: Some tools (or future tools) may re-render/rehydrate message DOM
+      // without going through appendMessage(), or may overwrite bubble.innerHTML
+      // after we attached the link. A MutationObserver makes this bulletproof.
+      (function setupBadResponseObserver() {
+        if (!$messages) return;
+
+        function getLastUserBubbleText() {
+          try {
+            const userBubbles = $messages.querySelectorAll(".msg.user .bubble");
+            if (!userBubbles || !userBubbles.length) return "";
+            const last = userBubbles[userBubbles.length - 1];
+            return safeText(last && last.textContent);
+          } catch (_) {
+            return "";
+          }
+        }
+
+        function getAiBubbleText(bubble) {
+          try {
+            return safeText(bubble && bubble.textContent);
+          } catch (_) {
+            return "";
+          }
+        }
+
+        function ensureLinks() {
+          try {
+            const aiBubbles = $messages.querySelectorAll(".msg.ai .bubble");
+            if (!aiBubbles || !aiBubbles.length) return;
+
+            const toolTitle = (typeof getDeliverableTitle === "function") ? getDeliverableTitle() : "";
+            const historyTail = (typeof getHistoryForSend === "function") ? (function () {
+              try {
+                const h = getHistoryForSend();
+                return Array.isArray(h) ? h.slice(-4) : [];
+              } catch (_) { return []; }
+            })() : [];
+
+            aiBubbles.forEach(function (bubble) {
+              // If link row already exists, do nothing.
+              const hasRow = bubble && bubble.querySelector && bubble.querySelector(".paw-report-row");
+              if (hasRow) return;
+
+              attachBadResponseLink(bubble, {
+                toolId: toolId,
+                toolTitle: toolTitle,
+                userMessage: getLastUserBubbleText(),
+                historyTail: historyTail,
+                aiOutput: getAiBubbleText(bubble),
+                createdAt: new Date().toISOString(),
+                pageUrl: (typeof location !== "undefined" ? location.href : ""),
+              });
+            });
+          } catch (_) {}
+        }
+
+        // Run once on load in case messages were rendered before shell init.
+        ensureLinks();
+
+        // Observe new messages or DOM rewrites and re-ensure.
+        try {
+          const obs = new MutationObserver(function () {
+            // Microtask batch: ensure after DOM settles.
+            Promise.resolve().then(ensureLinks);
+          });
+          obs.observe($messages, { childList: true, subtree: true });
+        } catch (_) {}
+      })();
+
+
+
 
       // -------------------------
       // Global composer guardrails
@@ -793,6 +866,21 @@ function resetAutoGrowTextarea($ta){
         if (!messageWrap) return;
 
         // Avoid duplicates if a tool re-renders.
+        // IMPORTANT: Some tools may overwrite bubble.innerHTML after we attach.
+        // In that case the DOM row disappears but the flag remains, so we must
+        // re-check the DOM rather than relying on the flag alone.
+        try {
+          const existing = messageWrap.querySelector && messageWrap.querySelector(".paw-report-row");
+          if (existing) {
+            messageWrap.__pawHasBadLink = true;
+            return;
+          }
+          // If the flag is set but the DOM row is missing, allow re-injection.
+          if (messageWrap.__pawHasBadLink && !existing) {
+            messageWrap.__pawHasBadLink = false;
+          }
+        } catch (_) {}
+
         if (messageWrap.__pawHasBadLink) return;
         messageWrap.__pawHasBadLink = true;
 
@@ -801,10 +889,17 @@ function resetAutoGrowTextarea($ta){
 
         const row = document.createElement("div");
         row.className = "paw-report-row";
+        // Inline styles as a safety net so the link is visible even if a page forgets to include
+        // the global CSS updates. (We still prefer CSS, but this prevents "it does nothing" bugs.)
+        row.style.marginTop = "6px";
+        row.style.textAlign = "right";
+        row.style.fontSize = "12px";
 
         const a = document.createElement("a");
         a.href = "#";
         a.className = "paw-report-link";
+        a.style.textDecoration = "none";
+        a.style.opacity = "0.75";
         a.textContent = "Bad response?";
 
         a.addEventListener("click", function (e) {
