@@ -42,13 +42,32 @@
       .replaceAll("'", "&#39;");
   }
 
-  function appendMessage($messages, role, text) {
+  function appendMessage($messages, role, text, meta) {
     const wrap = document.createElement("div");
     wrap.className = "msg " + (role === "user" ? "user" : "ai");
     const bubble = document.createElement("div");
     bubble.className = "bubble";
     bubble.innerHTML = "<p>" + escapeHtml(text) + "</p>";
     wrap.appendChild(bubble);
+
+    // PAW: "Bad response?" reporting link (AI messages only)
+    // - Lives in the shared shell so it automatically applies to all tools.
+    // - Captures a snapshot (user input + AI output + tool id/title + time) without extra user work.
+    if (role !== "user") {
+      try {
+        attachBadResponseLink(wrap, {
+          toolId: meta && meta.toolId,
+          toolTitle: meta && meta.toolTitle,
+          userMessage: meta && meta.userMessage,
+          extraPayload: meta && meta.extraPayload,
+          historyTail: meta && meta.historyTail,
+          aiOutput: text,
+          createdAt: (meta && meta.createdAt) || new Date().toISOString(),
+          pageUrl: (meta && meta.pageUrl) || (typeof location !== "undefined" ? location.href : ""),
+        });
+      } catch (_) {}
+    }
+
     $messages.appendChild(wrap);
     $messages.scrollTop = $messages.scrollHeight;
     return wrap;
@@ -604,6 +623,200 @@ function resetAutoGrowTextarea($ta){
         modal.setAttribute("aria-hidden", "false");
       }
 
+
+      // ─────────────────────────────────────────────
+      // Bad response reporting (shared across all tools)
+      // ─────────────────────────────────────────────
+      //
+      // UX:
+      // - A subtle "Bad response?" link is added under every AI message.
+      // - Clicking opens a tiny modal: reason dropdown + optional note + Send.
+      //
+      // Data captured automatically (no extra user steps):
+      // - user message (+ extra payload if tool supplies it)
+      // - AI output shown
+      // - tool id + tool title
+      // - time + page URL
+      //
+      // Delivery:
+      // - Frontend POSTs to Worker endpoint: /report-bad-response
+      // - Worker emails the snapshot to joe@joinproagent.com
+
+      function ensureBadResponseModal() {
+        let modal = document.getElementById("pawBadResponseModal");
+        if (modal) return modal;
+
+        modal = document.createElement("div");
+        modal.id = "pawBadResponseModal";
+        modal.className = "modal paw-report-modal";
+        modal.setAttribute("aria-hidden", "true");
+
+        const card = document.createElement("div");
+        card.className = "modal-card paw-report-card";
+        card.setAttribute("role", "dialog");
+        card.setAttribute("aria-modal", "true");
+
+        const head = document.createElement("div");
+        head.className = "modal-head";
+        head.innerHTML =
+          '<div class="modal-title">Report a bad response</div>' +
+          '<button type="button" class="modal-close" aria-label="Close">×</button>';
+
+        const body = document.createElement("div");
+        body.className = "modal-body";
+        body.innerHTML =
+          '<div class="field">' +
+          '<label for="pawBadReason">What went wrong?</label>' +
+          '<select id="pawBadReason">' +
+          '<option value="wrong">Wrong / inaccurate</option>' +
+          '<option value="generic">Generic / bland</option>' +
+          '<option value="off-brand">Off-brand</option>' +
+          '<option value="compliance">Compliance risk</option>' +
+          '<option value="other">Other</option>' +
+          "</select>" +
+          "</div>" +
+          '<div class="field">' +
+          '<label for="pawBadNote">Optional note</label>' +
+          '<textarea id="pawBadNote" rows="3" maxlength="500" placeholder="Short note (optional)"></textarea>' +
+          "</div>" +
+          '<div class="paw-report-actions">' +
+          '<button type="button" class="btn" data-action="cancel">Cancel</button>' +
+          '<button type="button" class="btn primary" data-action="send">Send</button>' +
+          "</div>" +
+          '<div class="paw-report-status" aria-live="polite"></div>';
+
+        card.appendChild(head);
+        card.appendChild(body);
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+
+        // close behavior
+        const closeBtn = modal.querySelector(".modal-close");
+        const cancelBtn = modal.querySelector('[data-action="cancel"]');
+
+        function close() {
+          modal.classList.remove("show");
+          modal.setAttribute("aria-hidden", "true");
+          try {
+            const note = modal.querySelector("#pawBadNote");
+            if (note) note.value = "";
+            const status = modal.querySelector(".paw-report-status");
+            if (status) status.textContent = "";
+          } catch (_) {}
+        }
+
+        if (closeBtn) closeBtn.addEventListener("click", close);
+        if (cancelBtn) cancelBtn.addEventListener("click", close);
+
+        // click outside card closes
+        modal.addEventListener("click", function (e) {
+          try {
+            if (e && e.target === modal) close();
+          } catch (_) {}
+        });
+
+        // Esc closes
+        document.addEventListener("keydown", function (e) {
+          try {
+            if (!modal.classList.contains("show")) return;
+            if (e.key === "Escape") close();
+          } catch (_) {}
+        });
+
+        // send behavior
+        const sendBtn = modal.querySelector('[data-action="send"]');
+        if (sendBtn) {
+          sendBtn.addEventListener("click", async function () {
+            const reasonEl = modal.querySelector("#pawBadReason");
+            const noteEl = modal.querySelector("#pawBadNote");
+            const statusEl = modal.querySelector(".paw-report-status");
+            const snapshot = modal.__pawSnapshot || null;
+
+            if (!snapshot) {
+              if (statusEl) statusEl.textContent = "Nothing to report.";
+              return;
+            }
+
+            const reason = safeText(reasonEl && reasonEl.value) || "other";
+            const note = safeText(noteEl && noteEl.value) || "";
+
+            try {
+              if (statusEl) statusEl.textContent = "Sending…";
+
+              const token = getCSRFTokenFromMeta();
+              const baseUrl = getPostUrl();
+              const url = baseUrl.replace(/\/+$/, "") + "/report-bad-response";
+
+              await postJSON(
+                url,
+                {
+                  kind: "bad_response_report",
+                  reason,
+                  note,
+                  snapshot,
+                },
+                token
+              );
+
+              if (statusEl) statusEl.textContent = "Sent. Thank you!";
+              setTimeout(function () {
+                try {
+                  close();
+                } catch (_) {}
+              }, 700);
+            } catch (err) {
+              if (statusEl) {
+                statusEl.textContent =
+                  "Could not send right now. Please try again.";
+              }
+            }
+          });
+        }
+
+        return modal;
+      }
+
+      function openBadResponseModal(snapshot) {
+        const modal = ensureBadResponseModal();
+        modal.__pawSnapshot = snapshot || null;
+
+        try {
+          const status = modal.querySelector(".paw-report-status");
+          if (status) status.textContent = "";
+        } catch (_) {}
+
+        modal.classList.add("show");
+        modal.setAttribute("aria-hidden", "false");
+      }
+
+      function attachBadResponseLink(messageWrap, snapshot) {
+        if (!messageWrap) return;
+
+        // Avoid duplicates if a tool re-renders.
+        if (messageWrap.__pawHasBadLink) return;
+        messageWrap.__pawHasBadLink = true;
+
+        // Store snapshot on the message node (keeps the "exact moment" tied to the UI).
+        messageWrap.__pawBadSnapshot = snapshot || null;
+
+        const row = document.createElement("div");
+        row.className = "paw-report-row";
+
+        const a = document.createElement("a");
+        a.href = "#";
+        a.className = "paw-report-link";
+        a.textContent = "Bad response?";
+
+        a.addEventListener("click", function (e) {
+          try { e.preventDefault(); } catch (_) {}
+          const snap = messageWrap.__pawBadSnapshot || snapshot || null;
+          openBadResponseModal(snap);
+        });
+
+        row.appendChild(a);
+        messageWrap.appendChild(row);
+      }
+
       function hideDeliverableModal() {
         const modal = document.getElementById("pawDeliverableModal");
         if (!modal) return;
@@ -611,9 +824,9 @@ function resetAutoGrowTextarea($ta){
         modal.setAttribute("aria-hidden", "true");
       }
 
-      function renderDeliverable(replyText) {
+      function renderDeliverable(replyText, reportMeta) {
         // Always render in-flow for a clean chat experience.
-        appendMessage($messages, "ai", replyText);
+        appendMessage($messages, "ai", replyText, reportMeta);
 
         // Remember the last deliverable so the user can re-open/copy it again.
         lastDeliverableText = String(replyText || "");
@@ -693,7 +906,22 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
 
           const reply = safeText(data && data.reply);
           if (reply) {
-            renderDeliverable(reply);
+            renderDeliverable(reply, {
+              toolId: toolId,
+              toolTitle: getDeliverableTitle(),
+              userMessage: trimmed,
+              extraPayload: extraPayload,
+              historyTail: (function () {
+                try {
+                  const h = getHistoryForSend();
+                  return Array.isArray(h) ? h.slice(-4) : [];
+                } catch (_) {
+                  return [];
+                }
+              })(),
+              createdAt: new Date().toISOString(),
+              pageUrl: (typeof location !== "undefined" ? location.href : ""),
+            });
             pushHistory("assistant", reply);
           }
           return data;
@@ -766,7 +994,22 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
 
           const reply = safeText(data && data.reply);
           if (reply) {
-            renderDeliverable(reply);
+            renderDeliverable(reply, {
+              toolId: toolId,
+              toolTitle: getDeliverableTitle(),
+              userMessage: trimmed,
+              extraPayload: extraPayload,
+              historyTail: (function () {
+                try {
+                  const h = getHistoryForSend();
+                  return Array.isArray(h) ? h.slice(-4) : [];
+                } catch (_) {
+                  return [];
+                }
+              })(),
+              createdAt: new Date().toISOString(),
+              pageUrl: (typeof location !== "undefined" ? location.href : ""),
+            });
             pushHistory("assistant", reply);
           }
         } catch (err) {
