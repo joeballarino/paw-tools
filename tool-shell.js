@@ -750,7 +750,7 @@ function resetAutoGrowTextarea($ta){
           "</div>" +
           '<div class="field">' +
           '<label for="pawBadNote">Optional note</label>' +
-          '<textarea id="pawBadNote" rows="3" maxlength="500" placeholder="Short note (optional)"></textarea>' +
+          '<textarea id="pawBadNote" rows="3" maxlength="500" placeholder="Short note (optional)" style="width:100%;max-width:100%;box-sizing:border-box;"></textarea>' +
           "</div>" +
           '<div class="paw-report-actions">' +
           '<button type="button" class="btn" data-action="cancel">Cancel</button>' +
@@ -820,16 +820,43 @@ function resetAutoGrowTextarea($ta){
               const baseUrl = getPostUrl();
               const url = baseUrl.replace(/\/+$/, "") + "/report-bad-response";
 
-              await postJSON(
-                url,
-                {
+              // NOTE: We intentionally do not use postJSON() here because postJSON() prefers
+              // `error` over `message` when building the thrown Error. For this reporting modal
+              // we want the friendly `message` text if the Worker provides it.
+              const headers = { "Content-Type": "application/json" };
+              if (token) headers["X-CSRF-Token"] = token;
+
+              const resp = await fetch(url, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
                   kind: "bad_response_report",
                   reason,
                   note,
                   snapshot,
-                },
-                token
-              );
+                }),
+              });
+
+              const respText = await resp.text();
+              let res = null;
+              try {
+                res = JSON.parse(respText);
+              } catch (_) {
+                res = { message: respText || "" };
+              }
+
+              if (!resp.ok) {
+                throw new Error(
+                  (res && (res.message || res.reply)) ||
+                    "Could not send right now. Please try again."
+                );
+              }
+
+              if (res && res.ok === false) {
+                throw new Error(
+                  res.message || "Could not send right now. Please try again."
+                );
+              }
 
               if (statusEl) statusEl.textContent = "Sent. Thank you!";
               setTimeout(function () {
@@ -839,8 +866,7 @@ function resetAutoGrowTextarea($ta){
               }, 700);
             } catch (err) {
               if (statusEl) {
-                statusEl.textContent =
-                  "Could not send right now. Please try again.";
+                statusEl.textContent = (err && err.message) ? String(err.message) : "Could not send right now. Please try again.";
               }
             }
           });
