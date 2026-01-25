@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PAW Admin — User Feedback</title>
+
+  <!-- Reuse PAW shared UI styling where possible -->
+  <link rel="stylesheet" href="paw-ui.css" />
+
+  <style>
+    body { background:#f7f7f7; margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+    .topbar { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .title h1 { margin:0; font-size: 22px; }
+    .title p { margin:6px 0 0; opacity:.7; font-size: 13px; }
+
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .controls input[type="search"]{
+      width: 320px; max-width: 70vw;
+      padding: 10px 12px;
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 12px;
+      outline: none;
+      background: #fff;
+      font-size: 14px;
+    }
+    .btn {
+      border: 1px solid rgba(0,0,0,.12);
+      background:#fff;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn.primary { background:#111; color:#fff; border-color:#111; }
+    .btn:disabled { opacity:.55; cursor:not-allowed; }
+
+    .grid { display:grid; grid-template-columns: 1.05fr .95fr; gap: 14px; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+
+    .cardx {
+      background:#fff;
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.06);
+      overflow:hidden;
+    }
+    .cardx .hd {
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(0,0,0,.06);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .cardx .hd .meta { font-size: 13px; opacity:.7; }
+    .cardx .bd { padding: 12px 14px 14px; }
+
+    .list { list-style:none; padding:0; margin:0; }
+    .item {
+      border-bottom: 1px solid rgba(0,0,0,.06);
+      padding: 12px 14px;
+      cursor:pointer;
+      display:grid;
+      grid-template-columns: 150px 120px 1fr;
+      gap: 10px;
+      align-items:start;
+    }
+    .item:hover { background: rgba(0,0,0,.02); }
+    .item:last-child { border-bottom: none; }
+    .date { font-size: 12px; opacity:.7; }
+    .tool { font-size: 13px; font-weight: 600; }
+    .reason { font-size: 12px; opacity:.8; margin-top: 2px; }
+    .snippet { font-size: 13px; line-height: 1.25rem; }
+    .pill {
+      display:inline-block; font-size: 11px; padding: 2px 8px; border-radius:999px;
+      border:1px solid rgba(0,0,0,.12); opacity:.85; margin-left:6px;
+    }
+
+    .detail-empty { opacity:.7; font-size: 14px; padding: 6px 0; }
+    .section { margin-top: 12px; }
+    .section:first-child { margin-top: 0; }
+    .section .sh { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .section h3 { margin: 0; font-size: 13px; opacity:.8; letter-spacing:.02em; text-transform: uppercase; }
+    pre {
+      margin: 8px 0 0;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.03);
+      border: 1px solid rgba(0,0,0,.06);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+      line-height: 1.25rem;
+    }
+    a { color: inherit; }
+
+    /* Login overlay */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      display:flex; align-items:center; justify-content:center;
+      padding: 18px;
+    }
+    .login {
+      width: 420px; max-width: 92vw;
+      background:#fff; border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .login .hd { padding: 16px 16px 10px; border-bottom: 1px solid rgba(0,0,0,.08); }
+    .login .hd h2 { margin:0; font-size: 18px; }
+    .login .bd { padding: 14px 16px 16px; }
+    .field { display:flex; flex-direction:column; gap:6px; margin-top: 10px; }
+    .field label { font-size: 12px; opacity:.8; }
+    .field input {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,.14);
+      font-size: 14px;
+      outline: none;
+    }
+    .err { margin-top: 10px; color: #b00020; font-size: 13px; display:none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">
+        <h1>PAW Admin — User Feedback</h1>
+        <p>Read feedback reports and copy blocks into ChatGPT for analysis.</p>
+      </div>
+      <div class="controls">
+        <input id="q" type="search" placeholder="Search tool, reason, snippet…" />
+        <button id="refresh" class="btn">Refresh</button>
+        <button id="logout" class="btn">Log out</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="cardx">
+        <div class="hd">
+          <div>
+            <div style="font-weight:700;">Inbox</div>
+            <div class="meta"><span id="count">0</span> item(s) • newest first</div>
+          </div>
+          <div class="meta">Retention: 30 days</div>
+        </div>
+        <div class="bd" style="padding:0;">
+          <ul id="list" class="list"></ul>
+        </div>
+      </div>
+
+      <div class="cardx">
+        <div class="hd">
+          <div>
+            <div style="font-weight:700;">Details</div>
+            <div id="detailMeta" class="meta">Select a report to view.</div>
+          </div>
+          <button id="copyAll" class="btn primary" disabled>Copy everything</button>
+        </div>
+        <div class="bd" id="detail">
+          <div class="detail-empty">No report selected.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login overlay -->
+  <div id="overlay" class="overlay" style="display:none;">
+    <div class="login">
+      <div class="hd">
+        <h2>Admin access</h2>
+        <div style="opacity:.75; font-size: 13px; margin-top:6px;">
+          Enter the Worker Basic Auth credentials.
+        </div>
+      </div>
+      <div class="bd">
+        <div class="field">
+          <label for="user">Username</label>
+          <input id="user" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="pass">Password</label>
+          <input id="pass" type="password" autocomplete="current-password" />
+        </div>
+        <div class="err" id="err">Login failed. Check credentials.</div>
+        <div style="display:flex; gap:10px; margin-top: 14px;">
+          <button id="loginBtn" class="btn primary" style="flex:1;">Log in</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      "use strict";
+
+      // Keep this aligned with your tool pages (ask.html etc.)
+      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+      const LIST_URL = API_ENDPOINT + "/admin/user-feedback/list?limit=200";
+      const DETAIL_URL = (id) => API_ENDPOINT + "/admin/user-feedback/detail?id=" + encodeURIComponent(id);
+
+      const $ = (id) => document.getElementById(id);
+
+      const state = {
+        items: [],
+        filtered: [],
+        selected: null,
+        authHeader: null,
+      };
+
+      function fmtDate(ms){
+        try{
+          const d = new Date(Number(ms));
+          return d.toLocaleString(undefined, { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+        }catch(_){ return String(ms||""); }
+      }
+
+      function parseReason(feedbackNote){
+        if(!feedbackNote) return "";
+        const s = String(feedbackNote);
+        const m = s.match(/Reason:\s*([^\n]+)/i);
+        return m ? m[1].trim() : "";
+      }
+
+      function hasUserNote(feedbackNote){
+        if(!feedbackNote) return false;
+        return /Note:\s*\S+/i.test(String(feedbackNote));
+      }
+
+      function snippetFor(item){
+        const msg = (item.user_message || "").trim();
+        if (msg) return msg.slice(0, 140);
+        const out = (item.ai_response || "").trim();
+        return out ? out.slice(0, 140) : "";
+      }
+
+      function escapeHtml(s){
+        return String(s || "")
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;");
+      }
+
+      function setAuthHeaderFromCreds(user, pass){
+        const token = btoa(user + ":" + pass);
+        state.authHeader = "Basic " + token;
+        sessionStorage.setItem("pawAdminAuth", state.authHeader);
+      }
+
+      function clearAuth(){
+        state.authHeader = null;
+        sessionStorage.removeItem("pawAdminAuth");
+      }
+
+      async function fetchJson(url){
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Authorization": state.authHeader || "",
+          },
+        });
+        if (res.status === 401){
+          clearAuth();
+          throw new Error("unauthorized");
+        }
+        const data = await res.json().catch(()=>null);
+        if(!res.ok){
+          const msg = data && (data.message || data.error) ? (data.message || data.error) : ("HTTP " + res.status);
+          throw new Error(msg);
+        }
+        return data;
+      }
+
+      function applyFilter(){
+        const q = ($("q").value || "").trim().toLowerCase();
+        if(!q){
+          state.filtered = state.items.slice();
+        } else {
+          state.filtered = state.items.filter(it => {
+            const r = parseReason(it.feedback_note || "");
+            const s = snippetFor(it);
+            const tool = (it.tool_name || "");
+            return (tool + " " + r + " " + s).toLowerCase().includes(q);
+          });
+        }
+        renderList();
+      }
+
+      function renderList(){
+        $("count").textContent = String(state.filtered.length || 0);
+        const ul = $("list");
+        ul.innerHTML = "";
+        if(!state.filtered.length){
+          ul.innerHTML = '<li style="padding:14px; opacity:.7;">No feedback found.</li>';
+          return;
+        }
+        for (const it of state.filtered){
+          const li = document.createElement("li");
+          li.className = "item";
+          li.dataset.id = it.id;
+
+          const r = parseReason(it.feedback_note || "");
+          const notePill = hasUserNote(it.feedback_note) ? '<span class="pill">note</span>' : "";
+          const tool = escapeHtml(it.tool_name || "—");
+          const snip = escapeHtml(snippetFor(it) || "—");
+          const dt = escapeHtml(fmtDate(it.created_at));
+          const reason = escapeHtml(r || "—");
+
+          li.innerHTML = `
+            <div class="date">${dt}</div>
+            <div>
+              <div class="tool">${tool}${notePill}</div>
+              <div class="reason">${reason}</div>
+            </div>
+            <div class="snippet">${snip}</div>
+          `;
+          li.addEventListener("click", () => selectItem(it.id));
+          ul.appendChild(li);
+        }
+      }
+
+      async function selectItem(id){
+        state.selected = null;
+        $("detail").innerHTML = '<div class="detail-empty">Loading…</div>';
+        $("copyAll").disabled = true;
+
+        const data = await fetchJson(DETAIL_URL(id));
+        const item = data.item;
+        state.selected = item;
+
+        const dt = fmtDate(item.created_at);
+        const tool = item.tool_name || "—";
+        const url = item.tool_url || "";
+        const reason = parseReason(item.feedback_note || "");
+        const note = (() => {
+          const s = String(item.feedback_note || "");
+          const m = s.match(/Note:\s*([\s\S]+)/i);
+          return m ? m[1].trim() : "";
+        })();
+
+        $("detailMeta").innerHTML = escapeHtml(dt + " • " + tool) + (url ? ' • <a href="'+escapeHtml(url)+'" target="_blank" rel="noopener">open page</a>' : "");
+
+        const userMsg = item.user_message || "";
+        const aiOut = item.ai_response || "";
+        const ctx = item.session_context || "";
+        const raw = item.raw_payload || "";
+
+        $("detail").innerHTML = `
+          <div class="section">
+            <div class="sh">
+              <h3>User message</h3>
+              <button class="btn" data-copy="user">Copy</button>
+            </div>
+            <pre id="userPre">${escapeHtml(userMsg)}</pre>
+          </div>
+
+          <div class="section">
+            <div class="sh">
+              <h3>AI response</h3>
+              <button class="btn" data-copy="ai">Copy</button>
+            </div>
+            <pre id="aiPre">${escapeHtml(aiOut)}</pre>
+          </div>
+
+          <div class="section">
+            <div class="sh">
+              <h3>Reason + note</h3>
+              <button class="btn" data-copy="note">Copy</button>
+            </div>
+            <pre id="notePre">${escapeHtml((reason ? "Reason: " + reason : "Reason:") + (note ? "\nNote: " + note : ""))}</pre>
+          </div>
+
+          <div class="section">
+            <div class="sh">
+              <h3>Session context</h3>
+              <button class="btn" data-copy="ctx">Copy</button>
+            </div>
+            <pre id="ctxPre">${escapeHtml(ctx)}</pre>
+          </div>
+
+          <div class="section">
+            <div class="sh">
+              <h3>Raw payload</h3>
+              <button class="btn" data-copy="raw">Copy</button>
+            </div>
+            <details style="margin-top:8px;">
+              <summary style="cursor:pointer; opacity:.8;">Show raw payload</summary>
+              <pre id="rawPre">${escapeHtml(raw)}</pre>
+            </details>
+          </div>
+        `;
+
+        $("copyAll").disabled = false;
+        $("copyAll").onclick = () => copyAll();
+
+        $("detail").querySelectorAll("button[data-copy]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const k = btn.getAttribute("data-copy");
+            if (k === "user") copyText(userMsg);
+            if (k === "ai") copyText(aiOut);
+            if (k === "note") copyText((reason ? "Reason: " + reason : "Reason:") + (note ? "\nNote: " + note : ""));
+            if (k === "ctx") copyText(ctx);
+            if (k === "raw") copyText(raw);
+          });
+        });
+      }
+
+      function buildCopyBundle(){
+        if(!state.selected) return "";
+        const it = state.selected;
+        const dt = fmtDate(it.created_at);
+        const tool = it.tool_name || "—";
+        const url = it.tool_url || "";
+        const reason = parseReason(it.feedback_note || "");
+        const note = (() => {
+          const s = String(it.feedback_note || "");
+          const m = s.match(/Note:\s*([\s\S]+)/i);
+          return m ? m[1].trim() : "";
+        })();
+
+        return [
+          "PAW User Feedback",
+          "Date: " + dt,
+          "Tool: " + tool,
+          (url ? "Page URL: " + url : ""),
+          "",
+          "USER MESSAGE:",
+          (it.user_message || ""),
+          "",
+          "AI RESPONSE:",
+          (it.ai_response || ""),
+          "",
+          "REASON + NOTE:",
+          (reason ? "Reason: " + reason : "Reason:") + (note ? "\nNote: " + note : ""),
+          "",
+          "SESSION CONTEXT:",
+          (it.session_context || ""),
+          "",
+          "RAW PAYLOAD:",
+          (it.raw_payload || ""),
+        ].filter(Boolean).join("\n");
+      }
+
+      function copyAll(){
+        copyText(buildCopyBundle());
+      }
+
+      async function copyText(t){
+        try{
+          await navigator.clipboard.writeText(String(t||""));
+        }catch(_){
+          // Fallback for older browsers / some iframe contexts
+          const ta = document.createElement("textarea");
+          ta.value = String(t||"");
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+      }
+
+      async function load(){
+        $("refresh").disabled = true;
+        try{
+          const data = await fetchJson(LIST_URL);
+          state.items = data.items || [];
+          applyFilter();
+        } finally {
+          $("refresh").disabled = false;
+        }
+      }
+
+      function showLogin(){
+        $("overlay").style.display = "flex";
+        $("err").style.display = "none";
+        $("loginBtn").disabled = false;
+        $("user").focus();
+      }
+
+      function hideLogin(){
+        $("overlay").style.display = "none";
+      }
+
+      async function tryLogin(){
+        $("err").style.display = "none";
+        $("loginBtn").disabled = true;
+
+        const u = ($("user").value || "").trim();
+        const p = ($("pass").value || "").trim();
+        if(!u || !p){
+          $("err").textContent = "Enter username and password.";
+          $("err").style.display = "block";
+          $("loginBtn").disabled = false;
+          return;
+        }
+
+        setAuthHeaderFromCreds(u, p);
+
+        try{
+          await load();
+          hideLogin();
+        }catch(e){
+          clearAuth();
+          $("err").textContent = "Login failed. Check credentials.";
+          $("err").style.display = "block";
+        } finally {
+          $("loginBtn").disabled = false;
+        }
+      }
+
+      // Wire up
+      $("q").addEventListener("input", applyFilter);
+      $("refresh").addEventListener("click", () => load().catch(e => {
+        if(String(e.message||"") === "unauthorized") showLogin();
+        else alert("Refresh failed: " + e.message);
+      }));
+      $("logout").addEventListener("click", () => {
+        clearAuth();
+        location.reload();
+      });
+
+      $("loginBtn").addEventListener("click", tryLogin);
+      $("pass").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") tryLogin();
+      });
+      $("user").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") tryLogin();
+      });
+
+      // Boot
+      const saved = sessionStorage.getItem("pawAdminAuth");
+      if(saved){
+        state.authHeader = saved;
+        load().catch(() => showLogin());
+      } else {
+        showLogin();
+      }
+    })();
+  </script>
+</body>
+</html>
