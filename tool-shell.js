@@ -50,7 +50,7 @@
     bubble.innerHTML = "<p>" + escapeHtml(text) + "</p>";
     wrap.appendChild(bubble);
 
-    // PAW: "Bad response?" reporting link (AI messages only)
+    // PAW: "Give feedback" link (AI messages only)
     // - Lives in the shared shell so it automatically applies to all tools.
     // - Captures a snapshot (user input + AI output + tool id/title + time) without extra user work.
     if (role !== "user") {
@@ -324,7 +324,7 @@ function removeNode(node) {
 
 
       // -------------------------
-      // PAW: Ensure "Bad response?" link exists under every AI bubble.
+      // PAW: Ensure "Give feedback" link exists under every AI bubble.
       // Why: Some tools (or future tools) may re-render/rehydrate message DOM
       // without going through appendMessage(), or may overwrite bubble.innerHTML
       // after we attached the link. A MutationObserver makes this bulletproof.
@@ -702,7 +702,7 @@ function resetAutoGrowTextarea($ta){
       // ─────────────────────────────────────────────
       //
       // UX:
-      // - A subtle "Bad response?" link is added under every AI message.
+      // - A subtle "Give feedback" link is added under every AI message.
       // - Clicking opens a tiny modal: reason dropdown + optional note + Send.
       //
       // Data captured automatically (no extra user steps):
@@ -712,8 +712,8 @@ function resetAutoGrowTextarea($ta){
       // - time + page URL
       //
       // Delivery:
-      // - Frontend POSTs to Worker endpoint: /report-bad-response
-      // - Worker emails the snapshot to joe@joinproagent.com
+      // - Frontend POSTs to Worker endpoint: /give-feedback (DB storage)
+      // - Worker stores the snapshot in D1 (no email)proagent.com
 
       function ensureBadResponseModal() {
         let modal = document.getElementById("pawBadResponseModal");
@@ -732,14 +732,14 @@ function resetAutoGrowTextarea($ta){
         const head = document.createElement("div");
         head.className = "modal-head";
         head.innerHTML =
-          '<div class="modal-title">Report a bad response</div>' +
+          '<div class="modal-title">Give feedback</div>' +
           '<button type="button" class="modal-close" aria-label="Close">×</button>';
 
         const body = document.createElement("div");
         body.className = "modal-body";
         body.innerHTML =
           '<div class="field">' +
-          '<label for="pawBadReason">What went wrong?</label>' +
+          '<label for="pawBadReason">What happened?</label>' +
           '<select id="pawBadReason">' +
           '<option value="wrong">Wrong / inaccurate</option>' +
           '<option value="generic">Generic / bland</option>' +
@@ -814,11 +814,11 @@ function resetAutoGrowTextarea($ta){
             const note = safeText(noteEl && noteEl.value) || "";
 
             try {
-              if (statusEl) statusEl.textContent = "Sending…";
+              if (statusEl) statusEl.textContent = "Saving…";
 
               const token = getCSRFTokenFromMeta();
               const baseUrl = getPostUrl();
-              const url = baseUrl.replace(/\/+$/, "") + "/report-bad-response";
+              const url = baseUrl.replace(/\/+$/, "") + "/give-feedback";
 
               // NOTE: We intentionally do not use postJSON() here because postJSON() prefers
               // `error` over `message` when building the thrown Error. For this reporting modal
@@ -830,7 +830,7 @@ function resetAutoGrowTextarea($ta){
                 method: "POST",
                 headers,
                 body: JSON.stringify({
-                  kind: "bad_response_report",
+                  kind: "user_feedback",
                   reason,
                   note,
                   snapshot,
@@ -858,7 +858,7 @@ function resetAutoGrowTextarea($ta){
                 );
               }
 
-              if (statusEl) statusEl.textContent = "Sent. Thank you!";
+              if (statusEl) statusEl.textContent = "Saved. Thank you!";
               setTimeout(function () {
                 try {
                   close();
@@ -926,7 +926,7 @@ function resetAutoGrowTextarea($ta){
         a.className = "paw-report-link";
         a.style.textDecoration = "none";
         a.style.opacity = "0.75";
-        a.textContent = "Bad response?";
+        a.textContent = "Give feedback";
 
         a.addEventListener("click", function (e) {
           try { e.preventDefault(); } catch (_) {}

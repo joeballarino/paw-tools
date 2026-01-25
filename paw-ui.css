@@ -806,9 +806,9 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 
 
 /* ==========================================================
-   PAW — Bad response reporting UI
+   PAW — Give feedback reporting UI
    ----------------------------------------------------------
-   Shared shell adds a subtle "Bad response?" link under AI messages.
+   Shared shell adds a subtle "Give feedback?" link under AI messages.
    Styles are namespaced to avoid affecting existing tools.
    ========================================================== */
 
