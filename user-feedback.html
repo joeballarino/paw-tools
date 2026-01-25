@@ -208,12 +208,33 @@
         authHeader: null,
       };
 
-      function fmtDate(ms){
-        try{
-          const d = new Date(Number(ms));
-          return d.toLocaleString(undefined, { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
-        }catch(_){ return String(ms||""); }
-      }
+      /**
+ * Date display helper.
+ * The feedback table historically stored created_at as epoch ms.
+ * The Worker now stores ISO timestamps (e.g. 2026-01-25T17:10:52.528Z).
+ * Support both so the admin UI never shows "Invalid Date".
+ */
+function fmtDate(value){
+  try{
+    if(value === null || value === undefined || value === "") return "";
+    let d;
+
+    // If it's already a number (or numeric string), treat as epoch milliseconds.
+    if(typeof value === "number" || (typeof value === "string" && /^\d{10,}$/.test(value.trim()))){
+      d = new Date(Number(value));
+    } else {
+      // Otherwise attempt to parse as an ISO (or any Date.parse compatible) string.
+      const t = Date.parse(String(value));
+      d = new Date(t);
+    }
+
+    if(!isFinite(d.getTime())) return String(value||"");
+    return d.toLocaleString(undefined, { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+  }catch(_){
+    return String(value||"");
+  }
+}
+
 
       function parseReason(feedbackNote){
         if(!feedbackNote) return "";
