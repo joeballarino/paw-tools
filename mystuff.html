@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!--
+    PAW Embed Guard (required):
+    ------------------------------------------------------------
+    These pages are built for Circle embedding.
+    If someone opens this page directly (not in an iframe), redirect to proagentworks.com.
+    Keep this lightweight; no dependencies.
+
+    NOTE:
+    - tool-shell.js also enforces Circle-only behavior, but we keep this guard
+      in the <head> so the page fails closed even if future edits remove JS.
+  -->
+  <script>
+    (function () {
+      try {
+        if (window.top === window.self) {
+          window.location.replace("https://proagentworks.com");
+        }
+      } catch (e) {
+        // If cross-origin framing prevents access to window.top, fail closed.
+        window.location.replace("https://proagentworks.com");
+      }
+    })();
+  </script>
+
+  <script>
+    // PAW Embed Mode Guard (same intent as other tools)
+    // ------------------------------------------------
+    // Circle provides the outer card. The embedded tool must render "flat".
+    // paw-ui.css switches to flat mode when html[data-embed="1"] is present.
+    (function(){
+      try{
+        var params = new URLSearchParams(window.location.search);
+        var isEmbedParam = params.get('embed') === '1';
+        var isInIframe = (function(){ try{ return window.self !== window.top; } catch(e){ return true; } })();
+        if(isEmbedParam || isInIframe){
+          document.documentElement.setAttribute('data-embed','1');
+        }
+      }catch(e){}
+    })();
+  </script>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Stuff</title>
+
+  <!-- Shared PAW styles (do not fork) -->
+  <link rel="stylesheet" href="./paw-ui.css">
+
+  <!--
+    ProAgent Works — My Stuff (Circle-embedded page)
+    ------------------------------------------------
+    PURPOSE (Phase 1):
+    - Teach the "intentional saving" model.
+    - Provide the single system of record UI scaffold:
+        Tabs: My Brand / Listings / Deals
+        Empty states + Create CTAs
+        Delete confirmation modal (wired later when real data exists)
+
+    IMPORTANT PRODUCT RULES (locked):
+    - Nothing is saved automatically.
+    - Deletion is permanent (confirm required, no undo, no archive).
+    - This page owns storage/limits messaging (tools should not).
+
+    WIRING NOTE (Phase 1):
+    - This file is UI-only. No backend persistence.
+    - The "Create" CTAs currently open a lightweight “Coming next” modal.
+      Later phases will route these actions into real editors and My Stuff storage.
+  -->
+  <style>
+    /* Scoped styles for My Stuff only (do NOT modify paw-ui.css here). */
+    body.paw-mystuff .mystuff-wrap{
+      padding: 12px 14px 14px;
+    }
+
+    body.paw-mystuff .mystuff-head{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding: 2px 0 12px;
+    }
+    body.paw-mystuff .mystuff-title{
+      font-size:16px;
+      font-weight:900;
+      color: var(--text-strong);
+      letter-spacing:-0.01em;
+      margin:0;
+    }
+    body.paw-mystuff .mystuff-blurb{
+      font-size:13px;
+      font-weight:650;
+      color: rgba(15,23,42,.72);
+      line-height:1.35;
+      margin:0;
+      max-width: 860px;
+    }
+
+    /* Tabs: reuse the shared segmented pill aesthetic */
+    body.paw-mystuff .tabs-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-top: 6px;
+    }
+
+    body.paw-mystuff .tabs{
+      display:flex;
+      width: fit-content;
+      min-width: min(520px, 100%);
+    }
+
+    body.paw-mystuff .tabs .tab-btn{
+      flex:1 1 0;
+      height: 38px;
+      padding: 0 14px;
+      border: 0;
+      background: transparent;
+      color: rgba(15,23,42,.78);
+      font-weight: 900;
+      font-size: 13px;
+      cursor:pointer;
+      white-space:nowrap;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition: background .15s ease, color .15s ease;
+    }
+    body.paw-mystuff .tabs .tab-btn:hover{ background: rgba(15,23,42,.05); }
+    body.paw-mystuff .tabs .tab-btn + .tab-btn{ border-left:1px solid rgba(15,23,42,.08); }
+    body.paw-mystuff .tabs .tab-btn[aria-selected="true"]{
+      background: rgba(5,195,249,.18);
+      color: rgba(15,23,42,.92);
+    }
+
+    body.paw-mystuff .limits{
+      font-size:12px;
+      font-weight:750;
+      color: rgba(15,23,42,.58);
+      white-space:nowrap;
+    }
+
+    /* Content area */
+    body.paw-mystuff .tab-panel{
+      display:none;
+      padding-top: 14px;
+    }
+    body.paw-mystuff .tab-panel.active{ display:block; }
+
+    body.paw-mystuff .empty{
+      border:1px solid rgba(15,23,42,.08);
+      background: rgba(255,255,255,.92);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 24px rgba(15,23,42,.05);
+      max-width: 900px;
+    }
+    body.paw-mystuff .empty h3{
+      margin:0 0 6px 0;
+      font-size:14px;
+      font-weight: 900;
+      color: var(--text-strong);
+      letter-spacing:-0.01em;
+    }
+    body.paw-mystuff .empty p{
+      margin:0 0 14px 0;
+      font-size:13px;
+      font-weight:650;
+      color: rgba(15,23,42,.72);
+      line-height:1.4;
+      max-width: 760px;
+    }
+    body.paw-mystuff .empty .empty-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:flex-start;
+      flex-wrap:wrap;
+    }
+
+    /* Small “future list” placeholder area (keeps layout stable once items exist) */
+    body.paw-mystuff .list-placeholder{
+      margin-top: 14px;
+      border:1px dashed rgba(15,23,42,.12);
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,.76);
+      color: rgba(15,23,42,.62);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 560px){
+      body.paw-mystuff .tabs-row{ flex-direction:column; align-items:stretch; }
+      body.paw-mystuff .tabs{ width:100%; min-width:0; }
+      body.paw-mystuff .limits{ white-space:normal; }
+    }
+  </style>
+</head>
+
+<body class="paw-mystuff">
+  <div class="app">
+    <div class="frame">
+      <div class="panel">
+
+        <!-- Top bar: keep the same shared structure (subtitle + utilities on right) -->
+        <div class="panel-topbar">
+          <div class="topbar-row0">
+            <div class="tool-subtitle">
+              Save what matters so you can reuse it later. Nothing is saved automatically.
+            </div>
+
+            <div class="topbar-right">
+              <div class="utility-pair paw-seg" role="group" aria-label="My Stuff utilities">
+                <button id="help" class="util-btn paw-seg__btn" type="button">What gets saved?</button>
+                <button id="privacy" class="util-btn paw-seg__btn" type="button">Delete &amp; Privacy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mystuff-wrap">
+
+          <div class="mystuff-head">
+            <h2 class="mystuff-title">My Stuff</h2>
+            <p class="mystuff-blurb">
+              My Stuff is where you intentionally save work you’ll want to reuse, revisit, or build on later.
+              PAW doesn’t save things automatically — you choose what matters.
+            </p>
+
+            <div class="tabs-row">
+              <div class="tabs paw-seg" role="tablist" aria-label="My Stuff tabs">
+                <button class="tab-btn" id="tab-brand" role="tab" aria-selected="true" aria-controls="panel-brand" type="button">My Brand</button>
+                <button class="tab-btn" id="tab-listings" role="tab" aria-selected="false" aria-controls="panel-listings" type="button">Listings</button>
+                <button class="tab-btn" id="tab-deals" role="tab" aria-selected="false" aria-controls="panel-deals" type="button">Deals</button>
+              </div>
+
+              <!-- Phase 1: placeholder usage meter (non-technical, mocked) -->
+              <div class="limits" aria-label="Storage usage">
+                You’ve saved 0 of your available items.
+              </div>
+            </div>
+          </div>
+
+          <!-- Panels -->
+          <section id="panel-brand" class="tab-panel active" role="tabpanel" aria-labelledby="tab-brand">
+            <div class="empty">
+              <h3>Set up My Brand</h3>
+              <p>
+                My Brand helps PAW write like you — and saves the details needed to instantly generate bios,
+                profiles, and “About Me” content without starting from scratch each time.
+              </p>
+              <div class="empty-actions">
+                <button class="btn primary" data-action="create-brand" type="button">Create My Brand</button>
+                <button class="btn" data-action="learn-brand" type="button">See examples</button>
+              </div>
+            </div>
+
+            <div class="list-placeholder">
+              <b>Coming next:</b> Once My Brand is created, it will appear here for you to edit or delete anytime.
+            </div>
+          </section>
+
+          <section id="panel-listings" class="tab-panel" role="tabpanel" aria-labelledby="tab-listings">
+            <div class="empty">
+              <h3>No saved Listings yet</h3>
+              <p>
+                Save listing descriptions, property posts, or notes you want to reuse or build on later.
+              </p>
+              <div class="empty-actions">
+                <button class="btn primary" data-action="create-listing" type="button">Create a Listing</button>
+              </div>
+            </div>
+
+            <div class="list-placeholder">
+              <b>Coming next:</b> Saved listings will show up as a simple list you can open, rename, or delete.
+            </div>
+          </section>
+
+          <section id="panel-deals" class="tab-panel" role="tabpanel" aria-labelledby="tab-deals">
+            <div class="empty">
+              <h3>No saved Deals yet</h3>
+              <p>
+                Save important contract work or transaction summaries so you can come back to them anytime.
+              </p>
+              <div class="empty-actions">
+                <button class="btn primary" data-action="create-deal" type="button">Create a Deal</button>
+              </div>
+            </div>
+
+            <div class="list-placeholder">
+              <b>Coming next:</b> Deals can exist with or without documents. You’ll name a deal when you decide to save it.
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help modal (Phase 1: UI only) -->
+  <div id="helpModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modal-head">
+        <div id="helpTitle" class="modal-title">What gets saved?</div>
+        <button class="modal-close" id="helpClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:12px;">
+          <b>PAW doesn’t save things automatically.</b> “My Stuff” is for work you intentionally choose to keep.
+        </div>
+
+        <ul class="tips-list" style="margin-top:0;">
+          <li><b>My Brand</b> — your voice + details PAW can reuse for bios and profiles.</li>
+          <li><b>Listings</b> — saved listing descriptions, posts, and notes tied to a property.</li>
+          <li><b>Deals</b> — saved contract work or transaction summaries you want to revisit.</li>
+        </ul>
+
+        <div style="margin-top:12px; font-size:13px; color:rgba(15,23,42,.74);">
+          Anything you save here can be edited or deleted anytime.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete & privacy modal (Phase 1: UI only) -->
+  <div id="privacyModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+      <div class="modal-head">
+        <div id="privacyTitle" class="modal-title">Delete &amp; Privacy</div>
+        <button class="modal-close" id="privacyClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:10px;">
+          <b>Delete is permanent.</b> When you delete something from My Stuff, it’s gone — and cannot be recovered.
+        </div>
+        <div style="margin-bottom:10px;">
+          This page is the single system of record for saved items. Tools can suggest saving, but nothing is saved unless you choose it.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- “Coming next” modal for Create CTAs (Phase 1 placeholder) -->
+  <div id="comingModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="comingTitle">
+      <div class="modal-head">
+        <div id="comingTitle" class="modal-title">Coming next</div>
+        <button class="modal-close" id="comingClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="comingBody" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45;">
+          This is a placeholder.
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+          <button class="btn primary" id="comingOk" type="button">Got it</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./tool-shell.js"></script>
+
+  <script>
+    (function(){
+      // ------------------------------------------------------------
+      // Tabs (Phase 1)
+      // ------------------------------------------------------------
+      const tabs = [
+        { btn: document.getElementById('tab-brand'), panel: document.getElementById('panel-brand') },
+        { btn: document.getElementById('tab-listings'), panel: document.getElementById('panel-listings') },
+        { btn: document.getElementById('tab-deals'), panel: document.getElementById('panel-deals') },
+      ];
+
+      function activateTab(btnId){
+        tabs.forEach(t => {
+          const on = t.btn && t.btn.id === btnId;
+          if (t.btn) t.btn.setAttribute('aria-selected', on ? 'true' : 'false');
+          if (t.panel) t.panel.classList.toggle('active', !!on);
+        });
+      }
+
+      tabs.forEach(t => {
+        if (!t.btn) return;
+        t.btn.addEventListener('click', () => activateTab(t.btn.id));
+      });
+
+      // ------------------------------------------------------------
+      // Modal helpers (reuse shared .modal styles from paw-ui.css)
+      // ------------------------------------------------------------
+      function openModal($m){
+        try{
+          if (!$m) return;
+          $m.classList.add('show');
+          $m.setAttribute('aria-hidden','false');
+        }catch(_){}
+      }
+      function closeModal($m){
+        try{
+          if (!$m) return;
+          $m.classList.remove('show');
+          $m.setAttribute('aria-hidden','true');
+        }catch(_){}
+      }
+
+      function wireBasicModal(modalId, openBtnId, closeBtnId){
+        const $m = document.getElementById(modalId);
+        const $open = document.getElementById(openBtnId);
+        const $close = document.getElementById(closeBtnId);
+
+        if ($open) $open.addEventListener('click', () => openModal($m));
+        if ($close) $close.addEventListener('click', () => closeModal($m));
+        if ($m) $m.addEventListener('click', (e) => { if (e.target === $m) closeModal($m); });
+        return $m;
+      }
+
+      const $help = wireBasicModal('helpModal','help','helpClose');
+      const $privacy = wireBasicModal('privacyModal','privacy','privacyClose');
+
+      // Coming next modal (Create CTAs)
+      const $coming = document.getElementById('comingModal');
+      const $comingBody = document.getElementById('comingBody');
+      const $comingClose = document.getElementById('comingClose');
+      const $comingOk = document.getElementById('comingOk');
+
+      function showComing(msg){
+        if ($comingBody) $comingBody.textContent = msg;
+        openModal($coming);
+      }
+
+      if ($comingClose) $comingClose.addEventListener('click', () => closeModal($coming));
+      if ($comingOk) $comingOk.addEventListener('click', () => closeModal($coming));
+      if ($coming) $coming.addEventListener('click', (e) => { if (e.target === $coming) closeModal($coming); });
+
+      document.addEventListener('click', (e) => {
+        const el = e.target;
+        if (!el || !el.matches) return;
+        if (!el.matches('[data-action]')) return;
+
+        const a = el.getAttribute('data-action') || '';
+        if (a === 'create-brand') showComing('Next: a simple My Brand editor where you can save your voice + “About Me” details.');
+        if (a === 'learn-brand') showComing('Next: examples + a guided setup that makes it easy to capture your voice and bio details.');
+        if (a === 'create-listing') showComing('Next: create a saved Listing container so tools can save listing descriptions and posts into it.');
+        if (a === 'create-deal') showComing('Next: create a saved Deal container so contract work can be organized by transaction.');
+      });
+
+      // Escape key closes whichever modal is open
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        [$help,$privacy,$coming].forEach(m => closeModal(m));
+      });
+
+    })();
+  </script>
+</body>
+</html>
