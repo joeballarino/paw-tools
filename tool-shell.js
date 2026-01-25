@@ -713,7 +713,7 @@ function resetAutoGrowTextarea($ta){
       //
       // Delivery:
       // - Frontend POSTs to Worker endpoint: /give-feedback (DB storage)
-      // - Worker stores the snapshot in D1 (no email)proagent.com
+      // - Worker stores the snapshot in D1 (no email)
 
       function ensureBadResponseModal() {
         let modal = document.getElementById("pawBadResponseModal");
