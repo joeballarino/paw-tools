@@ -812,6 +812,14 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
    Styles are namespaced to avoid affecting existing tools.
    ========================================================== */
 
+.paw-message-block{
+  /* Wraps an AI response bubble + its feedback row.
+     Keeps feedback OUTSIDE the bubble while preserving alignment across all tools. */
+  display:inline-flex;
+  flex-direction:column;
+  align-items:stretch;
+}
+
 .paw-report-row{
   margin-top:8px;
   display:flex;

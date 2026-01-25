@@ -891,12 +891,42 @@ function resetAutoGrowTextarea($ta){
       function attachBadResponseLink(messageWrap, snapshot) {
         if (!messageWrap) return;
 
+        // Feedback link placement must be UNIFORM across all tools:
+        // - Lives OUTSIDE the AI bubble (below it, aligned right)
+        // - Does not exist before the first AI response (since we inject only when an AI message renders)
+        //
+        // Implementation note:
+        // We wrap each AI bubble in a lightweight container so the feedback row can sit
+        // beneath the bubble without being "inside" the bubble DOM (prevents crowding on short answers).
+        const ensureMessageBlock = () => {
+          try {
+            const existingBlock = messageWrap.closest && messageWrap.closest(".paw-message-block");
+            if (existingBlock) return existingBlock;
+
+            const parent = messageWrap.parentNode;
+            if (!parent) return null;
+
+            const block = document.createElement("div");
+            block.className = "paw-message-block";
+
+            // Insert wrapper where the bubble was, then move bubble into wrapper.
+            parent.insertBefore(block, messageWrap);
+            block.appendChild(messageWrap);
+
+            return block;
+          } catch (_) {
+            return null;
+          }
+        };
+
+        const block = ensureMessageBlock() || messageWrap;
+
         // Avoid duplicates if a tool re-renders.
         // IMPORTANT: Some tools may overwrite bubble.innerHTML after we attach.
         // In that case the DOM row disappears but the flag remains, so we must
         // re-check the DOM rather than relying on the flag alone.
         try {
-          const existing = messageWrap.querySelector && messageWrap.querySelector(".paw-report-row");
+          const existing = block.querySelector && block.querySelector(".paw-report-row");
           if (existing) {
             messageWrap.__pawHasBadLink = true;
             return;
@@ -935,7 +965,7 @@ function resetAutoGrowTextarea($ta){
         });
 
         row.appendChild(a);
-        messageWrap.appendChild(row);
+        block.appendChild(row);
       }
 
       function hideDeliverableModal() {
