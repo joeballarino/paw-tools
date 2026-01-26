@@ -695,14 +695,214 @@
       }
 
       if($mbSave){
-        $mbSave.addEventListener('click', () => {
-          // Phase 2 UI-only: no persistence yet.
-          closeBrandDrawer();
-          showComing('Next: saving My Brand into My Stuff so every tool can use it when it adds value.');
+        $mbSave.addEventListener('click', async () => {
+          // Phase 3: persist My Brand into D1 via the Worker.
+          // Nothing is saved automatically; this only runs on explicit Save.
+          try{
+            const brand = readBrandForm();
+            await apiSaveBrand(brand);
+            closeBrandDrawer();
+            await refreshBrandUI();
+            toast('My Brand saved.');
+          }catch(e){
+            toast('Couldn’t save My Brand. Please try again.');
+          }
         });
       }
 
-      function showComing(msg){
+      // ------------------------------------------------------------
+      // Phase 3: Backend wiring (Auth + Brand persistence)
+      // ------------------------------------------------------------
+      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+
+      function getAuthToken(){
+        try { return (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; } catch(_) { return ""; }
+      }
+      function toast(msg){
+        // My Stuff doesn't use the chat shell; fall back to alert if needed.
+        try{
+          if (window.PAWToolShell && window.PAWToolShell._toast) { window.PAWToolShell._toast(msg); return; }
+        }catch(_){}
+        try{ window.alert(String(msg||"")); }catch(_){}
+      }
+
+      async function apiFetch(path, opts){
+        const url = String(API_ENDPOINT).replace(/\/+$/,"") + path;
+        const headers = Object.assign({ "Content-Type":"application/json" }, (opts && opts.headers) ? opts.headers : {});
+        const t = getAuthToken();
+        if (t) headers["Authorization"] = "Bearer " + t;
+
+        const res = await fetch(url, Object.assign({}, opts, { headers }));
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok){
+          const msg = data && (data.error || data.message || data.reply) ? (data.error || data.message || data.reply) : ("Request failed ("+res.status+")");
+          throw new Error(msg);
+        }
+        return data;
+      }
+
+      async function apiGetBrand(){
+        return await apiFetch("/mystuff/brand", { method:"GET" });
+      }
+      async function apiSaveBrand(brand){
+        return await apiFetch("/mystuff/brand", { method:"POST", body: JSON.stringify({ brand: brand || {} }) });
+      }
+      async function apiDeleteBrand(){
+        return await apiFetch("/mystuff/brand", { method:"DELETE" });
+      }
+
+      function readBrandForm(){
+        return {
+          voice_tone: String((document.getElementById('mb_voice')||{}).value || "").trim(),
+          primary_audience: String((document.getElementById('mb_audience')||{}).value || "").trim(),
+          about_you: String((document.getElementById('mb_about')||{}).value || "").trim(),
+          what_makes_you_different: String((document.getElementById('mb_diff')||{}).value || "").trim(),
+          professional_designations: String((document.getElementById('mb_desig')||{}).value || "").trim(),
+        };
+      }
+
+      function fillBrandForm(brand){
+        const b = brand || {};
+        try{ const el = document.getElementById('mb_voice'); if(el) el.value = b.voice_tone || ""; }catch(_){}
+        try{ const el = document.getElementById('mb_audience'); if(el) el.value = b.primary_audience || ""; }catch(_){}
+        try{ const el = document.getElementById('mb_about'); if(el) el.value = b.about_you || ""; }catch(_){}
+        try{ const el = document.getElementById('mb_diff'); if(el) el.value = b.what_makes_you_different || ""; }catch(_){}
+        try{ const el = document.getElementById('mb_desig'); if(el) el.value = b.professional_designations || ""; }catch(_){}
+      }
+
+      function escapeHtml(str){
+        return String(str||"")
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;")
+          .replaceAll("'","&#39;");
+      }
+
+      function safePreview(str, max){
+        const s = String(str||"").trim().replace(/\s+/g," ");
+        if(!max) return s;
+        return s.length > max ? (s.slice(0, max-1) + "…") : s;
+      }
+
+      function setLimitsText(n){
+        const el = document.querySelector('.limits');
+        if (!el) return;
+        el.textContent = "You’ve saved " + String(n||0) + " of your available items.";
+      }
+
+      function renderBrandSaved(brand, meta){
+        const panel = document.getElementById('panel-brand');
+        if (!panel) return;
+
+        const b = brand || {};
+        const updated = (meta && meta.updated_at) ? String(meta.updated_at) : "";
+        const updatedNice = updated ? (new Date(updated)).toLocaleString() : "";
+
+        panel.innerHTML = `
+          <div class="empty">
+            <h3>My Brand is saved</h3>
+            <p>
+              PAW will use this when it materially improves your output — especially for bios, profiles, and “About Me” content.
+              You can edit or delete this anytime.
+            </p>
+
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+              <div style="display:grid; gap:8px;">
+                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92);">Voice & Tone</div>
+                <div style="font-size:13px; color:rgba(15,23,42,.74);">${escapeHtml(safePreview(b.voice_tone, 140) || "—")}</div>
+
+                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92); margin-top:6px;">Primary Audience</div>
+                <div style="font-size:13px; color:rgba(15,23,42,.74);">${escapeHtml(safePreview(b.primary_audience, 180) || "—")}</div>
+
+                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92); margin-top:6px;">About You</div>
+                <div style="font-size:13px; color:rgba(15,23,42,.74); line-height:1.35;">${escapeHtml(safePreview(b.about_you, 260) || "—")}</div>
+
+                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92); margin-top:6px;">What Makes You Different</div>
+                <div style="font-size:13px; color:rgba(15,23,42,.74); line-height:1.35;">${escapeHtml(safePreview(b.what_makes_you_different, 260) || "—")}</div>
+
+                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92); margin-top:6px;">Designations</div>
+                <div style="font-size:13px; color:rgba(15,23,42,.74);">${escapeHtml(safePreview(b.professional_designations, 120) || "—")}</div>
+
+                ${updatedNice ? `<div style="margin-top:10px; font-size:12px; font-weight:750; color:rgba(15,23,42,.55);">Last updated: ${escapeHtml(updatedNice)}</div>` : ``}
+              </div>
+
+              <div class="empty-actions" style="margin-top:10px;">
+                <button class="btn primary" id="brandEditBtn" type="button">Edit My Brand</button>
+                <button class="btn" id="brandDeleteBtn" type="button">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="list-placeholder">
+            <b>Next:</b> Later phases will let tools suggest saving and reusing your Brand automatically — but only with your permission.
+          </div>
+        `;
+
+        // Wire actions
+        const editBtn = document.getElementById('brandEditBtn');
+        if (editBtn) {
+          editBtn.addEventListener('click', () => {
+            fillBrandForm(b);
+            openBrandDrawer(editBtn);
+          });
+        }
+
+        const delBtn = document.getElementById('brandDeleteBtn');
+        if (delBtn) {
+          delBtn.addEventListener('click', async () => {
+            const ok = window.confirm("Delete My Brand permanently? This cannot be undone.");
+            if (!ok) return;
+            try{
+              await apiDeleteBrand();
+              await refreshBrandUI();
+              toast("My Brand deleted.");
+            }catch(e){
+              toast("Couldn’t delete My Brand. Please try again.");
+            }
+          });
+        }
+      }
+
+      function renderBrandEmpty(){
+        // Restore original "empty state" UI (same copy as Phase 1/2).
+        const panel = document.getElementById('panel-brand');
+        if (!panel) return;
+
+        panel.innerHTML = `
+          <div class="empty">
+            <h3>Set up My Brand</h3>
+            <p>
+              My Brand helps PAW write like you — and saves the details needed to instantly generate bios,
+              profiles, and “About Me” content without starting from scratch each time.
+            </p>
+            <div class="empty-actions">
+              <button class="btn primary" data-action="create-brand" type="button">Create My Brand</button>
+              <button class="btn" data-action="learn-brand" type="button">See examples</button>
+            </div>
+          </div>
+
+          <div class="list-placeholder">
+            <b>Coming next:</b> Once My Brand is created, it will appear here for you to edit or delete anytime.
+          </div>
+        `;
+      }
+
+      async function refreshBrandUI(){
+        try{
+          const data = await apiGetBrand();
+          if (data && data.exists) {
+            renderBrandSaved(data.brand || {}, data.meta || {});
+            setLimitsText(1);
+          } else {
+            renderBrandEmpty();
+            setLimitsText(0);
+          }
+        }catch(_){
+          // If auth isn't ready yet, keep the existing UI.
+        }
+      }
+function showComing(msg){
         if ($comingBody) $comingBody.textContent = msg;
         openModal($coming);
       }
@@ -730,7 +930,24 @@
         closeBrandDrawer();
       });
 
-    })();
+    
+
+      // ------------------------------------------------------------
+      // Boot: initialize auth and load saved My Brand (if any)
+      // ------------------------------------------------------------
+      try{
+        if (window.PAWToolShell && window.PAWToolShell.authInit) {
+          window.PAWToolShell.authInit(API_ENDPOINT);
+        }
+        // Refresh once token is available (or immediately if already ready).
+        if (window.PAWAuth && window.PAWAuth.whenReady) {
+          window.PAWAuth.whenReady().then(() => refreshBrandUI()).catch(() => {});
+        } else {
+          refreshBrandUI();
+        }
+      }catch(_){}
+
+})();
   </script>
 </body>
 </html>

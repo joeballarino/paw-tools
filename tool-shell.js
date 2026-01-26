@@ -25,6 +25,135 @@
 
   enforceCircleOnly();
 
+  // ─────────────────────────────────────────────
+  // Phase 3 — Circle Identity + PAW Session Token
+  // ─────────────────────────────────────────────
+  // Product intent:
+  // - Circle remains the identity source of truth (no extra login).
+  // - Tools request identity from the parent (Circle) via postMessage.
+  // - The Worker mints a short-lived signed token, used for My Stuff persistence
+  //   (and later, usage limits).
+  //
+  // Privacy intent:
+  // - Token is kept in memory only (not localStorage).
+  //
+  // IMPORTANT:
+  // - This is a minimal bridge. Without Circle-side signing, the Worker cannot
+  //   cryptographically prove the user_id came from Circle. We mitigate by:
+  //     (a) only requesting identity when embedded,
+  //     (b) requiring a signed Worker token for all persistence,
+  //     (c) short token lifetimes.
+  // - If Circle provides a verifiable JWT in the future, we should validate it
+  //   in /auth/mint and eliminate spoofing risk.
+  const PAW_CIRCLE_ORIGIN = "https://proagentworks.circle.so";
+  const PAW_IDENTITY_MSG = "paw_identity_v1";
+  const PAW_IDENTITY_REQ = "paw_identity_request_v1";
+
+  const PAWAuth = (function () {
+    let _apiEndpoint = "";
+    let _memberId = "";
+    let _token = "";
+    let _exp = 0;
+
+    let _readyPromise = null;
+    let _readyResolve = null;
+
+    function isInIframe() {
+      try { return window.self !== window.top; } catch (e) { return true; }
+    }
+
+    function whenReady() {
+      if (!_readyPromise) {
+        _readyPromise = new Promise((resolve) => { _readyResolve = resolve; });
+      }
+      return _readyPromise;
+    }
+
+    function getToken() { return _token || ""; }
+    function getMemberId() { return _memberId || ""; }
+    function getMeta() { return { memberId: getMemberId(), exp: _exp || 0 }; }
+
+    async function mintToken(memberId) {
+      const url = String(_apiEndpoint || "").replace(/\/+$/,"") + "/auth/mint";
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: String(memberId || "").trim() })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data && (data.error || data.message || data.reply) ? (data.error || data.message || data.reply) : "Auth failed";
+        throw new Error(msg);
+      }
+      _token = String(data.token || "");
+      _exp = Number(data.exp || 0) || 0;
+    }
+
+    function requestIdentityFromParent() {
+      // Parent (Circle) must respond with:
+      //   window.postMessage({ type: PAW_IDENTITY_MSG, member_id: "<id>" }, "*")
+      // ...from origin https://proagentworks.circle.so
+      try {
+        if (!isInIframe()) return;
+        window.parent.postMessage({ type: PAW_IDENTITY_REQ }, "*");
+      } catch (_) {}
+    }
+
+    function listenForIdentity() {
+      window.addEventListener("message", async (event) => {
+        try {
+          const data = event && event.data ? event.data : null;
+          if (!data || typeof data !== "object") return;
+          if (data.type !== PAW_IDENTITY_MSG) return;
+
+          // Origin hard check (Circle domain)
+          if (event.origin !== PAW_CIRCLE_ORIGIN) return;
+
+          const memberId = String(data.member_id || data.memberId || "").trim();
+          if (!memberId) return;
+
+          // Only set once (do not thrash token)
+          if (_memberId && _memberId === memberId && _token) return;
+
+          _memberId = memberId;
+
+          if (_apiEndpoint) {
+            try { await mintToken(_memberId); } catch (_) {}
+          }
+
+          try { if (_readyResolve) _readyResolve(getMeta()); } catch (_) {}
+        } catch (_) {}
+      });
+    }
+
+    // Attach listener immediately (so we don't miss early messages)
+    listenForIdentity();
+
+    async function init(apiEndpoint) {
+      if (apiEndpoint) _apiEndpoint = String(apiEndpoint || "");
+      whenReady(); // ensure promise exists
+
+      // Only run handshake when embedded in Circle (or any iframe).
+      if (isInIframe()) requestIdentityFromParent();
+
+      // If we already have member_id but no token yet, mint.
+      if (_memberId && _apiEndpoint && !_token) {
+        try { await mintToken(_memberId); } catch (_) {}
+      }
+
+      // If not embedded, resolve with empty meta (tools will remain read-only).
+      if (!isInIframe()) {
+        try { if (_readyResolve) _readyResolve(getMeta()); } catch (_) {}
+      }
+
+      return whenReady();
+    }
+
+    return { init, whenReady, getToken, getMemberId, getMeta };
+  })();
+
+
+
   function $(id) {
     return document.getElementById(id);
   }
@@ -264,6 +393,10 @@ function removeNode(node) {
 
   async function postJSON(url, payload, csrfToken) {
     const headers = { "Content-Type": "application/json" };
+    try {
+      const t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (t) headers["Authorization"] = "Bearer " + t;
+    } catch (_) {}
     if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
 
     const res = await fetch(url, {
@@ -305,7 +438,13 @@ function removeNode(node) {
     return payload;
   }
 
+  window.PAWAuth = PAWAuth;
+
   window.PAWToolShell = {
+    // Auth-only init for pages that don't use the chat shell (e.g., My Stuff).
+    authInit: function (apiEndpoint) {
+      return PAWAuth.init(apiEndpoint);
+    },
     init: function (config) {
       config = config || {};
 
@@ -314,6 +453,9 @@ function removeNode(node) {
 
       const apiEndpoint = safeText(config.apiEndpoint);
       const toolId = safeText(config.toolId);
+
+      // Phase 3: initialize Circle identity + token minting (in-memory only)
+      try { PAWAuth.init(apiEndpoint); } catch (_) {}
 
       const $messages = $("messages");
       const $input = $("input") || $("prompt");
