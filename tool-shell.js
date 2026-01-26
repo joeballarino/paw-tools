@@ -45,7 +45,15 @@
   //     (c) short token lifetimes.
   // - If Circle provides a verifiable JWT in the future, we should validate it
   //   in /auth/mint and eliminate spoofing risk.
+  // Circle can run on its native *.circle.so domain or on a custom domain.
+  // We keep a strict allowlist for the parent (host page) origin to prevent
+  // accepting identity messages from arbitrary sites.
   const PAW_CIRCLE_ORIGIN = "https://proagentworks.circle.so";
+  const PAW_ALLOWED_PARENT_ORIGINS = [
+    PAW_CIRCLE_ORIGIN,
+    "https://www.proagentworks.com",
+    "https://proagentworks.com"
+  ];
   const PAW_IDENTITY_MSG = "paw_identity_v1";
   const PAW_IDENTITY_REQ = "paw_identity_request_v1";
 
@@ -106,8 +114,8 @@
           if (!data || typeof data !== "object") return;
           if (data.type !== PAW_IDENTITY_MSG) return;
 
-          // Origin hard check (Circle domain)
-          if (event.origin !== PAW_CIRCLE_ORIGIN) return;
+          // Origin hard check (Circle native + custom domain allowlist)
+          if (!PAW_ALLOWED_PARENT_ORIGINS.includes(String(event.origin || ""))) return;
 
           const memberId = String(data.member_id || data.memberId || "").trim();
           if (!memberId) return;
