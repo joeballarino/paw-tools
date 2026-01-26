@@ -587,6 +587,13 @@
             Used for email signatures and “About Me” sections when it adds value. Leave anything blank if you don’t want it used.
           </div>
 
+          
+          <div class="drawer-field">
+            <label for="mb_name">Display Name</label>
+            <div class="hint">Optional. Used for signatures and profiles. Example: Joe Ballarino</div>
+            <input id="mb_name" type="text" placeholder="Optional" autocomplete="name">
+          </div>
+
           <div class="drawer-field">
             <label for="mb_phone">Phone</label>
             <div class="hint">Optional. Example: (555) 555-5555</div>
@@ -716,6 +723,19 @@
           // Focus first field for a professional feel
           const first = document.getElementById('mb_voice');
           setTimeout(() => { try{ first && first.focus(); }catch(e){} }, 20);
+          // Prefill (no saving): pull from Circle profile to save time.
+          // IMPORTANT: This only fills empty inputs. Nothing is persisted unless the user clicks "Save My Brand".
+          try{
+            const cu = window.circleUser || {};
+            const name = String(cu.name || "").trim();
+            const email = String(cu.email || "").trim();
+
+            const nameEl = document.getElementById('mb_name');
+            if (nameEl && !String(nameEl.value||"").trim() && name) nameEl.value = name;
+
+            const emailEl = document.getElementById('mb_email');
+            if (emailEl && !String(emailEl.value||"").trim() && email) emailEl.value = email;
+          }catch(_){}
         }catch(e){}
       }
 
@@ -821,6 +841,7 @@
           professional_designations: String((document.getElementById('mb_desig')||{}).value || "").trim(),
 
           // Signature & Contact (optional)
+          display_name: String((document.getElementById('mb_name')||{}).value || "").trim(),
           contact_phone: String((document.getElementById('mb_phone')||{}).value || "").trim(),
           contact_email: String((document.getElementById('mb_email')||{}).value || "").trim(),
           contact_website: String((document.getElementById('mb_website')||{}).value || "").trim(),
@@ -838,6 +859,7 @@
         try{ const el = document.getElementById('mb_desig'); if(el) el.value = b.professional_designations || ""; }catch(_){}
 
         // Signature & Contact (optional)
+        try{ const el = document.getElementById('mb_name'); if(el) el.value = b.display_name || ""; }catch(_){}
         try{ const el = document.getElementById('mb_phone'); if(el) el.value = b.contact_phone || ""; }catch(_){}
         try{ const el = document.getElementById('mb_email'); if(el) el.value = b.contact_email || ""; }catch(_){}
         try{ const el = document.getElementById('mb_website'); if(el) el.value = b.contact_website || ""; }catch(_){}
@@ -900,17 +922,39 @@
                 <div style="font-size:13px; color:rgba(15,23,42,.74);">${escapeHtml(safePreview(b.professional_designations, 120) || "—")}</div>
 
                 ${(() => {
-                  const hasAny = !!(b.contact_phone || b.contact_email || b.contact_website || b.market_city_state || b.license_number);
+                  const hasAny = !!(b.display_name || b.contact_phone || b.contact_email || b.contact_website || b.market_city_state || b.license_number);
                   if (!hasAny) return ``;
+
+                  // Summary-first: keep the saved card compact.
+                  const summaryBits = [];
+                  if (b.display_name) summaryBits.push("Name");
+                  if (b.contact_email) summaryBits.push("Email");
+                  if (b.contact_phone) summaryBits.push("Phone");
+                  if (b.contact_website) summaryBits.push("Website");
+                  if (b.market_city_state) summaryBits.push("Market");
+                  if (b.license_number) summaryBits.push("License #");
+                  const summary = summaryBits.slice(0, 4).join(" • ") + (summaryBits.length > 4 ? " • …" : "");
+
                   return `
                     <div style="margin-top:14px; padding-top:12px; border-top:1px dashed rgba(15,23,42,.16);">
-                      <div style="font-size:13px; font-weight:900; color:rgba(15,23,42,.92);">Signature &amp; Contact</div>
-                      <div style="display:grid; gap:6px; margin-top:8px;">
-                        ${b.contact_phone ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Phone:</b> ${escapeHtml(safePreview(b.contact_phone, 60))}</div>` : ``}
-                        ${b.contact_email ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Email:</b> ${escapeHtml(safePreview(b.contact_email, 80))}</div>` : ``}
-                        ${b.contact_website ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Website:</b> ${escapeHtml(safePreview(b.contact_website, 120))}</div>` : ``}
-                        ${b.market_city_state ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Market:</b> ${escapeHtml(safePreview(b.market_city_state, 80))}</div>` : ``}
-                        ${b.license_number ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">License #:</b> ${escapeHtml(safePreview(b.license_number, 60))}</div>` : ``}
+                      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <div style="font-size:13px; font-weight:900; color:rgba(15,23,42,.92);">Signature &amp; Contact</div>
+                        <button id="brandSigToggle" class="btn" type="button" style="padding:6px 10px; border-radius:999px; font-size:12px; font-weight:900;">Show details</button>
+                      </div>
+
+                      <div style="margin-top:6px; font-size:12.5px; font-weight:750; color:rgba(15,23,42,.62);">
+                        ${escapeHtml(summary || "—")}
+                      </div>
+
+                      <div id="brandSigDetails" style="display:none; margin-top:10px;">
+                        <div style="display:grid; gap:6px;">
+                          ${b.display_name ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Name:</b> ${escapeHtml(safePreview(b.display_name, 60))}</div>` : ``}
+                          ${b.contact_phone ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Phone:</b> ${escapeHtml(safePreview(b.contact_phone, 60))}</div>` : ``}
+                          ${b.contact_email ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Email:</b> ${escapeHtml(safePreview(b.contact_email, 80))}</div>` : ``}
+                          ${b.contact_website ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Website:</b> ${escapeHtml(safePreview(b.contact_website, 120))}</div>` : ``}
+                          ${b.market_city_state ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Market:</b> ${escapeHtml(safePreview(b.market_city_state, 80))}</div>` : ``}
+                          ${b.license_number ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">License #:</b> ${escapeHtml(safePreview(b.license_number, 60))}</div>` : ``}
+                        </div>
                       </div>
                     </div>
                   `;
@@ -955,6 +999,18 @@
             }
           });
         }
+
+        // Signature & Contact: summary-first toggle (keeps the saved card compact).
+        const sigToggle = document.getElementById('brandSigToggle');
+        const sigDetails = document.getElementById('brandSigDetails');
+        if (sigToggle && sigDetails) {
+          sigToggle.addEventListener('click', () => {
+            const isOpen = sigDetails.style.display !== 'none';
+            sigDetails.style.display = isOpen ? 'none' : 'block';
+            sigToggle.textContent = isOpen ? 'Show details' : 'Hide details';
+          });
+        }
+
       }
 
       function renderBrandEmpty(){
