@@ -341,6 +341,27 @@
       flex-wrap: wrap;
     }
 
+    /* My Brand drawer: optional "Signature & Contact" section divider */
+    body.paw-mystuff .drawer-section{
+      margin: 18px 0 14px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(15,23,42,.16);
+    }
+    body.paw-mystuff .drawer-section-title{
+      font-size: 13px;
+      font-weight: 950;
+      color: rgba(15,23,42,.92);
+      letter-spacing:-0.01em;
+      margin: 0 0 6px 0;
+    }
+    body.paw-mystuff .drawer-section-sub{
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(15,23,42,.62);
+      line-height: 1.35;
+      margin: 0 0 10px 0;
+    }
+
   </style>
 </head>
 
@@ -507,10 +528,11 @@
 
 
   <!-- ------------------------------------------------------------
-       My Brand Slide-Over (Phase 2 UI-only)
+       My Brand Slide-Over
        ------------------------------------------------------------
        NOTE:
-       - No persistence yet. "Save My Brand" will show a placeholder message.
+       - This editor saves into My Stuff only when the user clicks Save.
+       - Nothing is saved automatically.
        - This keeps Circle navigation clean and keeps My Brand always editable.
   -->
   <div id="brandDrawer" class="drawer" aria-hidden="true">
@@ -558,6 +580,44 @@
           <div class="hint">Enter exactly how you want them to appear after your name. Example: <b>CRS, GRI</b></div>
           <input id="mb_desig" type="text" placeholder="Optional" autocomplete="off">
         </div>
+
+        <div class="drawer-section" aria-label="Signature and contact (optional)">
+          <div class="drawer-section-title">Signature &amp; Contact (Optional)</div>
+          <div class="drawer-section-sub">
+            Used for email signatures and “About Me” sections when it adds value. Leave anything blank if you don’t want it used.
+          </div>
+
+          <div class="drawer-field">
+            <label for="mb_phone">Phone</label>
+            <div class="hint">Optional. Example: (555) 555-5555</div>
+            <input id="mb_phone" type="text" placeholder="Optional" autocomplete="tel">
+          </div>
+
+          <div class="drawer-field">
+            <label for="mb_email">Email</label>
+            <div class="hint">Optional. Use the email you want included in signatures (not necessarily your Circle login).</div>
+            <input id="mb_email" type="text" placeholder="Optional" autocomplete="email">
+          </div>
+
+          <div class="drawer-field">
+            <label for="mb_website">Website / Booking Link</label>
+            <div class="hint">Optional. Example: your site or a scheduling link.</div>
+            <input id="mb_website" type="text" placeholder="Optional" autocomplete="url">
+          </div>
+
+          <div class="drawer-field">
+            <label for="mb_market">Market (City, ST)</label>
+            <div class="hint">Optional. Helps PAW stay locally accurate. Example: Tampa, FL</div>
+            <input id="mb_market" type="text" placeholder="Optional" autocomplete="off">
+          </div>
+
+          <div class="drawer-field">
+            <label for="mb_license">License #</label>
+            <div class="hint">Optional. If you include this in signatures, enter it exactly as you want it to appear.</div>
+            <input id="mb_license" type="text" placeholder="Optional" autocomplete="off">
+          </div>
+        </div>
+
       </div>
 
       <div class="drawer-foot">
@@ -753,21 +813,36 @@
 
       function readBrandForm(){
         return {
+
           voice_tone: String((document.getElementById('mb_voice')||{}).value || "").trim(),
           primary_audience: String((document.getElementById('mb_audience')||{}).value || "").trim(),
           about_you: String((document.getElementById('mb_about')||{}).value || "").trim(),
           what_makes_you_different: String((document.getElementById('mb_diff')||{}).value || "").trim(),
           professional_designations: String((document.getElementById('mb_desig')||{}).value || "").trim(),
+
+          // Signature & Contact (optional)
+          contact_phone: String((document.getElementById('mb_phone')||{}).value || "").trim(),
+          contact_email: String((document.getElementById('mb_email')||{}).value || "").trim(),
+          contact_website: String((document.getElementById('mb_website')||{}).value || "").trim(),
+          market_city_state: String((document.getElementById('mb_market')||{}).value || "").trim(),
+          license_number: String((document.getElementById('mb_license')||{}).value || "").trim(),
         };
       }
 
-      function fillBrandForm(brand){
+            function fillBrandForm(brand){
         const b = brand || {};
         try{ const el = document.getElementById('mb_voice'); if(el) el.value = b.voice_tone || ""; }catch(_){}
         try{ const el = document.getElementById('mb_audience'); if(el) el.value = b.primary_audience || ""; }catch(_){}
         try{ const el = document.getElementById('mb_about'); if(el) el.value = b.about_you || ""; }catch(_){}
         try{ const el = document.getElementById('mb_diff'); if(el) el.value = b.what_makes_you_different || ""; }catch(_){}
         try{ const el = document.getElementById('mb_desig'); if(el) el.value = b.professional_designations || ""; }catch(_){}
+
+        // Signature & Contact (optional)
+        try{ const el = document.getElementById('mb_phone'); if(el) el.value = b.contact_phone || ""; }catch(_){}
+        try{ const el = document.getElementById('mb_email'); if(el) el.value = b.contact_email || ""; }catch(_){}
+        try{ const el = document.getElementById('mb_website'); if(el) el.value = b.contact_website || ""; }catch(_){}
+        try{ const el = document.getElementById('mb_market'); if(el) el.value = b.market_city_state || ""; }catch(_){}
+        try{ const el = document.getElementById('mb_license'); if(el) el.value = b.license_number || ""; }catch(_){}
       }
 
       function escapeHtml(str){
@@ -823,6 +898,24 @@
 
                 <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92); margin-top:6px;">Designations</div>
                 <div style="font-size:13px; color:rgba(15,23,42,.74);">${escapeHtml(safePreview(b.professional_designations, 120) || "—")}</div>
+
+                ${(() => {
+                  const hasAny = !!(b.contact_phone || b.contact_email || b.contact_website || b.market_city_state || b.license_number);
+                  if (!hasAny) return ``;
+                  return `
+                    <div style="margin-top:14px; padding-top:12px; border-top:1px dashed rgba(15,23,42,.16);">
+                      <div style="font-size:13px; font-weight:900; color:rgba(15,23,42,.92);">Signature &amp; Contact</div>
+                      <div style="display:grid; gap:6px; margin-top:8px;">
+                        ${b.contact_phone ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Phone:</b> ${escapeHtml(safePreview(b.contact_phone, 60))}</div>` : ``}
+                        ${b.contact_email ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Email:</b> ${escapeHtml(safePreview(b.contact_email, 80))}</div>` : ``}
+                        ${b.contact_website ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Website:</b> ${escapeHtml(safePreview(b.contact_website, 120))}</div>` : ``}
+                        ${b.market_city_state ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Market:</b> ${escapeHtml(safePreview(b.market_city_state, 80))}</div>` : ``}
+                        ${b.license_number ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">License #:</b> ${escapeHtml(safePreview(b.license_number, 60))}</div>` : ``}
+                      </div>
+                    </div>
+                  `;
+                })()}
+
 
                 ${updatedNice ? `<div style="margin-top:10px; font-size:12px; font-weight:750; color:rgba(15,23,42,.55);">Last updated: ${escapeHtml(updatedNice)}</div>` : ``}
               </div>
