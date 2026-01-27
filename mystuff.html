@@ -1121,46 +1121,49 @@ function showComing(msg){
        * If the parent listener is missing or blocked, we open the destination in a new tab.
        * This ensures the buttons never appear "dead".
        */
-      function pawNavigate(destinationKey, fallbackUrl) {
+      function pawNavigate(destinationKey){
         const DEST = String(destinationKey || '').toUpperCase();
         const ACK = 'paw_navigate_ack_v1';
         const REQ = 'paw_navigate_request_v1';
 
-        let done = false;
-        const cleanup = (timer, handler) => {
-          if (done) return;
-          done = true;
-          try { clearTimeout(timer); } catch(_) {}
-          try { window.removeEventListener('message', handler); } catch(_) {}
-        };
+        // We intentionally do NOT implement a time-based fallback that opens a new tab.
+        // Reason: the Circle parent navigates immediately, which can unload this iframe
+        // before an ACK is processed — causing false fallbacks and janky UX.
+        //
+        // If the parent bridge is missing, the click will appear to do nothing; in that rare case
+        // we surface a gentle notice so users aren’t confused.
+        let acked = false;
 
         const onAck = (ev) => {
-          try {
+          try{
             if (!ev || !ev.data || ev.data.type !== ACK) return;
             if (String(ev.data.destination || '').toUpperCase() !== DEST) return;
-            cleanup(timer, onAck);
-            // Parent will navigate; nothing else to do here.
-          } catch (_) {
-            // No-op: keep this handler safe and silent.
-          }
+            acked = true;
+            try { window.removeEventListener('message', onAck); } catch(_) {}
+            // Parent will navigate the Circle shell.
+          }catch(_){}
         };
 
-        // If we never receive an ACK, fall back to opening the tool in a new tab.
-        const timer = setTimeout(() => {
-          cleanup(timer, onAck);
-          try { window.open(fallbackUrl, '_blank', 'noopener'); } catch (_) {}
-        }, 900);
+        try { window.addEventListener('message', onAck); } catch(_) {}
 
-        window.addEventListener('message', onAck);
-        try {
+        try{
           // Use "*" because the parent bridge validates origin; we may be embedded under
           // proagentworks.com even though the HTML is hosted on paw-tools.pages.dev.
           window.postMessage({ type: REQ, destination: DEST }, '*');
-        } catch (_) {
-          cleanup(timer, onAck);
-          try { window.open(fallbackUrl, '_blank', 'noopener'); } catch (_) {}
+        }catch(_){
+          // If postMessage fails entirely, let the user know.
+          try { toast('Navigation unavailable. Please refresh Circle and try again.'); } catch(__) {}
         }
+
+        // If we never receive an ACK, we do nothing else by design (no new tabs).
+        // Provide a gentle notice after a short delay, but only if we haven't been acked.
+        setTimeout(() => {
+          if (acked) return;
+          try { toast('Taking you there… If nothing happens, refresh Circle and try again.'); } catch(_) {}
+          try { window.removeEventListener('message', onAck); } catch(_) {}
+        }, 1200);
       }
+
 
 document.addEventListener('click', (e) => {
         const el = e.target;
@@ -1170,8 +1173,8 @@ document.addEventListener('click', (e) => {
         const a = el.getAttribute('data-action') || '';
         if (a === 'create-brand') { openBrandDrawer(el); return; }
         if (a === 'learn-brand') showComing('Next: examples + a guided setup that makes it easy to capture your voice and bio details.');
-        if (a === 'create-listing') { pawNavigate('LISTINGS', 'https://www.proagentworks.com/listings'); return; }
-        if (a === 'create-transaction') { pawNavigate('TRANSACTIONS', 'https://www.proagentworks.com/transactions'); return; }
+        if (a === 'create-listing') { pawNavigate('LISTINGS'); return; }
+        if (a === 'create-transaction') { pawNavigate('TRANSACTIONS'); return; }
       });
 
       // Escape key closes whichever modal is open
