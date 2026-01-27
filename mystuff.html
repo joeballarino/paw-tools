@@ -1130,9 +1130,7 @@ function showComing(msg){
         // Reason: the Circle parent navigates immediately, which can unload this iframe
         // before an ACK is processed — causing false fallbacks and janky UX.
         //
-        // If the parent bridge is missing, the click will appear to do nothing; in that rare case
-        // we surface a gentle notice so users aren’t confused.
-        let acked = false;
+                let acked = false;
 
         const onAck = (ev) => {
           try{
@@ -1149,19 +1147,11 @@ function showComing(msg){
         try{
           // Use "*" because the parent bridge validates origin; we may be embedded under
           // proagentworks.com even though the HTML is hosted on paw-tools.pages.dev.
-          window.postMessage({ type: REQ, destination: DEST }, '*');
+          window.parent.postMessage({ type: REQ, destination: DEST }, '*');
         }catch(_){
-          // If postMessage fails entirely, let the user know.
-          try { toast('Navigation unavailable. Please refresh Circle and try again.'); } catch(__) {}
+          // If postMessage fails entirely, do nothing. (Parent bridge should exist in Circle.)
         }
 
-        // If we never receive an ACK, we do nothing else by design (no new tabs).
-        // Provide a gentle notice after a short delay, but only if we haven't been acked.
-        setTimeout(() => {
-          if (acked) return;
-          try { toast('Taking you there… If nothing happens, refresh Circle and try again.'); } catch(_) {}
-          try { window.removeEventListener('message', onAck); } catch(_) {}
-        }, 1200);
       }
 
 
