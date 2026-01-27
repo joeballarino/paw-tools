@@ -1496,3 +1496,26 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     },
   };
 })();
+
+// ==========================================================
+// My Stuff Context Drawer (shared) — UI only
+// ==========================================================
+var __pawContext = { kind: "" };
+
+function __pawContextLabel(){
+  if (__pawContext.kind === "brand") return "My Stuff · Brand";
+  if (__pawContext.kind === "listing") return "My Stuff · Listing";
+  if (__pawContext.kind === "transaction") return "My Stuff · Transaction";
+  return "My Stuff · No context";
+}
+
+function __pawUpdateMyStuffIndicator(){
+  var b = document.getElementById("pawMyStuffBtn");
+  if (b) b.textContent = __pawContextLabel();
+}
+
+function __pawWireMyStuffButton(){
+  var b = document.getElementById("pawMyStuffBtn");
+  if (!b) return;
+  __pawUpdateMyStuffIndicator();
+}

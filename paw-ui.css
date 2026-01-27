@@ -856,3 +856,63 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   font-size:12px;
   color: rgba(15,23,42,.70);
 }
+
+/* ==========================================================
+   PAW — My Stuff Context Indicator + Drawer (shared)
+   ========================================================== */
+
+.paw-mystuff-btn{
+  height:34px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(255,255,255,.72);
+  color:rgba(15,23,42,.86);
+  font-weight:750;
+  font-size:13px;
+  cursor:pointer;
+  white-space:nowrap;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+  transition: background .15s ease;
+}
+.paw-mystuff-btn:hover{ background:rgba(15,23,42,.05); }
+
+.paw-drawer{
+  position:fixed;
+  inset:0;
+  display:none;
+  z-index:9992;
+}
+.paw-drawer.show{ display:block; }
+
+.paw-drawer__backdrop{
+  position:absolute;
+  inset:0;
+  background: rgba(2,6,23,.52);
+  backdrop-filter: blur(2px);
+}
+
+.paw-drawer__panel{
+  position:absolute;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  width: min(560px, calc(100vw - 20px));
+  background:#fff;
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:16px;
+  box-shadow: 0 28px 70px rgba(0,0,0,.22);
+  overflow:hidden;
+  transform: translateX(12px);
+  opacity: 0;
+  transition: transform .18s ease, opacity .18s ease;
+  display:flex;
+  flex-direction:column;
+}
+.paw-drawer.show .paw-drawer__panel{
+  transform: translateX(0);
+  opacity: 1;
+}
