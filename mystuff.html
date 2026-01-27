@@ -547,7 +547,7 @@
     </div>
   </div>
 
-  <!-- Notice modal (fallback for messages when toast shell isn't available; avoid /* window.alert removed (use PAW modals) */) -->
+  <!-- Notice modal (fallback for messages when toast shell isn't available; avoid browser-native alert) -->
   <div id="noticeModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="noticeTitle">
       <div class="modal-head">
@@ -555,9 +555,7 @@
         <button class="modal-close" id="noticeClose" aria-label="Close" type="button">✕</button>
       </div>
       <div class="modal-body">
-        <div id="noticeBody" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45;">
-          —
-        </div>
+        <div id="noticeBody" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45;">—</div>
         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
           <button class="btn primary" id="noticeOk" type="button">OK</button>
         </div>
@@ -752,7 +750,6 @@
       const $noticeClose = document.getElementById('noticeClose');
       const $noticeOk = document.getElementById('noticeOk');
 
-      let pendingBrandDelete = false;
 
       
       // ------------------------------------------------------------
@@ -838,11 +835,11 @@
         try { return (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; } catch(_) { return ""; }
       }
       function toast(msg){
-        // My Stuff doesn't use the chat shell; prefer the shared shell toast when available.
+        // Prefer the shared shell toast when available.
         try{
           if (window.PAWToolShell && window.PAWToolShell._toast) { window.PAWToolShell._toast(msg); return; }
         }catch(_){}
-        // Fallback: PAW-owned notice modal (avoid /* window.alert removed (use PAW modals) */ which can trigger browser permission prompts).
+        // Fallback: PAW-owned notice modal (avoid browser-native alert).
         try{ showNotice(String(msg||""), "Notice"); }catch(_){}
       }
 
@@ -1061,16 +1058,12 @@
         const delBtn = document.getElementById('brandDeleteBtn');
         if (delBtn) {
           delBtn.addEventListener('click', async () => {
-            // Always use PAW-owned modals for destructive confirmations (avoid browser-native confirm).
-            pendingBrandDelete = true;
+            // Always use PAW-owned modal for destructive confirmations (avoid browser-native confirm).
             openModal($brandDeleteModal);
 
-            // Confirm action (overwrite per-open to prevent stacking).
-            const btn = document.getElementById('brandDeleteConfirm');
-            if (btn) {
-              btn.onclick = async () => {
-                if (!pendingBrandDelete) return;
-                pendingBrandDelete = false;
+            // Confirm action (overwrite to prevent stacking)
+            if ($brandDeleteConfirm) {
+              $brandDeleteConfirm.onclick = async () => {
                 closeModal($brandDeleteModal);
                 try{
                   await apiDeleteBrand();
@@ -1166,13 +1159,13 @@ function showComing(msg){
         openModal($notice);
       }
 
-      // Notice modal wiring (close button, OK, backdrop)
+      // Notice modal wiring
       if ($noticeClose) $noticeClose.addEventListener('click', () => closeModal($notice));
       if ($noticeOk) $noticeOk.addEventListener('click', () => closeModal($notice));
       if ($notice) $notice.addEventListener('click', (e) => { if (e.target === $notice) closeModal($notice); });
 
-      // Brand delete modal wiring (close button, cancel, backdrop)
-      function closeBrandDeleteModal(){ pendingBrandDelete = false; closeModal($brandDeleteModal); }
+      // Brand delete modal wiring
+      function closeBrandDeleteModal(){ closeModal($brandDeleteModal); }
       if ($brandDeleteClose) $brandDeleteClose.addEventListener('click', closeBrandDeleteModal);
       if ($brandDeleteCancel) $brandDeleteCancel.addEventListener('click', closeBrandDeleteModal);
       if ($brandDeleteModal) $brandDeleteModal.addEventListener('click', (e) => { if (e.target === $brandDeleteModal) closeBrandDeleteModal(); });
