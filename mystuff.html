@@ -1111,8 +1111,8 @@ function showComing(msg){
         const a = el.getAttribute('data-action') || '';
         if (a === 'create-brand') { openBrandDrawer(el); return; }
         if (a === 'learn-brand') showComing('Next: examples + a guided setup that makes it easy to capture your voice and bio details.');
-        if (a === 'create-listing') showComing('Next: create a saved Listing container so tools can save listing descriptions and posts into it.');
-        if (a === 'create-transaction') showComing('Next: create a saved Transaction container so contract work can be organized by transaction.');
+        if (a === 'create-listing') { window.location.href = 'https://www.proagentworks.com/listings'; return; }
+        if (a === 'create-transaction') { window.location.href = 'https://www.proagentworks.com/transactions'; return; }
       });
 
       // Escape key closes whichever modal is open
