@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!--
+    PAW Embed Guard (required):
+    These tool pages are built for Circle embedding.
+    If someone opens this page directly (not in an iframe), redirect to proagentworks.com.
+    Keep this lightweight; no dependencies.
+  -->
+  <script>
+    (function () {
+      try {
+        if (window.top === window.self) {
+          window.location.replace("https://proagentworks.com");
+        }
+      } catch (e) {
+        // If cross-origin framing prevents access to window.top, fail closed.
+        window.location.replace("https://proagentworks.com");
+      }
+    })();
+  </script>
+
+  <script>
+    // PAW Embed Mode Guard
+    // -------------------
+    // Circle provides the outer card. The embedded tool must render "flat".
+    // We rely on paw-ui.css rules that activate when html[data-embed="1"] is present.
+    // tool-shell.js will set this when initialized, but this UI scaffold does not
+    // depend on shell init yet, so we set it here as well.
+    (function(){
+      try{
+        var params = new URLSearchParams(window.location.search);
+        var isEmbedParam = params.get('embed') === '1';
+        var isInIframe = (function(){ try{ return window.self !== window.top; } catch(e){ return true; } })();
+        if(isEmbedParam || isInIframe){
+          document.documentElement.setAttribute('data-embed','1');
+        }
+      }catch(e){}
+    })();
+  </script>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Presence</title>
+
+  <!-- Shared PAW styles (do not fork) -->
+  <link rel="stylesheet" href="./paw-ui.css">
+
+  <!--
+    ProAgent Works — Presence (Circle-embedded tool page)
+    ----------------------------------------------------
+    PURPOSE (v1):
+    - Intent-aware content studio for identity, authority, and local expertise.
+    - Generates public-facing content structured for its intended use/destination.
+    - Provides an "escape hatch" for real-world edge cases (Something else / Custom destination).
+
+    IMPORTANT PRODUCT RULES (LOCKED):
+    - Circle owns the tool title. This embedded page MUST NOT render its own title.
+    - Nothing is saved automatically. (This v1 UI does not implement Save; it can suggest it in copy.)
+    - My Brand influence is contextual and applied by the Worker when relevant.
+    - This page contains NO AI prompting logic. All "secret sauce" lives in the Worker.
+
+    IMPLEMENTATION NOTES:
+    - Uses tool-shell.js for consistent chat + deliverable modal behavior.
+    - Uses deliverable mode (Copy / Revise) because Presence outputs are typically paste-ready.
+    - Sends structured preferences to the Worker:
+        presence_content_type, presence_destination, presence_custom_destination, presence_constraints
+
+    FUTURE PHASES (not implemented here):
+    - Optional "Save to My Stuff" actions once Worker endpoints exist for Presence items.
+    - Template-like reusable content blocks (My Brand / Presence patterns).
+  -->
+
+  <style>
+    /* ==========================================================
+       PAW Presence — Scoped UI styles (v1)
+       ----------------------------------------------------------
+       Goal:
+       - Calm, structured, intent-aware controls without turning into a form.
+       - Mobile-first behavior: stack cleanly; no horizontal scroll.
+       - Scoped to Presence only (do not modify shared paw-ui.css).
+       ========================================================== */
+
+    body.paw-presence .presence-controls{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:12px 14px 12px;
+      border-bottom:1px solid var(--border-soft);
+      background:transparent;
+    }
+
+    body.paw-presence .presence-row{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:flex-end;
+      gap:12px;
+    }
+
+    body.paw-presence .presence-block{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width: 240px;
+      flex: 1 1 240px;
+    }
+
+    body.paw-presence .presence-label{
+      font-size:12px;
+      font-weight:900;
+      color:rgba(15,23,42,.72);
+      letter-spacing:-0.01em;
+    }
+
+    body.paw-presence .presence-select,
+    body.paw-presence .presence-input{
+      height:38px;
+      width:100%;
+      border-radius:12px;
+      border:1px solid rgba(15,23,42,.14);
+      background:rgba(255,255,255,.92);
+      padding:8px 10px;
+      font-size:14px;
+      font-weight:750;
+      color:rgba(15,23,42,.92);
+      outline:none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+    }
+
+    body.paw-presence .presence-select:focus,
+    body.paw-presence .presence-input:focus{
+      border-color:rgba(5,195,249,.70);
+      box-shadow:0 0 0 4px rgba(5,195,249,.14);
+      background:#fff;
+    }
+
+    body.paw-presence .presence-hint{
+      font-size:12px;
+      font-weight:700;
+      color:rgba(15,23,42,.60);
+      line-height:1.25;
+      margin-top:2px;
+    }
+
+    body.paw-presence .presence-mini{
+      padding:10px 14px 12px;
+      border-bottom:1px solid var(--border-soft);
+      background:transparent;
+    }
+
+    body.paw-presence .presence-mini textarea{
+      width:100%;
+      min-height:64px;
+      max-height:220px;
+      resize:none;
+      overflow-y:auto;
+      border-radius:14px;
+      border:1px solid rgba(15,23,42,.14);
+      background:rgba(255,255,255,.92);
+      padding:12px 12px;
+      font-size:14px;
+      font-weight:650;
+      line-height:1.35;
+      color:rgba(15,23,42,.92);
+      outline:none;
+    }
+    body.paw-presence .presence-mini textarea:focus{
+      border-color:rgba(5,195,249,.70);
+      box-shadow:0 0 0 4px rgba(5,195,249,.14);
+      background:#fff;
+    }
+
+    body.paw-presence .presence-mini .mini-title{
+      font-size:12px;
+      font-weight:900;
+      color:rgba(15,23,42,.72);
+      letter-spacing:-0.01em;
+      margin:0 0 6px 0;
+    }
+
+    /* Hide the message area when empty so the composer sits closer to the intent controls (calmer feel) */
+    body.paw-presence #messages:empty{
+      display:none;
+    }
+
+    /* Mobile: stack blocks cleanly */
+    @media (max-width: 560px){
+      body.paw-presence .presence-controls{ padding:10px 12px 12px; }
+      body.paw-presence .presence-row{ flex-direction:column; align-items:stretch; }
+      body.paw-presence .presence-block{ min-width:0; width:100%; }
+    }
+  </style>
+</head>
+
+<body class="paw-presence">
+  <div class="app">
+    <div class="frame">
+      <div class="panel">
+
+        <div class="panel-topbar">
+          <div class="topbar-row0">
+            <!-- Circle owns the tool title; embed only shows a short description. -->
+            <div class="tool-subtitle">
+              Public-facing content for your brand, expertise, and local authority.
+            </div>
+
+            <div class="topbar-right">
+              <div class="utility-pair paw-seg" role="group" aria-label="Tool utilities">
+                <button id="reset" class="util-btn paw-seg__btn" type="button">Reset</button>
+                <button id="tips" class="util-btn paw-seg__btn" type="button">Tips &amp; How To</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Presence intent controls -->
+          <div class="presence-controls" aria-label="Presence intent controls">
+            <div class="presence-row" aria-label="Presence primary selectors">
+
+              <div class="presence-block">
+                <div class="presence-label">What are you creating?</div>
+                <select id="contentType" class="presence-select" aria-label="Content type">
+                  <option value="" selected>Choose…</option>
+                  <option value="bio">Bio / About Me</option>
+                  <option value="authority">Authority content (article / blog)</option>
+                  <option value="local">Local content</option>
+                  <option value="social">Social content</option>
+                  <option value="guide">Guide-related content</option>
+                  <option value="other">Something else (describe it)</option>
+                </select>
+                <div id="contentTypeHint" class="presence-hint" style="display:none;">
+                  Describe what you’re creating and what it’s for.
+                </div>
+              </div>
+
+              <div class="presence-block" id="destBlock" style="display:none;">
+                <div class="presence-label">Where will this be used?</div>
+                <select id="destination" class="presence-select" aria-label="Destination">
+                  <option value="" selected>Choose…</option>
+                </select>
+                <div class="presence-hint">This helps PAW format the output correctly.</div>
+              </div>
+
+              <div class="presence-block" id="customDestBlock" style="display:none;">
+                <div class="presence-label">Custom destination</div>
+                <input id="customDest" class="presence-input" type="text"
+                  placeholder="Example: Conference app profile, church bulletin ad" autocomplete="off" />
+                <div class="presence-hint">Optional. Tell PAW where this will appear.</div>
+              </div>
+
+              <div class="presence-block" id="constraintsBlock" style="display:none;">
+                <div class="presence-label">Any constraints?</div>
+                <input id="constraints" class="presence-input" type="text"
+                  placeholder="Example: Max 300 characters, not salesy, faith-based audience" autocomplete="off" />
+                <div class="presence-hint">Optional. Length limits, audience, or must-have details.</div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Optional context (light, not required) -->
+          <div class="presence-mini" aria-label="Presence optional context">
+            <div class="mini-title">Anything PAW should know? (optional)</div>
+            <textarea id="context" placeholder="Example: Your market (City, ST), who you want to attract, your style, a few bullet points, or a rough draft."></textarea>
+          </div>
+
+        </div>
+
+        <!-- Messages (shell-managed) -->
+        <div id="messages" class="messages" aria-live="polite"></div>
+
+        <!-- Composer -->
+        <div class="composer">
+          <div class="composer-main">
+            <div class="composer-help">Tell PAW what you want to create. Paste notes or an existing draft if you have one.</div>
+            <textarea id="prompt" class="prompt" rows="3"
+              placeholder="Example: Write a short, confident bio for my website. I work mostly with first-time buyers in Tampa."></textarea>
+          </div>
+
+          <button id="send" class="send" aria-label="Generate" type="button">
+            <img src="https://paw-tools.pages.dev/paw.png" class="send-icon" alt="">
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="./tool-shell.js"></script>
+
+  <script>
+    /**
+     * PAW Presence (Circle-embedded tool page)
+     * ------------------------------------------------------------
+     * This UI:
+     *  - captures intent (content type + destination + optional constraints)
+     *  - allows edge cases via "Something else" + custom destination fields
+     *  - sends structured prefs to the Worker via tool-shell.js
+     *  - uses deliverable mode (paste-ready content)
+     *
+     * IMPORTANT:
+     * - No AI logic here. Worker holds the "secret sauce".
+     * - Nothing saved automatically. Saving comes later once My Stuff wiring exists.
+     */
+    (function () {
+      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+
+      // -----------------------------
+      // UI elements
+      // -----------------------------
+      const $type = document.getElementById("contentType");
+      const $typeHint = document.getElementById("contentTypeHint");
+
+      const $destBlock = document.getElementById("destBlock");
+      const $dest = document.getElementById("destination");
+
+      const $customDestBlock = document.getElementById("customDestBlock");
+      const $customDest = document.getElementById("customDest");
+
+      const $constraintsBlock = document.getElementById("constraintsBlock");
+      const $constraints = document.getElementById("constraints");
+
+      const $context = document.getElementById("context");
+
+      function norm(v){ return String(v == null ? "" : v).trim(); }
+
+      // Destination presets per content type (v1)
+      const DESTS = {
+        bio: [
+          { v: "website", t: "Website" },
+          { v: "mls_profile", t: "MLS profile" },
+          { v: "social_profile", t: "Social profile" },
+          { v: "short_intro", t: "Short intro" },
+          { v: "custom", t: "Other / Custom" },
+        ],
+        social: [
+          { v: "linkedin", t: "LinkedIn" },
+          { v: "instagram_facebook", t: "Instagram / Facebook" },
+          { v: "google_business_profile", t: "Google Business Profile" },
+          { v: "x", t: "X (Twitter)" },
+          { v: "custom", t: "Other / Custom" },
+        ],
+        authority: [
+          { v: "blog", t: "Blog" },
+          { v: "website_page", t: "Website page" },
+          { v: "email_content", t: "Email content" },
+          { v: "social_preview", t: "Social preview + link" },
+          { v: "custom", t: "Other / Custom" },
+        ],
+        local: [
+          { v: "blog", t: "Blog" },
+          { v: "website_page", t: "Website page" },
+          { v: "google_business_profile", t: "Google Business Profile" },
+          { v: "social_preview", t: "Social preview + link" },
+          { v: "custom", t: "Other / Custom" },
+        ],
+        guide: [
+          { v: "lead_magnet_guide", t: "Lead magnet guide content" },
+          { v: "landing_page", t: "Landing page section" },
+          { v: "social_cta", t: "Social CTA copy" },
+          { v: "email_delivery", t: "Email delivery copy" },
+          { v: "custom", t: "Other / Custom" },
+        ],
+        other: [
+          // In "Something else", we skip presets and go directly to custom fields.
+        ]
+      };
+
+      function setVisible(el, on){
+        try { el.style.display = on ? "" : "none"; } catch(_) {}
+      }
+
+      function populateDestOptions(list){
+        if (!$dest) return;
+        $dest.innerHTML = '<option value="" selected>Choose…</option>';
+        (list || []).forEach(o => {
+          const opt = document.createElement("option");
+          opt.value = o.v;
+          opt.textContent = o.t;
+          $dest.appendChild(opt);
+        });
+      }
+
+      function refreshDestUI(){
+        const typeVal = norm($type && $type.value);
+        const isOther = (typeVal === "other");
+
+        setVisible($typeHint, isOther);
+
+        if (!typeVal) {
+          setVisible($destBlock, false);
+          setVisible($customDestBlock, false);
+          setVisible($constraintsBlock, false);
+          if ($dest) $dest.value = "";
+          if ($customDest) $customDest.value = "";
+          if ($constraints) $constraints.value = "";
+          return;
+        }
+
+        if (isOther) {
+          // Edge-case mode: skip preset destination list and show custom fields.
+          setVisible($destBlock, false);
+          setVisible($customDestBlock, true);
+          setVisible($constraintsBlock, true);
+          if ($dest) $dest.value = "";
+          return;
+        }
+
+        const opts = DESTS[typeVal] || [];
+        populateDestOptions(opts);
+        setVisible($destBlock, true);
+
+        // If destination is custom, reveal custom fields. Otherwise hide.
+        const destVal = norm($dest && $dest.value);
+        const isCustom = (destVal === "custom");
+        setVisible($customDestBlock, isCustom);
+        setVisible($constraintsBlock, isCustom);
+        if (!isCustom) {
+          if ($customDest) $customDest.value = "";
+          if ($constraints) $constraints.value = "";
+        }
+      }
+
+      // Wire changes
+      if ($type) $type.addEventListener("change", refreshDestUI);
+      if ($dest) $dest.addEventListener("change", refreshDestUI);
+
+      // Defaults
+      refreshDestUI();
+
+      // -----------------------------
+      // Deliverable title (dynamic)
+      // -----------------------------
+      function getDeliverableTitle(){
+        const typeVal = norm($type && $type.value);
+        const destVal = norm($dest && $dest.value);
+        const cd = norm($customDest && $customDest.value);
+
+        const typeLabel = {
+          bio: "Bio",
+          authority: "Article",
+          local: "Local Content",
+          social: "Social Post",
+          guide: "Guide Content",
+          other: "Content"
+        }[typeVal] || "Content";
+
+        const destLabel = {
+          website: "Website",
+          mls_profile: "MLS Profile",
+          social_profile: "Social Profile",
+          short_intro: "Short Intro",
+          linkedin: "LinkedIn",
+          instagram_facebook: "Instagram / Facebook",
+          google_business_profile: "Google Business Profile",
+          x: "X (Twitter)",
+          blog: "Blog",
+          website_page: "Website Page",
+          email_content: "Email",
+          social_preview: "Social Preview",
+          lead_magnet_guide: "Lead Magnet Guide",
+          landing_page: "Landing Page",
+          social_cta: "Social CTA",
+          email_delivery: "Email Delivery",
+          custom: (cd ? cd : "Custom Destination")
+        }[destVal] || "";
+
+        if (typeVal === "other") {
+          return cd ? ("Your " + cd) : "Your Custom Content";
+        }
+        if (destLabel) return "Your " + destLabel + " " + typeLabel;
+        return "Your " + typeLabel;
+      }
+
+      // -----------------------------
+      // Tips content
+      // -----------------------------
+      const tipsText =
+`What Presence is for
+• Public-facing content that shows who you are and what you stand for
+• Authority content that builds trust over time
+• Local expertise content that helps people feel confident choosing you
+
+Best results when you include
+• Where it will be used (Website, MLS, LinkedIn, GBP, etc.)
+• Any constraints (character limits, audience, “not salesy”)
+• Your market (City, ST) + who you work with most
+
+Examples
+• “Write my MLS profile bio. I specialize in relocations to Tampa.”
+• “Create a Google Business Profile description that feels local and confident.”
+• “Write a LinkedIn post explaining why inspections matter (calm, helpful).”
+• “I need a 300-character conference app bio. Keep it professional.”`;
+
+      if (!window.PAWToolShell || typeof window.PAWToolShell.init !== "function") {
+        console.error("PAWToolShell not found. Ensure tool-shell.js is loaded.");
+        return;
+      }
+
+      const shell = window.PAWToolShell.init({
+        apiEndpoint: API_ENDPOINT,
+        toolId: "presence",
+
+        // Presence outputs are paste-ready; use the deliverable modal (Copy / Revise)
+        deliverableMode: true,
+        deliverableTitle: getDeliverableTitle,
+
+        tipsText,
+
+        getPrefs: function(){
+          const typeVal = norm($type && $type.value);
+          const destVal = norm($dest && $dest.value);
+
+          const isOther = (typeVal === "other");
+          const isCustom = isOther || (destVal === "custom");
+
+          return {
+            presence_content_type: typeVal,
+            presence_destination: isOther ? "custom" : destVal,
+            presence_custom_destination: isCustom ? norm($customDest && $customDest.value) : "",
+            presence_constraints: isCustom ? norm($constraints && $constraints.value) : ""
+          };
+        },
+
+        getExtraPayload: function(){
+          return { presence_context: norm($context && $context.value) };
+        },
+
+        beforeSend: async () => {
+          try{
+            const tv = norm($type && $type.value);
+            if (!tv) {
+              try{ if (shell && shell.toast) shell.toast("Tip: choose what you’re creating so PAW formats it correctly."); }catch(_){}
+            }
+          }catch(_){}
+          return;
+        }
+      });
+
+      // Reset: restore Presence controls AND let tool-shell clear thread/input.
+      const $reset = document.getElementById("reset");
+      if ($reset) {
+        $reset.addEventListener("click", () => {
+          try{
+            if ($type) $type.value = "";
+            if ($dest) $dest.value = "";
+            if ($customDest) $customDest.value = "";
+            if ($constraints) $constraints.value = "";
+            if ($context) $context.value = "";
+            refreshDestUI();
+          }catch(_){}
+        }, true);
+      }
+
+    })();
+  </script>
+
+</body>
+</html>
