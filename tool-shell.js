@@ -1371,9 +1371,73 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
       if ($reset) $reset.addEventListener("click", reset);
 
       if ($tips && typeof config.tipsText === "string") {
-        $tips.addEventListener("click", function () {
-          alert(config.tipsText);
+        
+    // Tips & How To (PAW modal, not browser-native alert)
+    // ---------------------------------------------------
+    // Contract:
+    // - Uses shared .modal styles from paw-ui.css
+    // - Close via X, backdrop click, or Escape
+    function ensureTipsModal(){
+      try{
+        var existing = document.getElementById("pawTipsModal");
+        if (existing) return existing;
+
+        var m = document.createElement("div");
+        m.id = "pawTipsModal";
+        m.className = "modal";
+        m.setAttribute("aria-hidden","true");
+
+        m.innerHTML =
+          '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawTipsTitle">' +
+            '<div class="modal-head">' +
+              '<div id="pawTipsTitle" class="modal-title">Tips &amp; How To</div>' +
+              '<button class="modal-close" id="pawTipsClose" aria-label="Close" type="button">✕</button>' +
+            '</div>' +
+            '<div class="modal-body">' +
+              '<div id="pawTipsBody" style="white-space:pre-wrap;"></div>' +
+            '</div>' +
+          '</div>';
+
+        document.body.appendChild(m);
+
+        // Close controls
+        var closeBtn = document.getElementById("pawTipsClose");
+        if (closeBtn) closeBtn.addEventListener("click", function(){ closeTipsModal(); });
+
+        m.addEventListener("click", function(e){
+          if (e.target === m) closeTipsModal();
         });
+
+        document.addEventListener("keydown", function(e){
+          if (e.key === "Escape") closeTipsModal();
+        });
+
+        return m;
+      }catch(e){ return null; }
+    }
+
+    function openTipsModal(text){
+      try{
+        var m = ensureTipsModal();
+        if (!m) return;
+
+        var body = document.getElementById("pawTipsBody");
+        if (body) body.textContent = String(text || "");
+
+        m.classList.add("show");
+        m.setAttribute("aria-hidden","false");
+      }catch(e){}
+    }
+
+    function closeTipsModal(){
+      try{
+        var m = document.getElementById("pawTipsModal");
+        if (!m) return;
+        m.classList.remove("show");
+        m.setAttribute("aria-hidden","true");
+      }catch(e){}
+    }
+$tips.addEventListener("click", function () { openTipsModal(config.tipsText || ""); });
       }
 
       

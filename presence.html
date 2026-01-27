@@ -85,9 +85,7 @@
       display:flex;
       flex-direction:column;
       gap:10px;
-      padding:12px 14px 12px;
-      border-bottom:1px solid var(--border-soft);
-      background:transparent;
+      padding:12px 14px 12px;background:transparent;
     }
 
     body.paw-presence .presence-row{
@@ -143,9 +141,7 @@
     }
 
     body.paw-presence .presence-mini{
-      padding:10px 14px 12px;
-      border-bottom:1px solid var(--border-soft);
-      background:transparent;
+      padding:10px 14px 12px;background:transparent;
     }
 
     body.paw-presence .presence-mini textarea{
@@ -227,32 +223,26 @@
                   <option value="guide">Guide-related content</option>
                   <option value="other">Something else (describe it)</option>
                 </select>
-                <div id="contentTypeHint" class="presence-hint" style="display:none;">
-                  Describe what you’re creating and what it’s for.
-                </div>
-              </div>
+</div>
 
               <div class="presence-block" id="destBlock" style="display:none;">
                 <div class="presence-label">Where will this be used?</div>
                 <select id="destination" class="presence-select" aria-label="Destination">
                   <option value="" selected>Choose…</option>
                 </select>
-                <div class="presence-hint">This helps PAW format the output correctly.</div>
-              </div>
+</div>
 
               <div class="presence-block" id="customDestBlock" style="display:none;">
                 <div class="presence-label">Custom destination</div>
                 <input id="customDest" class="presence-input" type="text"
-                  placeholder="Example: Conference app profile, church bulletin ad" autocomplete="off" />
-                <div class="presence-hint">Optional. Tell PAW where this will appear.</div>
-              </div>
+                  placeholder="e.g., Conference app profile" autocomplete="off" />
+</div>
 
               <div class="presence-block" id="constraintsBlock" style="display:none;">
                 <div class="presence-label">Any constraints?</div>
                 <input id="constraints" class="presence-input" type="text"
-                  placeholder="Example: Max 300 characters, not salesy, faith-based audience" autocomplete="off" />
-                <div class="presence-hint">Optional. Length limits, audience, or must-have details.</div>
-              </div>
+                  placeholder="e.g., Max 300 characters" autocomplete="off" />
+</div>
 
             </div>
           </div>
@@ -260,7 +250,7 @@
           <!-- Optional context (light, not required) -->
           <div class="presence-mini" aria-label="Presence optional context">
             <div class="mini-title">Anything PAW should know? (optional)</div>
-            <textarea id="context" placeholder="Example: Your market (City, ST), who you want to attract, your style, a few bullet points, or a rough draft."></textarea>
+            <textarea id="context" placeholder="Market, audience, bullets, or a rough draft…"></textarea>
           </div>
 
         </div>
@@ -273,7 +263,7 @@
           <div class="composer-main">
             <div class="composer-help">Tell PAW what you want to create. Paste notes or an existing draft if you have one.</div>
             <textarea id="prompt" class="prompt" rows="3"
-              placeholder="Example: Write a short, confident bio for my website. I work mostly with first-time buyers in Tampa."></textarea>
+              placeholder="Tell PAW what to write…"></textarea>
           </div>
 
           <button id="send" class="send" aria-label="Generate" type="button">
@@ -308,8 +298,6 @@
       // UI elements
       // -----------------------------
       const $type = document.getElementById("contentType");
-      const $typeHint = document.getElementById("contentTypeHint");
-
       const $destBlock = document.getElementById("destBlock");
       const $dest = document.getElementById("destination");
 
@@ -382,11 +370,7 @@
 
       function refreshDestUI(){
         const typeVal = norm($type && $type.value);
-        const isOther = (typeVal === "other");
-
-        setVisible($typeHint, isOther);
-
-        if (!typeVal) {
+        const isOther = (typeVal === "other");        if (!typeVal) {
           setVisible($destBlock, false);
           setVisible($customDestBlock, false);
           setVisible($constraintsBlock, false);
