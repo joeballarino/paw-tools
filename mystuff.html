@@ -341,7 +341,7 @@
       flex-wrap: wrap;
     }
 
-    /* My Brand drawer: optional "Signature & Contact" section divider */
+    /* My Brand drawer: optional "Contact data" section divider */
     body.paw-mystuff .drawer-section{
       margin: 18px 0 14px;
       padding-top: 14px;
@@ -362,7 +362,87 @@
       margin: 0 0 10px 0;
     }
 
-  </style>
+  
+    /* ------------------------------------------------------------
+       My Stuff: Saved-item list styling (My Brand)
+       ------------------------------------------------------------
+       Keep this page clean and consistent with upcoming Listings/Deals lists.
+       We intentionally avoid "card inside card inside card" nesting. */
+    body.paw-mystuff .saved-list{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      margin: 6px 0 14px;
+    }
+    body.paw-mystuff .saved-item{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px;
+      border:1px solid rgba(15,23,42,.08);
+      background: rgba(255,255,255,.92);
+      border-radius:16px;
+      box-shadow: 0 10px 24px rgba(15,23,42,.05);
+    }
+    body.paw-mystuff .saved-item-title{
+      font-size:15px;
+      font-weight:950;
+      color: rgba(15,23,42,.92);
+      letter-spacing:-0.01em;
+    }
+    body.paw-mystuff .saved-item-meta{
+      margin-top:4px;
+      font-size:12px;
+      font-weight:750;
+      color: rgba(15,23,42,.55);
+      line-height:1.3;
+    }
+    body.paw-mystuff .saved-item-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    body.paw-mystuff .brand-details{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      margin-top: 8px;
+    }
+    body.paw-mystuff .detail-card{
+      border:1px solid rgba(15,23,42,.08);
+      background: rgba(255,255,255,.92);
+      border-radius:16px;
+      padding:14px;
+    }
+    body.paw-mystuff .detail-title{
+      font-size:12px;
+      font-weight:950;
+      color: rgba(15,23,42,.60);
+      letter-spacing:-0.01em;
+    }
+    body.paw-mystuff .detail-body{
+      margin-top:8px;
+      font-size:13px;
+      font-weight:750;
+      color: rgba(15,23,42,.78);
+      line-height:1.4;
+      display:grid;
+      gap:6px;
+    }
+    body.paw-mystuff .detail-body.strong{
+      font-size:14px;
+      font-weight:850;
+      color: rgba(15,23,42,.88);
+      display:block;
+    }
+    body.paw-mystuff .muted{
+      color: rgba(15,23,42,.55);
+      font-weight:750;
+    }
+</style>
 </head>
 
 <body class="paw-mystuff">
@@ -581,16 +661,16 @@
           <input id="mb_desig" type="text" placeholder="Optional" autocomplete="off">
         </div>
 
-        <div class="drawer-section" aria-label="Signature and contact (optional)">
-          <div class="drawer-section-title">Signature &amp; Contact (Optional)</div>
+        <div class="drawer-section" aria-label="Contact data (optional)">
+          <div class="drawer-section-title">Contact data (Optional)</div>
           <div class="drawer-section-sub">
-            Used for email signatures and “About Me” sections when it adds value. Leave anything blank if you don’t want it used.
+            Used when generating bios, profiles, and contact blocks (only when it adds value). Leave anything blank if you don’t want it used.
           </div>
 
           
           <div class="drawer-field">
             <label for="mb_name">Display Name</label>
-            <div class="hint">Optional. Used for signatures and profiles. Example: First Last</div>
+            <div class="hint">Optional. Used for contact blocks and profiles. Example: First Last</div>
             <input id="mb_name" type="text" placeholder="Optional" autocomplete="name">
           </div>
 
@@ -602,7 +682,7 @@
 
           <div class="drawer-field">
             <label for="mb_email">Email</label>
-            <div class="hint">Optional. Use the email you want included in signatures (not necessarily your Circle login).</div>
+            <div class="hint">Optional. Use the email you want included in contact blocks (not necessarily your Circle login).</div>
             <input id="mb_email" type="text" placeholder="Optional" autocomplete="email">
           </div>
 
@@ -620,7 +700,7 @@
 
           <div class="drawer-field">
             <label for="mb_license">License #</label>
-            <div class="hint">Optional. If you include this in signatures, enter it exactly as you want it to appear.</div>
+            <div class="hint">Optional. If you include this in contact blocks, enter it exactly as you want it to appear.</div>
             <input id="mb_license" type="text" placeholder="Optional" autocomplete="off">
           </div>
         </div>
@@ -830,7 +910,7 @@
           what_makes_you_different: String((document.getElementById('mb_diff')||{}).value || "").trim(),
           professional_designations: String((document.getElementById('mb_desig')||{}).value || "").trim(),
 
-          // Signature & Contact (optional)
+          // Contact data (optional)
           display_name: String((document.getElementById('mb_name')||{}).value || "").trim(),
           contact_phone: String((document.getElementById('mb_phone')||{}).value || "").trim(),
           contact_email: String((document.getElementById('mb_email')||{}).value || "").trim(),
@@ -848,7 +928,7 @@
         try{ const el = document.getElementById('mb_diff'); if(el) el.value = b.what_makes_you_different || ""; }catch(_){}
         try{ const el = document.getElementById('mb_desig'); if(el) el.value = b.professional_designations || ""; }catch(_){}
 
-        // Signature & Contact (optional)
+        // Contact data (optional)
         try{ const el = document.getElementById('mb_name'); if(el) el.value = b.display_name || ""; }catch(_){}
         try{ const el = document.getElementById('mb_phone'); if(el) el.value = b.contact_phone || ""; }catch(_){}
         try{ const el = document.getElementById('mb_email'); if(el) el.value = b.contact_email || ""; }catch(_){}
@@ -886,20 +966,36 @@
         const updated = (meta && meta.updated_at) ? String(meta.updated_at) : "";
         const updatedNice = updated ? (new Date(updated)).toLocaleString() : "";
 
+        // NOTE (PAW): My Stuff should not "dump" the full My Brand JSON.
+        // It should behave like a saved-item list (same mental model as Listings + Deals),
+        // then show only the derived, helpful previews below.
         panel.innerHTML = `
-          <div class="empty">
-            <h3>My Brand is saved</h3>
-            <p>
-              PAW will use this when it materially improves your output — especially for bios, profiles, and “About Me” content.
-              You can edit or delete this anytime.
-            </p>
-            <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
-              <div style="border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.92); border-radius:16px; padding:14px; box-shadow: 0 10px 24px rgba(15,23,42,.05);">
-                <div style="font-size:12px; font-weight:900; color:rgba(15,23,42,.60); letter-spacing:-0.01em;">PAW’s snapshot</div>
-                <div id="brandSmartSummary" style="margin-top:8px; font-size:14px; font-weight:750; color:rgba(15,23,42,.88); line-height:1.4;">
-                  Writing your brand snapshot<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span>
+          <div class="saved-list" aria-label="Saved items">
+            <div class="saved-item">
+              <div class="saved-item-main">
+                <div class="saved-item-title">My Brand</div>
+                <div class="saved-item-meta">
+                  Saved${updatedNice ? ` • Last updated: ${escapeHtml(updatedNice)}` : ``}
                 </div>
+              </div>
+              <div class="saved-item-actions">
+                <button class="btn primary" id="brandEditBtn" type="button">Edit</button>
+                <button class="btn" id="brandDeleteBtn" type="button">Delete</button>
+              </div>
+            </div>
+          </div>
 
+          <div class="brand-details" aria-label="My Brand previews">
+            <div class="detail-card">
+              <div class="detail-title">PAW’s snapshot</div>
+              <div id="brandSmartSummary" class="detail-body strong">
+                Writing your brand snapshot<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span>
+              </div>
+            </div>
+
+            <div class="detail-card">
+              <div class="detail-title">Contact data</div>
+              <div class="detail-body">
                 ${(() => {
                   const bits = [];
                   if (b.display_name) bits.push(`<div><b>Name:</b> ${escapeHtml(safePreview(b.display_name, 60))}</div>`);
@@ -907,92 +1003,11 @@
                   if (b.contact_phone) bits.push(`<div><b>Phone:</b> ${escapeHtml(safePreview(b.contact_phone, 60))}</div>`);
                   if (b.contact_website) bits.push(`<div><b>Website:</b> ${escapeHtml(safePreview(b.contact_website, 120))}</div>`);
                   if (b.market_city_state) bits.push(`<div><b>Serving:</b> ${escapeHtml(safePreview(b.market_city_state, 80))}</div>`);
-                  const hasAny = bits.length > 0;
-                  if (!hasAny) return ``;
-
-                  return `
-                    <div style="margin-top:12px; padding-top:12px; border-top:1px dashed rgba(15,23,42,.14);">
-                      <div style="font-size:12px; font-weight:900; color:rgba(15,23,42,.60); letter-spacing:-0.01em;">Signature preview</div>
-                      <div style="margin-top:8px; display:grid; gap:6px; font-size:13px; font-weight:750; color:rgba(15,23,42,.78);">
-                        ${bits.join("")}
-                      </div>
-                    </div>
-                  `;
+                  if (b.license_number) bits.push(`<div><b>License #:</b> ${escapeHtml(safePreview(b.license_number, 60))}</div>`);
+                  return bits.length ? bits.join("") : `<div class="muted">No contact data saved yet.</div>`;
                 })()}
-              </div>
-
-
-            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-              <div style="display:grid; gap:8px;">
-                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92);">Voice & Tone</div>
-                <div style="font-size:13px; color:rgba(15,23,42,.74);">${escapeHtml(safePreview(b.voice_tone, 140) || "—")}</div>
-
-                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92); margin-top:6px;">Primary Audience</div>
-                <div style="font-size:13px; color:rgba(15,23,42,.74);">${escapeHtml(safePreview(b.primary_audience, 180) || "—")}</div>
-
-                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92); margin-top:6px;">About You</div>
-                <div style="font-size:13px; color:rgba(15,23,42,.74); line-height:1.35;">${escapeHtml(safePreview(b.about_you, 260) || "—")}</div>
-
-                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92); margin-top:6px;">What Makes You Different</div>
-                <div style="font-size:13px; color:rgba(15,23,42,.74); line-height:1.35;">${escapeHtml(safePreview(b.what_makes_you_different, 260) || "—")}</div>
-
-                <div style="font-size:13px; font-weight:800; color:rgba(15,23,42,.92); margin-top:6px;">Designations</div>
-                <div style="font-size:13px; color:rgba(15,23,42,.74);">${escapeHtml(safePreview(b.professional_designations, 120) || "—")}</div>
-
-                ${(() => {
-                  const hasAny = !!(b.display_name || b.contact_phone || b.contact_email || b.contact_website || b.market_city_state || b.license_number);
-                  if (!hasAny) return ``;
-
-                  // Summary-first: keep the saved card compact.
-                  const summaryBits = [];
-                  if (b.display_name) summaryBits.push("Name");
-                  if (b.contact_email) summaryBits.push("Email");
-                  if (b.contact_phone) summaryBits.push("Phone");
-                  if (b.contact_website) summaryBits.push("Website");
-                  if (b.market_city_state) summaryBits.push("Market");
-                  if (b.license_number) summaryBits.push("License #");
-                  const summary = summaryBits.slice(0, 4).join(" • ") + (summaryBits.length > 4 ? " • …" : "");
-
-                  return `
-                    <div style="margin-top:14px; padding-top:12px; border-top:1px dashed rgba(15,23,42,.16);">
-                      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <div style="font-size:13px; font-weight:900; color:rgba(15,23,42,.92);">Signature &amp; Contact</div>
-                        <button id="brandSigToggle" class="btn" type="button" style="padding:6px 10px; border-radius:999px; font-size:12px; font-weight:900;">Show details</button>
-                      </div>
-
-                      <div style="margin-top:6px; font-size:12.5px; font-weight:750; color:rgba(15,23,42,.62);">
-                        ${escapeHtml(summary || "—")}
-                      </div>
-
-                      <div id="brandSigDetails" style="display:none; margin-top:10px;">
-                        <div style="display:grid; gap:6px;">
-                          ${b.display_name ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Name:</b> ${escapeHtml(safePreview(b.display_name, 60))}</div>` : ``}
-                          ${b.contact_phone ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Phone:</b> ${escapeHtml(safePreview(b.contact_phone, 60))}</div>` : ``}
-                          ${b.contact_email ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Email:</b> ${escapeHtml(safePreview(b.contact_email, 80))}</div>` : ``}
-                          ${b.contact_website ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Website:</b> ${escapeHtml(safePreview(b.contact_website, 120))}</div>` : ``}
-                          ${b.market_city_state ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">Market:</b> ${escapeHtml(safePreview(b.market_city_state, 80))}</div>` : ``}
-                          ${b.license_number ? `<div style="font-size:13px; color:rgba(15,23,42,.74);"><b style="color:rgba(15,23,42,.86);">License #:</b> ${escapeHtml(safePreview(b.license_number, 60))}</div>` : ``}
-                        </div>
-                      </div>
-                    </div>
-                  `;
-                })()}
-
-
-                </div>
-
-                ${updatedNice ? `<div style="margin-top:10px; font-size:12px; font-weight:750; color:rgba(15,23,42,.55);">Last updated: ${escapeHtml(updatedNice)}</div>` : ``}
-              </div>
-
-              <div class="empty-actions" style="margin-top:10px;">
-                <button class="btn primary" id="brandEditBtn" type="button">Edit My Brand</button>
-                <button class="btn" id="brandDeleteBtn" type="button">Delete</button>
               </div>
             </div>
-          </div>
-
-          <div class="list-placeholder">
-            <b>Next:</b> Later phases will let tools suggest saving and reusing your Brand automatically — but only with your permission.
           </div>
         `;
 
@@ -1020,21 +1035,8 @@
           });
         }
 
-
         // Generate the smart snapshot (derived, not saved)
         try { refreshBrandSmartSummary(); } catch (_) {}
-
-        // Signature & Contact: summary-first toggle (keeps the saved card compact).
-        const sigToggle = document.getElementById('brandSigToggle');
-        const sigDetails = document.getElementById('brandSigDetails');
-        if (sigToggle && sigDetails) {
-          sigToggle.addEventListener('click', () => {
-            const isOpen = sigDetails.style.display !== 'none';
-            sigDetails.style.display = isOpen ? 'none' : 'block';
-            sigToggle.textContent = isOpen ? 'Show details' : 'Hide details';
-          });
-        }
-
       }
 
       function renderBrandEmpty(){
