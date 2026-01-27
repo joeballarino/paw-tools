@@ -55,7 +55,7 @@
     PURPOSE (Phase 1):
     - Teach the "intentional saving" model.
     - Provide the single system of record UI scaffold:
-        Tabs: My Brand / Listings / Deals
+        Tabs: My Brand / Listings / Transactions
         Empty states + Create CTAs
         Delete confirmation modal (wired later when real data exists)
 
@@ -399,7 +399,7 @@
               <div class="tabs paw-seg" role="tablist" aria-label="My Stuff tabs">
                 <button class="tab-btn" id="tab-brand" role="tab" aria-selected="true" aria-controls="panel-brand" type="button">My Brand</button>
                 <button class="tab-btn" id="tab-listings" role="tab" aria-selected="false" aria-controls="panel-listings" type="button">Listings</button>
-                <button class="tab-btn" id="tab-deals" role="tab" aria-selected="false" aria-controls="panel-deals" type="button">Deals</button>
+                <button class="tab-btn" id="tab-transactions" role="tab" aria-selected="false" aria-controls="panel-transactions" type="button">Transactions</button>
               </div>
 
               <!-- Phase 1: placeholder usage meter (non-technical, mocked) -->
@@ -444,19 +444,19 @@
             </div>
           </section>
 
-          <section id="panel-deals" class="tab-panel" role="tabpanel" aria-labelledby="tab-deals">
+          <section id="panel-transactions" class="tab-panel" role="tabpanel" aria-labelledby="tab-transactions">
             <div class="empty">
-              <h3>No saved Deals yet</h3>
+              <h3>No saved Transactions yet</h3>
               <p>
                 Save important contract work or transaction summaries so you can come back to them anytime.
               </p>
               <div class="empty-actions">
-                <button class="btn primary" data-action="create-deal" type="button">Create a Deal</button>
+                <button class="btn primary" data-action="create-transaction" type="button">Create a Transaction</button>
               </div>
             </div>
 
             <div class="list-placeholder">
-              <b>Coming next:</b> Deals can exist with or without documents. You’ll name a deal when you decide to save it.
+              <b>Coming next:</b> Transactions can exist with or without documents. You’ll name a transaction when you decide to save it.
             </div>
           </section>
 
@@ -480,7 +480,7 @@
         <ul class="tips-list" style="margin-top:0;">
           <li><b>My Brand</b> — your voice + details PAW can reuse for bios and profiles.</li>
           <li><b>Listings</b> — saved listing descriptions, posts, and notes tied to a property.</li>
-          <li><b>Deals</b> — saved contract work or transaction summaries you want to revisit.</li>
+          <li><b>Transactions</b> — saved contract work or transaction summaries you want to revisit.</li>
         </ul>
 
         <div style="margin-top:12px; font-size:13px; color:rgba(15,23,42,.74);">
@@ -684,7 +684,7 @@
       const tabs = [
         { btn: document.getElementById('tab-brand'), panel: document.getElementById('panel-brand') },
         { btn: document.getElementById('tab-listings'), panel: document.getElementById('panel-listings') },
-        { btn: document.getElementById('tab-deals'), panel: document.getElementById('panel-deals') },
+        { btn: document.getElementById('tab-transactions'), panel: document.getElementById('panel-transactions') },
       ];
 
       function activateTab(btnId){
@@ -958,7 +958,7 @@
           : ``;
 
         panel.innerHTML = `
-          <!-- Saved item entry (matches how Listings/Deals will appear) -->
+          <!-- Saved item entry (matches how Listings/Transactions will appear) -->
           <div class="empty" style="padding:14px;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
               <div>
@@ -1112,7 +1112,7 @@ function showComing(msg){
         if (a === 'create-brand') { openBrandDrawer(el); return; }
         if (a === 'learn-brand') showComing('Next: examples + a guided setup that makes it easy to capture your voice and bio details.');
         if (a === 'create-listing') showComing('Next: create a saved Listing container so tools can save listing descriptions and posts into it.');
-        if (a === 'create-deal') showComing('Next: create a saved Deal container so contract work can be organized by transaction.');
+        if (a === 'create-transaction') showComing('Next: create a saved Transaction container so contract work can be organized by transaction.');
       });
 
       // Escape key closes whichever modal is open
