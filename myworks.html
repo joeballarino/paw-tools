@@ -113,18 +113,13 @@
       gap:10px;
       height:34px;
       padding:0 14px;
-      border-radius:999px;
-      border:1px solid rgba(5,195,249,.55);
-      background: linear-gradient(90deg, rgba(5,195,249,1), rgba(5,195,249,.78));
-      color:#fff;
-      font-weight:850;
+      background: transparent;
+      color:#ffffff;
+      font-weight:900;
       font-size:13px;
       white-space:nowrap;
       user-select:none;
-      cursor:default; /* explicitly NOT a button */
-      box-shadow:
-        0 8px 18px rgba(15,23,42,.10),
-        0 4px 10px rgba(5,195,249,.14);
+      cursor:default;
     }
     body.paw-mystuff .paw-savedworks-banner .works-paw{
       width:18px;
@@ -414,6 +409,14 @@
       margin: 0 0 10px 0;
     }
 
+  
+    /* Page-only header emphasis for My Works */
+    body.paw-mystuff .panel-topbar.myworks-topbar{
+      background:
+        radial-gradient(900px 260px at 0% 0%, rgba(5,195,249,.22), rgba(255,255,255,0) 45%),
+        #ffffff;
+    }
+
   </style>
 </head>
 
@@ -423,10 +426,10 @@
       <div class="panel">
 
         <!-- Top bar: keep the same shared structure (subtitle + utilities on right) -->
-        <div class="panel-topbar">
+        <div class="panel-topbar myworks-topbar">
           <div class="topbar-row0">
             <div class="tool-head">
-              <div class="paw-savedworks-banner" aria-label="Saved works">
+              <div class="paw-savedworks-banner is-static" aria-label="Saved works">
                 <img class="works-paw" src="https://paw-tools.pages.dev/paw.png" alt="" aria-hidden="true">
                 <span class="savedworks-label">Saved works</span>
               </div>
@@ -444,7 +447,6 @@
         <div class="mystuff-wrap">
 
           <div class="mystuff-head">
-            <h2 class="mystuff-title">My Works</h2>
             <p class="mystuff-blurb">
               My Works is where you intentionally save work you’ll want to reuse, revisit, or build on later.
               PAW doesn’t save anything automatically — you choose what matters.
