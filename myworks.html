@@ -44,13 +44,13 @@
 
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>My Stuff</title>
+  <title>My Works</title>
 
   <!-- Shared PAW styles (do not fork) -->
   <link rel="stylesheet" href="./paw-ui.css">
 
   <!--
-    ProAgent Works — My Stuff (Circle-embedded page)
+    ProAgent Works — My Works (Circle-embedded page)
     ------------------------------------------------
     PURPOSE (Phase 1):
     - Teach the "intentional saving" model.
@@ -67,10 +67,10 @@
     WIRING NOTE (Phase 1):
     - This file is UI-only. No backend persistence.
     - The "Create" CTAs currently open a lightweight “Coming next” modal.
-      Later phases will route these actions into real editors and My Stuff storage.
+      Later phases will route these actions into real editors and My Works storage.
   -->
   <style>
-    /* Scoped styles for My Stuff only (do NOT modify paw-ui.css here). */
+    /* Scoped styles for My Works only (do NOT modify paw-ui.css here). */
     body.paw-mystuff .mystuff-wrap{
       padding: 12px 14px 14px;
     }
@@ -95,6 +95,58 @@
       line-height:1.35;
       margin:0;
       max-width: 860px;
+    }
+
+
+    /* ==========================================================
+       My Works — "Saved works" orientation banner (non-interactive)
+       ------------------------------------------------------------
+       PURPOSE:
+       - Top-left in PAW tools signals something important.
+       - On My Works, we use the same brand language (blue + paw)
+         as a LOCATION/ORIENTATION marker (not a button).
+       - Paw icon keeps the subtle one-time "hello" animation on load.
+       ========================================================== */
+    body.paw-mystuff .paw-savedworks-banner{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      height:34px;
+      padding:0 14px;
+      border-radius:999px;
+      border:1px solid rgba(5,195,249,.55);
+      background: linear-gradient(90deg, rgba(5,195,249,1), rgba(5,195,249,.78));
+      color:#fff;
+      font-weight:850;
+      font-size:13px;
+      white-space:nowrap;
+      user-select:none;
+      cursor:default; /* explicitly NOT a button */
+      box-shadow:
+        0 8px 18px rgba(15,23,42,.10),
+        0 4px 10px rgba(5,195,249,.14);
+    }
+    body.paw-mystuff .paw-savedworks-banner .works-paw{
+      width:18px;
+      height:18px;
+      display:block;
+      object-fit:contain;
+      flex:0 0 auto;
+      transform-origin: 50% 60%;
+    }
+    body.paw-mystuff .paw-savedworks-banner .works-paw.paw-hello{
+      animation: pawHello 1.10s ease-out;
+    }
+
+    body.paw-mystuff .paw-savedworks-banner .savedworks-label{
+      font-weight:900;
+      letter-spacing:-0.01em;
+    }
+
+    /* Mobile: keep the banner full-width so it reads as "important" */
+    @media (max-width: 560px){
+      body.paw-mystuff .tool-head{ width:100%; }
+      body.paw-mystuff .paw-savedworks-banner{ width:100%; }
     }
 
     /* Tabs: reuse the shared segmented pill aesthetic */
@@ -373,12 +425,15 @@
         <!-- Top bar: keep the same shared structure (subtitle + utilities on right) -->
         <div class="panel-topbar">
           <div class="topbar-row0">
-            <div class="tool-subtitle">
-              Save what matters so you can reuse it later. Nothing is saved automatically.
+            <div class="tool-head">
+              <div class="paw-savedworks-banner" aria-label="Saved works">
+                <img class="works-paw" src="https://paw-tools.pages.dev/paw.png" alt="" aria-hidden="true">
+                <span class="savedworks-label">Saved works</span>
+              </div>
             </div>
 
             <div class="topbar-right">
-              <div class="utility-pair paw-seg" role="group" aria-label="My Stuff utilities">
+              <div class="utility-pair paw-seg" role="group" aria-label="My Works utilities">
                 <button id="help" class="util-btn paw-seg__btn" type="button">What gets saved?</button>
                 <button id="privacy" class="util-btn paw-seg__btn" type="button">Delete &amp; Privacy</button>
               </div>
@@ -389,14 +444,14 @@
         <div class="mystuff-wrap">
 
           <div class="mystuff-head">
-            <h2 class="mystuff-title">My Stuff</h2>
+            <h2 class="mystuff-title">My Works</h2>
             <p class="mystuff-blurb">
-              My Stuff is where you intentionally save work you’ll want to reuse, revisit, or build on later.
-              PAW doesn’t save things automatically — you choose what matters.
+              My Works is where you intentionally save work you’ll want to reuse, revisit, or build on later.
+              PAW doesn’t save anything automatically — you choose what matters.
             </p>
 
             <div class="tabs-row">
-              <div class="tabs paw-seg" role="tablist" aria-label="My Stuff tabs">
+              <div class="tabs paw-seg" role="tablist" aria-label="My Works tabs">
                 <button class="tab-btn" id="tab-brand" role="tab" aria-selected="true" aria-controls="panel-brand" type="button">My Brand</button>
                 <button class="tab-btn" id="tab-listings" role="tab" aria-selected="false" aria-controls="panel-listings" type="button">Listings</button>
                 <button class="tab-btn" id="tab-transactions" role="tab" aria-selected="false" aria-controls="panel-transactions" type="button">Transactions</button>
@@ -474,7 +529,7 @@
       </div>
       <div class="modal-body">
         <div style="margin-bottom:12px;">
-          <b>PAW doesn’t save things automatically.</b> “My Stuff” is for work you intentionally choose to keep.
+          <b>PAW doesn’t save things automatically.</b> “My Works” is for work you intentionally choose to keep.
         </div>
 
         <ul class="tips-list" style="margin-top:0;">
@@ -499,7 +554,7 @@
       </div>
       <div class="modal-body">
         <div style="margin-bottom:10px;">
-          <b>Delete is permanent.</b> When you delete something from My Stuff, it’s gone — and cannot be recovered.
+          <b>Delete is permanent.</b> When you delete something from My Works, it’s gone — and cannot be recovered.
         </div>
         <div style="margin-bottom:10px;">
           This page is the single system of record for saved items. Tools can suggest saving, but nothing is saved unless you choose it.
@@ -567,7 +622,7 @@
        My Brand Slide-Over
        ------------------------------------------------------------
        NOTE:
-       - This editor saves into My Stuff only when the user clicks Save.
+       - This editor saves into My Works only when the user clicks Save.
        - Nothing is saved automatically.
        - This keeps Circle navigation clean and keeps My Brand always editable.
   -->
@@ -678,6 +733,22 @@
 
   <script>
     (function(){
+      // ------------------------------------------------------------
+      // Header "Saved works" paw — one-time hello animation
+      // ------------------------------------------------------------
+      // Uses the shared @keyframes pawHello from paw-ui.css.
+      try{
+        const paw = document.querySelector('.paw-savedworks-banner .works-paw');
+        if (paw){
+          setTimeout(() => {
+            try{
+              paw.classList.add('paw-hello');
+              setTimeout(() => { try{ paw.classList.remove('paw-hello'); }catch(_){} }, 1200);
+            }catch(_){}
+          }, 450);
+        }
+      }catch(_){}
+
       // ------------------------------------------------------------
       // Tabs (Phase 1)
       // ------------------------------------------------------------
@@ -930,7 +1001,7 @@
 
       
       function renderBrandSaved(brand, meta){
-        // My Stuff is a "saved items" view, not a raw data dump.
+        // My Works is a "saved items" view, not a raw data dump.
         // We show a single saved My Brand entry + two helpful previews:
         //  - PAW’s snapshot (derived, not saved)
         //  - Contact data (derived display of fields the user chose to provide)
