@@ -72,23 +72,19 @@
   <style>
     /* Scoped styles for My Works only (do NOT modify paw-ui.css here). */
     body.paw-mystuff .mystuff-wrap{
-      padding: 0 14px 14px;
+      padding: 0 14px 18px;
+      margin-top: -44px; /* visually tucks content into the extended header gradient */
     }
 
     body.paw-mystuff .mystuff-head{
       display:flex;
       flex-direction:column;
-      gap:8px;
-
-      /* Make the header + reminder copy feel like ONE unit with the gradient topbar */
-      margin-top: -10px;
-      padding: 12px 12px 14px;
-      background:
-        radial-gradient(1100px 420px at 0% 0%, rgba(5,195,249,.16), rgba(255,255,255,0) 70%),
-        rgba(255,255,255,.92);
+      gap:10px;
+      padding: 14px;
+      background: rgba(255,255,255,.78);
+      backdrop-filter: blur(4px);
+      border-radius: 16px;
       border: 1px solid rgba(15,23,42,.06);
-      border-top: 0;
-      border-radius: 0 0 18px 18px;
     }
     body.paw-mystuff .mystuff-title{
       font-size:16px;
@@ -160,7 +156,6 @@
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      margin-top: 6px;
     }
 
     body.paw-mystuff .tabs{
@@ -171,13 +166,13 @@
 
     body.paw-mystuff .tabs .tab-btn{
       flex:1 1 0;
-      height: 38px;
+      height: 40px;
       padding: 0 14px;
       border: 0;
       background: transparent;
-      color: rgba(15,23,42,.78);
+      color: rgba(15,23,42,.82);
       font-weight: 900;
-      font-size: 13px;
+      font-size: 13.5px;
       cursor:pointer;
       white-space:nowrap;
       display:flex;
@@ -188,7 +183,7 @@
     body.paw-mystuff .tabs .tab-btn:hover{ background: rgba(15,23,42,.05); }
     body.paw-mystuff .tabs .tab-btn + .tab-btn{ border-left:1px solid rgba(15,23,42,.08); }
     body.paw-mystuff .tabs .tab-btn[aria-selected="true"]{
-      background: rgba(5,195,249,.18);
+      background: rgba(5,195,249,.24);
       color: rgba(15,23,42,.92);
     }
 
@@ -207,17 +202,72 @@
     body.paw-mystuff .tab-panel.active{ display:block; }
 
     body.paw-mystuff .empty{
-      border:1px solid rgba(15,23,42,.08);
-      background: rgba(255,255,255,.92);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 10px 24px rgba(15,23,42,.05);
-      max-width: 900px;
+      /*
+        CONTAINER POLICY (My Works):
+        - Avoid card-on-card fatigue.
+        - Keep the page feeling like one coherent workspace.
+        - Use whitespace + subtle dividers instead of repeated boxes.
+      */
+      border: 0;
+      background: transparent;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
+      max-width: 980px;
     }
+
+    body.paw-mystuff .mw-section{
+      padding: 12px 0;
+      border-top: 1px solid rgba(15,23,42,.08);
+      max-width: 980px;
+    }
+    body.paw-mystuff .mw-section:first-child{ border-top: 0; }
+
+    body.paw-mystuff .mw-section-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    body.paw-mystuff .mw-title{
+      margin:0;
+      font-size: 14px;
+      font-weight: 950;
+      color: rgba(15,23,42,.92);
+      letter-spacing:-0.01em;
+    }
+    body.paw-mystuff .mw-meta{
+      margin-top:4px;
+      font-size:12px;
+      font-weight:650;
+      color: rgba(15,23,42,.56);
+    }
+
+    body.paw-mystuff .mw-body{
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(15,23,42,.80);
+      line-height: 1.45;
+      max-width: 920px;
+    }
+
+    body.paw-mystuff .mw-kv{
+      margin-top: 8px;
+      display:grid;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: rgba(15,23,42,.74);
+    }
+    body.paw-mystuff .mw-kv b{ font-weight: 750; color: rgba(15,23,42,.72); }
+
     body.paw-mystuff .empty h3{
-      margin:0 0 6px 0;
-      font-size:14px;
-      font-weight: 900;
+      margin:0;
+      font-size:13px;
+      font-weight: 950;
       color: var(--text-strong);
       letter-spacing:-0.01em;
     }
@@ -240,13 +290,15 @@
     /* Small “future list” placeholder area (keeps layout stable once items exist) */
     body.paw-mystuff .list-placeholder{
       margin-top: 14px;
-      border:1px dashed rgba(15,23,42,.12);
-      border-radius: 16px;
-      padding: 12px 14px;
-      background: rgba(255,255,255,.76);
-      color: rgba(15,23,42,.62);
+      padding: 10px 0 0;
+      border: 0;
+      border-top: 1px dashed rgba(15,23,42,.14);
+      border-radius: 0;
+      background: transparent;
+      color: rgba(15,23,42,.58);
       font-size: 12px;
       line-height: 1.35;
+      max-width: 980px;
     }
 
     @media (max-width: 560px){
@@ -422,9 +474,16 @@
   
     /* Page-only header emphasis for My Works */
     body.paw-mystuff .panel-topbar.myworks-topbar{
+      /*
+        Make the entire header area feel like one coherent group.
+        We extend the topbar’s gradient downward, then pull the content
+        (reminder + tabs) up into it so there’s no “two gradient” seam.
+      */
+      padding-bottom: 56px;
       background:
         radial-gradient(1100px 420px at 0% 0%, rgba(5,195,249,.62), rgba(5,195,249,.32) 35%, rgba(255,255,255,0) 70%),
         #ffffff;
+      border-radius: 18px;
     }
 
   </style>
@@ -447,8 +506,7 @@
 
             <div class="topbar-right">
               <div class="utility-pair paw-seg" role="group" aria-label="My Works utilities">
-                <button id="help" class="util-btn paw-seg__btn" type="button">What gets saved?</button>
-                <button id="privacy" class="util-btn paw-seg__btn" type="button">Delete &amp; Privacy</button>
+                <button id="tips" class="util-btn paw-seg__btn" type="button">Tips &amp; How To</button>
               </div>
             </div>
           </div>
@@ -532,44 +590,28 @@
     </div>
   </div>
 
-  <!-- Help modal (Phase 1: UI only) -->
-  <div id="helpModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+
+  <!-- Tips & How To modal (PAW-owned; adds value beyond on-page reminder) -->
+  <div id="tipsModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tipsTitle">
       <div class="modal-head">
-        <div id="helpTitle" class="modal-title">What gets saved?</div>
-        <button class="modal-close" id="helpClose" aria-label="Close" type="button">✕</button>
+        <div id="tipsTitle" class="modal-title">Tips &amp; How To</div>
+        <button class="modal-close" id="tipsClose" aria-label="Close" type="button">✕</button>
       </div>
       <div class="modal-body">
         <div style="margin-bottom:12px;">
-          <b>PAW doesn’t save things automatically.</b> “My Works” is for work you intentionally choose to keep.
+          <b>My Works is your “keep it” shelf.</b> Save only the things you’ll want to reuse, revisit, or build on.
         </div>
 
         <ul class="tips-list" style="margin-top:0;">
-          <li><b>My Brand</b> — your voice + details PAW can reuse for bios and profiles.</li>
-          <li><b>Listings</b> — saved listing descriptions, posts, and notes tied to a property.</li>
-          <li><b>Transactions</b> — saved contract work or transaction summaries you want to revisit.</li>
+          <li><b>Save when it took effort.</b> If you refined wording, gathered details, or nailed the tone — save it.</li>
+          <li><b>Saved vs. not saved:</b> Drafts you don’t save aren’t kept here. If you want it later, save it.</li>
+          <li><b>Edit anytime.</b> Updating an item changes what PAW will reuse going forward.</li>
+          <li><b>Delete is permanent.</b> If you delete something from My Works, it’s removed and can’t be recovered.</li>
         </ul>
 
-        <div style="margin-top:12px; font-size:18px; color:rgba(15,23,42,.74);">
-          Anything you save here can be edited or deleted anytime.
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Delete & privacy modal (Phase 1: UI only) -->
-  <div id="privacyModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
-      <div class="modal-head">
-        <div id="privacyTitle" class="modal-title">Delete &amp; Privacy</div>
-        <button class="modal-close" id="privacyClose" aria-label="Close" type="button">✕</button>
-      </div>
-      <div class="modal-body">
-        <div style="margin-bottom:10px;">
-          <b>Delete is permanent.</b> When you delete something from My Works, it’s gone — and cannot be recovered.
-        </div>
-        <div style="margin-bottom:10px;">
-          This page is the single system of record for saved items. Tools can suggest saving, but nothing is saved unless you choose it.
+        <div style="margin-top:12px; font-size:13px; font-weight:650; color:rgba(15,23,42,.68); line-height:1.35;">
+          <b>Quick examples:</b> Save a version of your bio you love, a listing description that worked, or a transaction summary you may reference later.
         </div>
       </div>
     </div>
@@ -812,8 +854,7 @@
         return $m;
       }
 
-      const $help = wireBasicModal('helpModal','help','helpClose');
-      const $privacy = wireBasicModal('privacyModal','privacy','privacyClose');
+      const $tips = wireBasicModal('tipsModal','tips','tipsClose');
 
       // Coming next modal (Create CTAs)
       const $coming = document.getElementById('comingModal');
@@ -1032,36 +1073,34 @@
         if (b.contact_website) bits.push(`<div><b>Website:</b> ${escapeHtml(safePreview(b.contact_website, 120))}</div>`);
         if (b.market_city_state) bits.push(`<div><b>Serving:</b> ${escapeHtml(safePreview(b.market_city_state, 80))}</div>`);
         const contactHtml = bits.length
-          ? `<div class="empty" style="margin-top:12px;">
-               <h3 style="margin-bottom:10px;">Contact data</h3>
-               <div style="display:grid; gap:6px; font-size:13.5px; font-weight:650; color:rgba(15,23,42,.68);">
+          ? `<div class="mw-section mw-preview">
+               <div class="mw-label">Contact data <span class="mw-label-sub">(used when it adds value)</span></div>
+               <div class="mw-contact">
                  ${bits.join("")}
                </div>
              </div>`
           : ``;
 
         panel.innerHTML = `
-          <!-- Saved item entry (matches how Listings/Transactions will appear) -->
-          <div class="empty" style="padding:14px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div class="mw-section mw-saved">
+            <div class="mw-saved-row">
               <div>
-                <div style="font-size:14px; font-weight:950; color:rgba(15,23,42,.92);">My Brand</div>
-                <div style="margin-top:4px; font-size:12px; font-weight:750; color:rgba(15,23,42,.60);">
+                <div class="mw-saved-title">My Brand</div>
+                <div class="mw-meta">
                   Saved${updatedNice ? ` • Last updated: ${escapeHtml(updatedNice)}` : ``}
                 </div>
               </div>
 
-              <div style="display:flex; gap:10px; align-items:center;">
+              <div class="mw-actions">
                 <button class="btn primary" id="brandEditBtn" type="button">Edit</button>
                 <button class="btn" id="brandDeleteBtn" type="button">Delete</button>
               </div>
             </div>
           </div>
 
-          <!-- Snapshot preview (derived, not saved) -->
-          <div class="empty" style="margin-top:12px;">
-            <h3 style="margin-bottom:10px;">PAW’s snapshot</h3>
-            <div id="brandSmartSummary" style="font-size:13.5px; font-weight:650; color:rgba(15,23,42,.78); line-height:1.45;">
+          <div class="mw-section mw-preview">
+            <div class="mw-label">PAW’s snapshot <span class="mw-label-sub">(generated from your saved brand)</span></div>
+            <div id="brandSmartSummary" class="mw-preview-text">
               Writing your brand snapshot<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span>
             </div>
           </div>
@@ -1253,7 +1292,7 @@ document.addEventListener('click', (e) => {
       // Escape key closes whichever modal is open
       document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
-        [$help,$privacy,$coming,$brandDeleteModal,$notice].forEach(m => closeModal(m));
+        [$tips,$coming,$brandDeleteModal,$notice].forEach(m => closeModal(m));
         closeBrandDrawer();
       });
 
