@@ -308,6 +308,29 @@
     body.paw-mystuff .mw-facet{
       margin-top: 14px;
     }
+
+    /* ------------------------------------------------------------
+       Desktop: Snapshot + Contact side-by-side
+       ------------------------------------------------------------
+       - Snapshot is the primary column (wider)
+       - Contact data is secondary (slightly narrower, but still readable)
+       - Collapses back to single column on smaller screens
+    */
+    body.paw-mystuff .mw-facets-grid{
+      display:grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      gap: 28px;
+      margin-top: 14px;
+      align-items:start;
+    }
+    body.paw-mystuff .mw-facets-grid .mw-facet{ margin-top: 0; }
+
+    @media (max-width: 860px){
+      body.paw-mystuff .mw-facets-grid{
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+    }
     body.paw-mystuff .mw-facet-label{
       font-size: 14px;              /* promoted snapshot header */
       font-weight: 900;
@@ -1237,7 +1260,7 @@
         if (b.market_city_state) bits.push(`<div><span class="mw-k">Serving</span><span class="mw-v">${escapeHtml(safePreview(b.market_city_state, 80))}</span></div>`);
         const contactHtml = bits.length
           ? `<div class="mw-facet">
-               <div class="mw-facet-label">Contact data <span class="mw-label-sub">(used when it adds value)</span></div>
+               <div class="mw-facet-label">Contact data</div>
                <div class="mw-contact">
                  ${bits.join("")}
                </div>
@@ -1260,15 +1283,18 @@
               </div>
             </div>
 
-            <div class="mw-facet">
-              <div class="mw-facet-label">PAW’s snapshot <span class="mw-label-sub">(generated from your saved brand)</span></div>
-              <div id="brandSmartSummary" class="mw-facet-body">
-                Writing your brand snapshot<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span>
+            
+            <div class="mw-facets-grid">
+              <div class="mw-facet">
+                <div class="mw-facet-label">PAW’s Snapshot</div>
+                <div id="brandSmartSummary" class="mw-facet-body">
+                  Writing your brand snapshot<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span>
+                </div>
               </div>
-            </div>
 
-            ${contactHtml}
-          </div>
+              ${contactHtml}
+            </div>
+</div>
         `;
 
         // Wire actions
