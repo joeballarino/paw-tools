@@ -72,7 +72,7 @@
   <style>
     /* Scoped styles for My Works only (do NOT modify paw-ui.css here). */
     body.paw-mystuff .mystuff-wrap{
-      padding: 12px 14px 14px;
+      padding: 4px 14px 14px;
     }
 
     body.paw-mystuff .mystuff-head{
@@ -89,7 +89,8 @@
       margin:0;
     }
     body.paw-mystuff .mystuff-blurb{
-      font-size:13px;
+      margin-top: -2px;
+      font-size:15px;
       font-weight:650;
       color: rgba(15,23,42,.72);
       line-height:1.35;
@@ -116,7 +117,7 @@
       background: transparent;
       color:#ffffff;
       font-weight:900;
-      font-size:13px;
+      font-size:15px;
       white-space:nowrap;
       user-select:none;
       cursor:default;
@@ -213,7 +214,7 @@
     }
     body.paw-mystuff .empty p{
       margin:0 0 14px 0;
-      font-size:13px;
+      font-size:15px;
       font-weight:650;
       color: rgba(15,23,42,.72);
       line-height:1.4;
@@ -413,7 +414,7 @@
     /* Page-only header emphasis for My Works */
     body.paw-mystuff .panel-topbar.myworks-topbar{
       background:
-        radial-gradient(900px 260px at 0% 0%, rgba(5,195,249,.22), rgba(255,255,255,0) 45%),
+        radial-gradient(900px 320px at 0% 0%, rgba(5,195,249,.42), rgba(5,195,249,.18) 28%, rgba(255,255,255,0) 55%),
         #ffffff;
     }
 
@@ -540,7 +541,7 @@
           <li><b>Transactions</b> — saved contract work or transaction summaries you want to revisit.</li>
         </ul>
 
-        <div style="margin-top:12px; font-size:13px; color:rgba(15,23,42,.74);">
+        <div style="margin-top:12px; font-size:15px; color:rgba(15,23,42,.74);">
           Anything you save here can be edited or deleted anytime.
         </div>
       </div>
@@ -1024,7 +1025,7 @@
         const contactHtml = bits.length
           ? `<div class="empty" style="margin-top:12px;">
                <h3 style="margin-bottom:10px;">Contact data</h3>
-               <div style="display:grid; gap:6px; font-size:13px; font-weight:750; color:rgba(15,23,42,.78);">
+               <div style="display:grid; gap:6px; font-size:15px; font-weight:750; color:rgba(15,23,42,.78);">
                  ${bits.join("")}
                </div>
              </div>`
