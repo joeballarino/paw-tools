@@ -107,8 +107,9 @@
        No extra container boxes; just a soft fade for legibility.
     */
     body.paw-mystuff .myworks-hero{
-      padding: 0 14px 12px;
-      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,.72));
+      /* Unified header group: no extra “shelf” backgrounds here. */
+      padding: 0 14px 10px;
+      background: transparent;
     }
 
 
@@ -274,6 +275,84 @@
       color: rgba(15,23,42,.74);
     }
     body.paw-mystuff .mw-kv b{ font-weight: 750; color: rgba(15,23,42,.72); }
+
+    /* ------------------------------------------------------------
+       Saved My Brand (single cohesive unit)
+       ------------------------------------------------------------
+       - My Brand + Snapshot + Contact data are one saved object.
+       - No “card” containers; grouping is done with spacing + type.
+       - This unit can later be followed by additional saved brand items.
+    */
+    body.paw-mystuff .mw-brandunit{
+      max-width: 980px;
+    }
+    body.paw-mystuff .mw-brandhead{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap:wrap;
+    }
+    body.paw-mystuff .mw-brandtitle{
+      margin:0;
+      font-size: 15px;
+      font-weight: 950;
+      color: rgba(15,23,42,.92);
+      letter-spacing:-0.01em;
+    }
+    body.paw-mystuff .mw-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+    body.paw-mystuff .mw-facet{
+      margin-top: 14px;
+    }
+    body.paw-mystuff .mw-facet-label{
+      font-size: 12.5px;
+      font-weight: 750;
+      color: rgba(15,23,42,.62);
+      line-height: 1.25;
+    }
+    body.paw-mystuff .mw-facet-label .mw-label-sub{
+      font-weight: 650;
+      color: rgba(15,23,42,.52);
+    }
+    body.paw-mystuff .mw-facet-body{
+      margin-top: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(15,23,42,.82);
+      line-height: 1.5;
+      max-width: 920px;
+    }
+
+    /* Contact key/value list (label muted, value readable) */
+    body.paw-mystuff .mw-contact{
+      margin-top: 8px;
+      display:grid;
+      gap: 6px;
+      max-width: 720px;
+    }
+    body.paw-mystuff .mw-contact > div{
+      display:grid;
+      grid-template-columns: 110px 1fr;
+      column-gap: 12px;
+      align-items: baseline;
+    }
+    body.paw-mystuff .mw-k{
+      font-size: 12.5px;
+      font-weight: 700;
+      color: rgba(15,23,42,.58);
+    }
+    body.paw-mystuff .mw-v{
+      font-size: 13.5px;
+      font-weight: 600;
+      color: rgba(15,23,42,.78);
+      overflow-wrap: anywhere;
+    }
 
     body.paw-mystuff .empty h3{
       margin:0;
@@ -488,11 +567,12 @@
         We extend the topbar’s gradient downward, then pull the content
         (reminder + tabs) up into it so there’s no “two gradient” seam.
       */
-      padding-bottom: 18px;
+      padding-bottom: 10px;
       background:
         radial-gradient(1100px 420px at 0% 0%, rgba(5,195,249,.62), rgba(5,195,249,.32) 35%, rgba(255,255,255,0) 70%),
         #ffffff;
-      border-radius: 18px;
+      border-radius: 18px 18px 0 0;
+      overflow: hidden;
     }
 
   </style>
@@ -1087,8 +1167,8 @@
         if (b.contact_website) bits.push(`<div><span class="mw-k">Website</span><span class="mw-v">${escapeHtml(safePreview(b.contact_website, 120))}</span></div>`);
         if (b.market_city_state) bits.push(`<div><span class="mw-k">Serving</span><span class="mw-v">${escapeHtml(safePreview(b.market_city_state, 80))}</span></div>`);
         const contactHtml = bits.length
-          ? `<div class="mw-section mw-preview">
-               <div class="mw-label">Contact data <span class="mw-label-sub">(used when it adds value)</span></div>
+          ? `<div class="mw-facet">
+               <div class="mw-facet-label">Contact data <span class="mw-label-sub">(used when it adds value)</span></div>
                <div class="mw-contact">
                  ${bits.join("")}
                </div>
@@ -1096,10 +1176,10 @@
           : ``;
 
         panel.innerHTML = `
-          <div class="mw-section mw-saved">
-            <div class="mw-saved-row">
+          <div class="mw-brandunit">
+            <div class="mw-brandhead">
               <div>
-                <div class="mw-saved-title">My Brand</div>
+                <h3 class="mw-brandtitle">My Brand</h3>
                 <div class="mw-meta">
                   Saved${updatedNice ? ` • Last updated: ${escapeHtml(updatedNice)}` : ``}
                 </div>
@@ -1110,16 +1190,16 @@
                 <button class="btn" id="brandDeleteBtn" type="button">Delete</button>
               </div>
             </div>
-          </div>
 
-          <div class="mw-section mw-preview">
-            <div class="mw-label">PAW’s snapshot <span class="mw-label-sub">(generated from your saved brand)</span></div>
-            <div id="brandSmartSummary" class="mw-preview-text">
-              Writing your brand snapshot<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span>
+            <div class="mw-facet">
+              <div class="mw-facet-label">PAW’s snapshot <span class="mw-label-sub">(generated from your saved brand)</span></div>
+              <div id="brandSmartSummary" class="mw-facet-body">
+                Writing your brand snapshot<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span>
+              </div>
             </div>
-          </div>
 
-          ${contactHtml}
+            ${contactHtml}
+          </div>
         `;
 
         // Wire actions
