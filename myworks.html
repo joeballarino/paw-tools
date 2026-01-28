@@ -72,19 +72,16 @@
   <style>
     /* Scoped styles for My Works only (do NOT modify paw-ui.css here). */
     body.paw-mystuff .mystuff-wrap{
+      /* Main workspace content */
       padding: 0 14px 18px;
-      margin-top: -44px; /* visually tucks content into the extended header gradient */
     }
 
     body.paw-mystuff .mystuff-head{
       display:flex;
       flex-direction:column;
       gap:10px;
-      padding: 14px;
-      background: rgba(255,255,255,.78);
-      backdrop-filter: blur(4px);
-      border-radius: 16px;
-      border: 1px solid rgba(15,23,42,.06);
+      padding: 10px 0 14px;
+      /* No card chrome: this lives inside the hero header region */
     }
     body.paw-mystuff .mystuff-title{
       font-size:16px;
@@ -102,6 +99,18 @@
       line-height: 1.45;
       max-width: 920px;
     }
+
+    /* ------------------------------------------------------------
+       My Works Hero (header workspace region)
+       ------------------------------------------------------------
+       Goal: one coherent header group (Saved Works + Tips + reminder + tabs)
+       No extra container boxes; just a soft fade for legibility.
+    */
+    body.paw-mystuff .myworks-hero{
+      padding: 0 14px 12px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,.72));
+    }
+
 
 
     /* ==========================================================
@@ -217,11 +226,13 @@
     }
 
     body.paw-mystuff .mw-section{
-      padding: 12px 0;
-      border-top: 1px solid rgba(15,23,42,.08);
+      /* Whitespace > rules. Avoid harsh dividers. */
+      padding: 0;
+      margin-top: 18px;
+      border: 0;
       max-width: 980px;
     }
-    body.paw-mystuff .mw-section:first-child{ border-top: 0; }
+    body.paw-mystuff .mw-section:first-child{ margin-top: 0; }
 
     body.paw-mystuff .mw-section-head{
       display:flex;
@@ -289,13 +300,11 @@
 
     /* Small “future list” placeholder area (keeps layout stable once items exist) */
     body.paw-mystuff .list-placeholder{
-      margin-top: 14px;
-      padding: 10px 0 0;
+      margin-top: 16px;
+      padding: 0;
       border: 0;
-      border-top: 1px dashed rgba(15,23,42,.14);
-      border-radius: 0;
       background: transparent;
-      color: rgba(15,23,42,.58);
+      color: rgba(15,23,42,.56);
       font-size: 12px;
       line-height: 1.35;
       max-width: 980px;
@@ -479,7 +488,7 @@
         We extend the topbar’s gradient downward, then pull the content
         (reminder + tabs) up into it so there’s no “two gradient” seam.
       */
-      padding-bottom: 56px;
+      padding-bottom: 18px;
       background:
         radial-gradient(1100px 420px at 0% 0%, rgba(5,195,249,.62), rgba(5,195,249,.32) 35%, rgba(255,255,255,0) 70%),
         #ffffff;
@@ -510,29 +519,34 @@
               </div>
             </div>
           </div>
+
+
+          <div class="myworks-hero">
+            <div class="mystuff-head">
+                        <p class="mystuff-blurb">
+                          My Works is where you intentionally save work you’ll want to reuse, revisit, or build on later.
+                          PAW doesn’t save anything automatically — you choose what matters.
+                        </p>
+
+                        <div class="tabs-row">
+                          <div class="tabs paw-seg" role="tablist" aria-label="My Works tabs">
+                            <button class="tab-btn" id="tab-brand" role="tab" aria-selected="true" aria-controls="panel-brand" type="button">My Brand</button>
+                            <button class="tab-btn" id="tab-listings" role="tab" aria-selected="false" aria-controls="panel-listings" type="button">Listings</button>
+                            <button class="tab-btn" id="tab-transactions" role="tab" aria-selected="false" aria-controls="panel-transactions" type="button">Transactions</button>
+                          </div>
+
+                          <!-- Phase 1: placeholder usage meter (non-technical, mocked) -->
+                          <div class="limits" aria-label="Storage usage">
+                            You’ve saved 0 of your available items.
+                          </div>
+                        </div>
+                      </div>
+          </div>
         </div>
 
         <div class="mystuff-wrap">
 
-          <div class="mystuff-head">
-            <p class="mystuff-blurb">
-              My Works is where you intentionally save work you’ll want to reuse, revisit, or build on later.
-              PAW doesn’t save anything automatically — you choose what matters.
-            </p>
-
-            <div class="tabs-row">
-              <div class="tabs paw-seg" role="tablist" aria-label="My Works tabs">
-                <button class="tab-btn" id="tab-brand" role="tab" aria-selected="true" aria-controls="panel-brand" type="button">My Brand</button>
-                <button class="tab-btn" id="tab-listings" role="tab" aria-selected="false" aria-controls="panel-listings" type="button">Listings</button>
-                <button class="tab-btn" id="tab-transactions" role="tab" aria-selected="false" aria-controls="panel-transactions" type="button">Transactions</button>
-              </div>
-
-              <!-- Phase 1: placeholder usage meter (non-technical, mocked) -->
-              <div class="limits" aria-label="Storage usage">
-                You’ve saved 0 of your available items.
-              </div>
-            </div>
-          </div>
+          
 
           <!-- Panels -->
           <section id="panel-brand" class="tab-panel active" role="tabpanel" aria-labelledby="tab-brand">
@@ -1067,11 +1081,11 @@
 
         // Contact data preview (only show fields that exist)
         const bits = [];
-        if (b.display_name) bits.push(`<div><b>Name:</b> ${escapeHtml(safePreview(b.display_name, 60))}</div>`);
-        if (b.contact_email) bits.push(`<div><b>Email:</b> ${escapeHtml(safePreview(b.contact_email, 80))}</div>`);
-        if (b.contact_phone) bits.push(`<div><b>Phone:</b> ${escapeHtml(safePreview(b.contact_phone, 60))}</div>`);
-        if (b.contact_website) bits.push(`<div><b>Website:</b> ${escapeHtml(safePreview(b.contact_website, 120))}</div>`);
-        if (b.market_city_state) bits.push(`<div><b>Serving:</b> ${escapeHtml(safePreview(b.market_city_state, 80))}</div>`);
+        if (b.display_name) bits.push(`<div><span class="mw-k">Name</span><span class="mw-v">${escapeHtml(safePreview(b.display_name, 60))}</span></div>`);
+        if (b.contact_email) bits.push(`<div><span class="mw-k">Email</span><span class="mw-v">${escapeHtml(safePreview(b.contact_email, 80))}</span></div>`);
+        if (b.contact_phone) bits.push(`<div><span class="mw-k">Phone</span><span class="mw-v">${escapeHtml(safePreview(b.contact_phone, 60))}</span></div>`);
+        if (b.contact_website) bits.push(`<div><span class="mw-k">Website</span><span class="mw-v">${escapeHtml(safePreview(b.contact_website, 120))}</span></div>`);
+        if (b.market_city_state) bits.push(`<div><span class="mw-k">Serving</span><span class="mw-v">${escapeHtml(safePreview(b.market_city_state, 80))}</span></div>`);
         const contactHtml = bits.length
           ? `<div class="mw-section mw-preview">
                <div class="mw-label">Contact data <span class="mw-label-sub">(used when it adds value)</span></div>
