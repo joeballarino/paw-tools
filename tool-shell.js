@@ -1503,19 +1503,49 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
 var __pawContext = { kind: "" };
 
 function __pawContextLabel(){
-  if (__pawContext.kind === "brand") return "My Stuff · Brand";
-  if (__pawContext.kind === "listing") return "My Stuff · Listing";
-  if (__pawContext.kind === "transaction") return "My Stuff · Transaction";
-  return "My Stuff · No context";
+  // UI label for the top-left Works indicator.
+  // NOTE: Keep this human (not technical). We’ll wire real item names later.
+  if (__pawContext.kind === "brand") return "Works: Brand";
+  if (__pawContext.kind === "listing") return "Works: Listing";
+  if (__pawContext.kind === "transaction") return "Works: Transaction";
+  return "Works: Ready";
 }
 
 function __pawUpdateMyStuffIndicator(){
   var b = document.getElementById("pawMyStuffBtn");
-  if (b) b.textContent = __pawContextLabel();
+  if (!b) return;
+
+  var label = __pawContextLabel();
+
+  // Prefer structured markup when present (works-label span).
+  var span = b.querySelector(".works-label");
+  if (span) span.textContent = label;
+  else b.textContent = label;
+
+  // Active styling: when anything is attached, the paw icon darkens.
+  b.classList.toggle("is-active", !!(__pawContext && __pawContext.kind));
+
+  // Keep an accessible name that matches what the user sees.
+  b.setAttribute("aria-label", label);
 }
 
 function __pawWireMyStuffButton(){
   var b = document.getElementById("pawMyStuffBtn");
   if (!b) return;
+
   __pawUpdateMyStuffIndicator();
+
+  // One-time "hello" animation for the Works paw icon.
+  // Subtle brand presence — runs once on page load, then rests.
+  if (!b.dataset.pawHelloDone) {
+    b.dataset.pawHelloDone = "1";
+    var icon = b.querySelector(".works-paw");
+    if (icon) {
+      setTimeout(function(){
+        icon.classList.add("paw-hello");
+        // Remove the class after the animation so it doesn't retrigger.
+        setTimeout(function(){ icon.classList.remove("paw-hello"); }, 1300);
+      }, 450);
+    }
+  }
 }

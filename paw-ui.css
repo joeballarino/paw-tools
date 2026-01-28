@@ -878,6 +878,55 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
   transition: background .15s ease;
 }
+
+/* ==========================================================
+   Works (My Stuff context indicator)
+   ----------------------------------------------------------
+   - Lives in the top-left header slot.
+   - Uses the SAME paw icon asset/process as the primary Send
+     button (image + sizing), but styled as a calm status mark.
+   - Resting state is muted/gray; active state matches the
+     darker "send" vibe.
+   - A one-time "hello" animation runs on page load only.
+   ========================================================== */
+
+.paw-works-btn{
+  gap:10px;
+  padding-left:10px;
+  padding-right:10px;
+}
+.paw-works-btn .works-paw{
+  width:18px;
+  height:18px;
+  display:inline-block;
+  /* Resting / default: muted */
+  filter: grayscale(1);
+  opacity:.62;
+  transform-origin: 50% 60%;
+}
+.paw-works-btn.is-active .works-paw{
+  /* Active: match the normal (non-muted) paw look */
+  filter:none;
+  opacity:1;
+}
+.paw-works-btn .works-label{
+  display:inline-block;
+}
+.paw-works-btn .works-chevron{
+  margin-left:2px;
+  font-size:12px;
+  opacity:.75;
+}
+
+/* One-time intro animation (subtle, unmissable) */
+.paw-works-btn .works-paw.paw-hello{
+  animation: pawHello 1.15s ease-out;
+}
+@keyframes pawHello{
+  0%{ transform: translateY(0) scale(1); opacity:.55; }
+  45%{ transform: translateY(-1px) scale(1.08); opacity:1; }
+  100%{ transform: translateY(0) scale(1); opacity:.62; }
+}
 .paw-mystuff-btn:hover{ background:rgba(15,23,42,.05); }
 
 .paw-drawer{
