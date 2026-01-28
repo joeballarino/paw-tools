@@ -79,8 +79,8 @@
     body.paw-mystuff .mystuff-head{
       display:flex;
       flex-direction:column;
-      gap:10px;
-      padding: 10px 0 14px;
+      gap:8px;
+      padding: 10px 0 8px;
       /* No card chrome: this lives inside the hero header region */
     }
     body.paw-mystuff .mystuff-title{
@@ -155,9 +155,7 @@
     }
 
     /* Mobile: keep the banner full-width so it reads as "important" */
-    @media (max-width: 560px){
-      body.paw-mystuff .tool-head{ width:100%; }
-      body.paw-mystuff .paw-savedworks-banner{ width:100%; }
+    body.paw-mystuff .paw-savedworks-banner{ width:100%; }
     }
 
     /* Tabs: reuse the shared segmented pill aesthetic */
@@ -390,8 +388,25 @@
     }
 
     @media (max-width: 560px){
-      body.paw-mystuff .tabs-row{ flex-direction:column; align-items:stretch; }
-      body.paw-mystuff .tabs{ width:100%; min-width:0; }
+  body.paw-mystuff .tool-head{ width:100%; }
+  body.paw-mystuff .paw-savedworks-banner{ width:100%; }
+
+  body.paw-mystuff .tabs-row{ flex-direction:column; align-items:stretch; gap:10px; }
+  body.paw-mystuff .tabs{ width:100%; min-width:0; flex-direction:column; }
+
+  /* Mobile: tabs become primary stacked actions */
+  body.paw-mystuff .tabs .tab-btn{
+    width:100%;
+    justify-content:center;
+    border-left: 0 !important;
+  }
+  body.paw-mystuff .tabs .tab-btn + .tab-btn{
+    border-left:0;
+    border-top:1px solid rgba(15,23,42,.10);
+  }
+
+  body.paw-mystuff .limits{ white-space:normal; text-align:left; }
+}body.paw-mystuff .tabs{ width:100%; min-width:0; }
       body.paw-mystuff .limits{ white-space:normal; }
     }
   
@@ -567,9 +582,12 @@
         We extend the topbar’s gradient downward, then pull the content
         (reminder + tabs) up into it so there’s no “two gradient” seam.
       */
-      padding-bottom: 10px;
+      padding-bottom: 6px;
       background:
-        radial-gradient(1100px 420px at 0% 0%, rgba(5,195,249,.62), rgba(5,195,249,.32) 35%, rgba(255,255,255,0) 70%),
+        /* Dark anchor glow behind the paw + "Saved Works" (keeps contrast) */
+        radial-gradient(520px 240px at 120px 74px, rgba(0,155,220,.95) 0%, rgba(5,195,249,.62) 28%, rgba(255,255,255,0) 58%),
+        /* Light diagonal glow that fades quickly to white (prevents a "blue slab") */
+        radial-gradient(920px 420px at 10% 0%, rgba(5,195,249,.22) 0%, rgba(255,255,255,0) 55%),
         #ffffff;
       border-radius: 18px 18px 0 0;
       overflow: hidden;
@@ -603,12 +621,7 @@
 
           <div class="myworks-hero">
             <div class="mystuff-head">
-                        <p class="mystuff-blurb">
-                          My Works is where you intentionally save work you’ll want to reuse, revisit, or build on later.
-                          PAW doesn’t save anything automatically — you choose what matters.
-                        </p>
-
-                        <div class="tabs-row">
+<div class="tabs-row">
                           <div class="tabs paw-seg" role="tablist" aria-label="My Works tabs">
                             <button class="tab-btn" id="tab-brand" role="tab" aria-selected="true" aria-controls="panel-brand" type="button">My Brand</button>
                             <button class="tab-btn" id="tab-listings" role="tab" aria-selected="false" aria-controls="panel-listings" type="button">Listings</button>
@@ -693,9 +706,7 @@
         <button class="modal-close" id="tipsClose" aria-label="Close" type="button">✕</button>
       </div>
       <div class="modal-body">
-        <div style="margin-bottom:12px;">
-          <b>My Works is your “keep it” shelf.</b> Save only the things you’ll want to reuse, revisit, or build on.
-        </div>
+        <div style="margin-bottom:12px;"><b>PAW doesn’t save anything automatically.</b> My Works is where you intentionally save work you’ll want to reuse, revisit, or build on later — you choose what matters.</div>
 
         <ul class="tips-list" style="margin-top:0;">
           <li><b>Save when it took effort.</b> If you refined wording, gathered details, or nailed the tone — save it.</li>
