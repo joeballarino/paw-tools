@@ -78,8 +78,17 @@
     body.paw-mystuff .mystuff-head{
       display:flex;
       flex-direction:column;
-      gap:6px;
-      padding: 6px 0 14px;
+      gap:8px;
+
+      /* Make the header + reminder copy feel like ONE unit with the gradient topbar */
+      margin-top: -10px;
+      padding: 12px 12px 14px;
+      background:
+        radial-gradient(1100px 420px at 0% 0%, rgba(5,195,249,.16), rgba(255,255,255,0) 70%),
+        rgba(255,255,255,.92);
+      border: 1px solid rgba(15,23,42,.06);
+      border-top: 0;
+      border-radius: 0 0 18px 18px;
     }
     body.paw-mystuff .mystuff-title{
       font-size:16px;
@@ -89,13 +98,13 @@
       margin:0;
     }
     body.paw-mystuff .mystuff-blurb{
-      margin-top: -2px;
-      font-size:18px;
-      font-weight:650;
-      color: rgba(15,23,42,.72);
-      line-height:1.35;
-      margin:0;
-      max-width: 860px;
+      /* Subtle reminder text (not a headline) */
+      margin: 0;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: rgba(15,23,42,.58);
+      line-height: 1.45;
+      max-width: 920px;
     }
 
 
@@ -185,8 +194,8 @@
 
     body.paw-mystuff .limits{
       font-size:12px;
-      font-weight:750;
-      color: rgba(15,23,42,.58);
+      font-weight:650;
+      color: rgba(15,23,42,.54);
       white-space:nowrap;
     }
 
@@ -214,10 +223,10 @@
     }
     body.paw-mystuff .empty p{
       margin:0 0 14px 0;
-      font-size:18px;
-      font-weight:650;
-      color: rgba(15,23,42,.72);
-      line-height:1.4;
+      font-size:14.5px;
+      font-weight:600;
+      color: rgba(15,23,42,.68);
+      line-height:1.45;
       max-width: 760px;
     }
     body.paw-mystuff .empty .empty-actions{
@@ -1025,7 +1034,7 @@
         const contactHtml = bits.length
           ? `<div class="empty" style="margin-top:12px;">
                <h3 style="margin-bottom:10px;">Contact data</h3>
-               <div style="display:grid; gap:6px; font-size:18px; font-weight:750; color:rgba(15,23,42,.78);">
+               <div style="display:grid; gap:6px; font-size:13.5px; font-weight:650; color:rgba(15,23,42,.68);">
                  ${bits.join("")}
                </div>
              </div>`
@@ -1052,7 +1061,7 @@
           <!-- Snapshot preview (derived, not saved) -->
           <div class="empty" style="margin-top:12px;">
             <h3 style="margin-bottom:10px;">PAW’s snapshot</h3>
-            <div id="brandSmartSummary" style="font-size:14px; font-weight:750; color:rgba(15,23,42,.88); line-height:1.4;">
+            <div id="brandSmartSummary" style="font-size:13.5px; font-weight:650; color:rgba(15,23,42,.78); line-height:1.45;">
               Writing your brand snapshot<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span>
             </div>
           </div>
