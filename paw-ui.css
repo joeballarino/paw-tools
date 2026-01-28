@@ -878,56 +878,94 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
   transition: background .15s ease;
 }
+.paw-mystuff-btn:hover{ background:rgba(15,23,42,.05); }
 
 /* ==========================================================
-   Works (My Stuff context indicator)
+   Works (My Stuff context indicator) — UI only (shared)
    ----------------------------------------------------------
-   - Lives in the top-left header slot.
-   - Uses the SAME paw icon asset/process as the primary Send
-     button (image + sizing), but styled as a calm status mark.
-   - Resting state is muted/gray; active state matches the
-     darker "send" vibe.
-   - A one-time "hello" animation runs on page load only.
+   PURPOSE:
+   - This is the high-priority session/context control that will
+     open the My Stuff drawer (wiring comes later).
+   - Visual contract (approved):
+       * Blue pill background (distinct from Reset/Tips)
+       * White paw + white text
+       * Mobile: full-width so long Listing/Deal names are readable
+       * One-time "hello" animation on page load (subtle, noticeable)
+   NOTE:
+   - This does NOT save anything automatically.
+   - Active state is a UI hook only: .is-active can be toggled later
+     once context selection is wired.
    ========================================================== */
 
 .paw-works-btn{
   gap:10px;
-  padding-left:10px;
-  padding-right:10px;
+  padding-left:12px;
+  padding-right:12px;
+
+  /* Distinct visual language from other header pills */
+  background: rgba(5,195,249,.88);
+  border-color: rgba(5,195,249,.40);
+  color:#fff;
+
+  /* Allow internal label to truncate cleanly */
+  min-width:0;
+  max-width:100%;
 }
+.paw-works-btn:hover{
+  background: rgba(5,195,249,.94);
+}
+.paw-works-btn.is-active{
+  /* Slightly stronger when a Brand / Listing / Deal is attached */
+  background: rgba(5,195,249,1);
+  border-color: rgba(5,195,249,.55);
+}
+
 .paw-works-btn .works-paw{
   width:18px;
   height:18px;
-  display:inline-block;
-  /* Resting / default: muted */
-  filter: grayscale(1);
-  opacity:.62;
-  transform-origin: 50% 60%;
-}
-.paw-works-btn.is-active .works-paw{
-  /* Active: match the normal (non-muted) paw look */
+  display:block;
+  object-fit:contain;
+  flex:0 0 auto;
+  /* White paw on blue */
   filter:none;
   opacity:1;
+  transform-origin: 50% 60%;
 }
+
 .paw-works-btn .works-label{
-  display:inline-block;
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
+
 .paw-works-btn .works-chevron{
-  margin-left:2px;
+  flex:0 0 auto;
+  margin-left:4px;
   font-size:12px;
-  opacity:.75;
+  opacity:.90;
 }
 
 /* One-time intro animation (subtle, unmissable) */
 .paw-works-btn .works-paw.paw-hello{
-  animation: pawHello 1.15s ease-out;
+  animation: pawHello 1.10s ease-out;
 }
 @keyframes pawHello{
-  0%{ transform: translateY(0) scale(1); opacity:.55; }
-  45%{ transform: translateY(-1px) scale(1.08); opacity:1; }
-  100%{ transform: translateY(0) scale(1); opacity:.62; }
+  0%{ transform: translateY(0) scale(1); opacity: .92; }
+  40%{ transform: translateY(-1px) scale(1.10); opacity: 1; }
+  100%{ transform: translateY(0) scale(1); opacity: 1; }
 }
-.paw-mystuff-btn:hover{ background:rgba(15,23,42,.05); }
+
+/* Mobile: Works becomes a full-width primary selector */
+@media (max-width: 560px){
+  .tool-head{ width:100%; }
+  .paw-works-btn{
+    width:100%;
+    justify-content:space-between;
+  }
+}
+
 
 .paw-drawer{
   position:fixed;

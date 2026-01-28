@@ -399,6 +399,38 @@ function removeNode(node) {
     } catch (_) {}
   }
 
+  // ==========================================================
+  // Works icon: one-time "hello" animation (UI only)
+  // ----------------------------------------------------------
+  // Product intent:
+  // - Subtle brand "I'm here" moment when the tool loads.
+  // - Runs ONCE per page load (never repeats on hover/state).
+  // - Safe no-op if the Works control isn't present on a page.
+  // ==========================================================
+  function helloWorksIconOnce(){
+    try{
+      var btn = document.getElementById("pawMyStuffBtn");
+      if(!btn) return;
+
+      // Prevent double-run if init() is called more than once.
+      if(btn.getAttribute("data-works-hello") === "1") return;
+      btn.setAttribute("data-works-hello","1");
+
+      var icon = btn.querySelector(".works-paw");
+      if(!icon) return;
+
+      // Delay slightly so it isn't lost during initial render.
+      setTimeout(function(){
+        try{
+          icon.classList.add("paw-hello");
+          // Remove after animation so future layout changes don't retrigger.
+          setTimeout(function(){ try{ icon.classList.remove("paw-hello"); }catch(_){} }, 1400);
+        }catch(_){}
+      }, 450);
+    }catch(_){}
+  }
+
+
   async function postJSON(url, payload, csrfToken) {
     const headers = { "Content-Type": "application/json" };
     try {
@@ -458,6 +490,9 @@ function removeNode(node) {
 
       // Ensure embed mode when framed (fixes “double container” look)
       coerceEmbedMode();
+
+      // One-time Works icon intro (subtle brand hello)
+      helloWorksIconOnce();
 
       const apiEndpoint = safeText(config.apiEndpoint);
       const toolId = safeText(config.toolId);
@@ -1503,49 +1538,19 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
 var __pawContext = { kind: "" };
 
 function __pawContextLabel(){
-  // UI label for the top-left Works indicator.
-  // NOTE: Keep this human (not technical). We’ll wire real item names later.
-  if (__pawContext.kind === "brand") return "Works: Brand";
-  if (__pawContext.kind === "listing") return "Works: Listing";
-  if (__pawContext.kind === "transaction") return "Works: Transaction";
-  return "Works: Ready";
+  if (__pawContext.kind === "brand") return "My Stuff · Brand";
+  if (__pawContext.kind === "listing") return "My Stuff · Listing";
+  if (__pawContext.kind === "transaction") return "My Stuff · Transaction";
+  return "My Stuff · No context";
 }
 
 function __pawUpdateMyStuffIndicator(){
   var b = document.getElementById("pawMyStuffBtn");
-  if (!b) return;
-
-  var label = __pawContextLabel();
-
-  // Prefer structured markup when present (works-label span).
-  var span = b.querySelector(".works-label");
-  if (span) span.textContent = label;
-  else b.textContent = label;
-
-  // Active styling: when anything is attached, the paw icon darkens.
-  b.classList.toggle("is-active", !!(__pawContext && __pawContext.kind));
-
-  // Keep an accessible name that matches what the user sees.
-  b.setAttribute("aria-label", label);
+  if (b) b.textContent = __pawContextLabel();
 }
 
 function __pawWireMyStuffButton(){
   var b = document.getElementById("pawMyStuffBtn");
   if (!b) return;
-
   __pawUpdateMyStuffIndicator();
-
-  // One-time "hello" animation for the Works paw icon.
-  // Subtle brand presence — runs once on page load, then rests.
-  if (!b.dataset.pawHelloDone) {
-    b.dataset.pawHelloDone = "1";
-    var icon = b.querySelector(".works-paw");
-    if (icon) {
-      setTimeout(function(){
-        icon.classList.add("paw-hello");
-        // Remove the class after the animation so it doesn't retrigger.
-        setTimeout(function(){ icon.classList.remove("paw-hello"); }, 1300);
-      }, 450);
-    }
-  }
 }
