@@ -156,7 +156,6 @@
 
     /* Mobile: keep the banner full-width so it reads as "important" */
     body.paw-mystuff .paw-savedworks-banner{ width:100%; }
-    }
 
     /* Tabs: reuse the shared segmented pill aesthetic */
     body.paw-mystuff .tabs-row{
@@ -309,10 +308,10 @@
       margin-top: 14px;
     }
     body.paw-mystuff .mw-facet-label{
-      font-size: 13.5px;
-      font-weight: 850;
-      color: rgba(15,23,42,.70);
-      line-height: 1.3;
+      font-size: 12.5px;
+      font-weight: 750;
+      color: rgba(15,23,42,.62);
+      line-height: 1.25;
     }
     body.paw-mystuff .mw-facet-label .mw-label-sub{
       font-weight: 650;
@@ -320,9 +319,9 @@
     }
     body.paw-mystuff .mw-facet-body{
       margin-top: 6px;
-      font-size: 13.5px;
-      font-weight: 550;
-      color: rgba(15,23,42,.80);
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(15,23,42,.82);
       line-height: 1.5;
       max-width: 920px;
     }
@@ -341,14 +340,14 @@
       align-items: baseline;
     }
     body.paw-mystuff .mw-k{
-      font-size: 13px;
-      font-weight: 800;
-      color: rgba(15,23,42,.60);
+      font-size: 12.5px;
+      font-weight: 700;
+      color: rgba(15,23,42,.58);
     }
     body.paw-mystuff .mw-v{
-      font-size: 13px;
-      font-weight: 550;
-      color: rgba(15,23,42,.76);
+      font-size: 13.5px;
+      font-weight: 600;
+      color: rgba(15,23,42,.78);
       overflow-wrap: anywhere;
     }
 
@@ -398,8 +397,6 @@
   body.paw-mystuff .tabs .tab-btn{
     width:100%;
     justify-content:center;
-    min-height:44px;
-    font-size:14px;
     border-left: 0 !important;
   }
   body.paw-mystuff .tabs .tab-btn + .tab-btn{
@@ -576,26 +573,84 @@
       margin: 0 0 10px 0;
     }
 
-  
-    /* Page-only header emphasis for My Works */
+    /* Page-only header emphasis for My Works
+       --------------------------------------
+       FIXES:
+       1) The gradient must start near the paw + "Saved Works" (top/left),
+          then fade all the way to white across the header band.
+       2) The "You've saved..." meter belongs bottom-right of the header.
+       3) Mobile tabs must not inherit the big rounded segmented-pill shape.
+    */
     body.paw-mystuff .panel-topbar.myworks-topbar{
-      /*
-        Make the entire header area feel like one coherent group.
-        We extend the topbar’s gradient downward, then pull the content
-        (reminder + tabs) up into it so there’s no “two gradient” seam.
-      */
-      padding-bottom: 6px;
-      background:
-        /* Stronger, higher-contrast anchor behind paw + label */
-        radial-gradient(520px 240px at 80px 40px, rgba(0,145,215,1) 0%, rgba(5,195,249,.70) 32%, rgba(255,255,255,0) 60%),
-        /* Soft secondary wash that fully resolves to white */
-        radial-gradient(1100px 480px at 0% 0%, rgba(5,195,249,.20) 0%, rgba(255,255,255,0) 58%),
-        #ffffff;
+      position: relative;           /* allow bottom-right limits placement */
+      padding-bottom: 28px;         /* reserve space for bottom-right limits */
+      background: #ffffff;          /* keep the full header area clean/white */
       border-radius: 18px 18px 0 0;
       overflow: hidden;
     }
 
-  </style>
+    /* Apply the blue anchor glow ONLY to the top header row (Saved Works + Tips).
+       This prevents the "blue slab" effect over the entire header region. */
+    body.paw-mystuff .panel-topbar.myworks-topbar .topbar-row0{
+      background:
+        radial-gradient(720px 260px at 110px 12px,
+          rgba(0,150,220,1) 0%,
+          rgba(5,195,249,.70) 30%,
+          rgba(255,255,255,0) 70%),
+        #ffffff;
+      border-radius: 18px 18px 0 0;
+    }
+
+    /* "You've saved..." meter pinned bottom-right inside the header container */
+    body.paw-mystuff .panel-topbar.myworks-topbar .limits{
+      position: absolute;
+      right: 16px;
+      bottom: 10px;
+      white-space: nowrap;
+      text-align: right;
+      font-size: 12px;
+      font-weight: 750;
+      color: rgba(15,23,42,.58);
+    }
+
+    /* Ensure tabs row doesn't collide with the pinned limits */
+    body.paw-mystuff .panel-topbar.myworks-topbar .myworks-hero{
+      padding-bottom: 6px;
+    }
+
+    /* Mobile: convert tabs into clean stacked buttons (no giant capsule) */
+    @media (max-width: 560px){
+      body.paw-mystuff .panel-topbar.myworks-topbar{ padding-bottom: 34px; }
+
+      body.paw-mystuff .panel-topbar.myworks-topbar .limits{
+        right: 14px;
+        bottom: 10px;
+        white-space: normal; /* allow wrap if ultra narrow */
+        max-width: calc(100% - 28px);
+      }
+
+      /* Override shared segmented pill styling on mobile */
+      body.paw-mystuff .tabs.paw-seg{
+        background: rgba(255,255,255,.92) !important;
+        border: 1px solid rgba(15,23,42,.12) !important;
+        border-radius: 14px !important;
+        padding: 0 !important;
+        overflow: hidden;
+        box-shadow: none !important;
+      }
+
+      body.paw-mystuff .tabs .tab-btn{
+        min-height: 44px;
+        font-size: 14px;
+        border-radius: 0 !important;
+      }
+
+      body.paw-mystuff .tabs .tab-btn[aria-selected="true"]{
+        background: rgba(5,195,249,.18);
+      }
+    }
+
+</style>
 </head>
 
 <body class="paw-mystuff">
