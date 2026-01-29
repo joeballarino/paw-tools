@@ -468,8 +468,16 @@ function removeNode(node) {
       tool: toolId || "",
       message: "",
       history: Array.isArray(history) ? history : [],
-      prefs: prefs && typeof prefs === "object" ? prefs : {},
+      prefs: prefs && typeof prefs === \"object\" ? prefs : {},
     };
+
+    // Session context (My Works) — sent for future prompting, but does not imply persistence.
+    try {
+      if (window.__PAWWorks && window.__PAWWorks.getActiveWork) {
+        const aw = window.__PAWWorks.getActiveWork();
+        if (aw) payload.active_work = aw;
+      }
+    } catch (_) {}
 
     if (extraPayload && typeof extraPayload === "object") {
       for (const k in extraPayload) payload[k] = extraPayload[k];
@@ -493,6 +501,9 @@ function removeNode(node) {
 
       // One-time Works icon intro (subtle brand hello)
       helloWorksIconOnce();
+
+      // My Works drawer + session context (Phase 1)
+      try { if (window.__PAWWorks && window.__PAWWorks.init) window.__PAWWorks.init(apiEndpoint || \"\"); } catch (_) {}
 
       const apiEndpoint = safeText(config.apiEndpoint);
       const toolId = safeText(config.toolId);
@@ -1533,24 +1544,425 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
 })();
 
 // ==========================================================
-// My Stuff Context Drawer (shared) — UI only
+// My Works Drawer (shared) — Phase 1
+// ----------------------------------------------------------
+// PURPOSE:
+// - The Work pill ("Work: Ready") is present on every tool.
+// - Phase 1 makes it REAL: clicking opens a drawer that can
+//   attach/detach a single active Work to the current session.
+// - Nothing is saved automatically.
+// - Brand is wired to the Worker (GET /mystuff/brand). Listings/Deals
+//   are placeholders until Worker endpoints exist.
+//
+// IMPORTANT PRODUCT RULES (LOCKED):
+// - Session-first by default.
+// - Users explicitly choose what is saved.
+// - My Works is the single system of record (tools do not own persistence).
 // ==========================================================
-var __pawContext = { kind: "" };
 
-function __pawContextLabel(){
-  if (__pawContext.kind === "brand") return "My Stuff · Brand";
-  if (__pawContext.kind === "listing") return "My Stuff · Listing";
-  if (__pawContext.kind === "transaction") return "My Stuff · Transaction";
-  return "My Stuff · No context";
-}
+(function(){
+  "use strict";
 
-function __pawUpdateMyStuffIndicator(){
-  var b = document.getElementById("pawMyStuffBtn");
-  if (b) b.textContent = __pawContextLabel();
-}
+  // Session-only context (in-memory, resets on reload).
+  var __pawActiveWork = null; // { bucket:"brand"|"listings"|"deals", id:string, label:string }
 
-function __pawWireMyStuffButton(){
-  var b = document.getElementById("pawMyStuffBtn");
-  if (!b) return;
-  __pawUpdateMyStuffIndicator();
-}
+  // Drawer DOM refs
+  var __drawer = null;
+  var __drawerPanel = null;
+  var __drawerBackdrop = null;
+
+  var __tabBtns = null; // NodeList
+  var __panels = null;  // {brand, listings, deals}
+  var __brandPanel = null;
+
+  var __apiEndpoint = "";
+  var __brandCache = null; // { exists:boolean, brand:{...}, meta:{...} }
+
+  function $(sel, root){ return (root || document).querySelector(sel); }
+  function $all(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel) || []); }
+  function norm(v){ return String(v == null ? "" : v).trim(); }
+  function escapeHtml(str){
+    return String(str||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#39;");
+  }
+
+  // ------------------------------------------------------------
+  // Work pill label update (DO NOT overwrite markup)
+  // ------------------------------------------------------------
+  function workLabelText(){
+    if (__pawActiveWork && __pawActiveWork.label){
+      // Brand language: "Work: My Brand" / "Work: 123 Oak St"
+      return "Work: " + String(__pawActiveWork.label);
+    }
+    return "Work: Ready";
+  }
+
+  function updateWorkPill(){
+    try{
+      var btn = document.getElementById("pawMyStuffBtn");
+      if (!btn) return;
+      var label = btn.querySelector(".works-label");
+      if (label) label.textContent = workLabelText();
+      // Visual hook: .is-active when attached
+      btn.classList.toggle("is-active", !!__pawActiveWork);
+      btn.setAttribute("aria-label", __pawActiveWork ? ("Work context: " + workLabelText()) : "Work context");
+    }catch(_){}
+  }
+
+  // ------------------------------------------------------------
+  // Drawer injection (shared across all tools)
+  // ------------------------------------------------------------
+  function injectDrawerOnce(){
+    if (__drawer) return;
+
+    __drawer = document.createElement("div");
+    __drawer.className = "paw-drawer";
+    __drawer.id = "pawWorksDrawer";
+    __drawer.setAttribute("aria-hidden","true");
+
+    __drawer.innerHTML = `
+      <div class="paw-drawer__backdrop" data-paw-close="1"></div>
+
+      <div class="paw-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="pawWorksTitle">
+        <div class="paw-drawer__head">
+          <div>
+            <div id="pawWorksTitle" class="paw-drawer__title">My Works</div>
+            <div class="paw-drawer__sub">Attach a Work to this session. Nothing is saved unless you choose.</div>
+          </div>
+          <button class="paw-drawer__close" type="button" aria-label="Close" data-paw-close="1">✕</button>
+        </div>
+
+        <div class="paw-drawer__tabs paw-seg" role="tablist" aria-label="My Works tabs">
+          <button class="paw-drawer__tab paw-seg__btn" data-tab="brand" role="tab" aria-selected="true" type="button">My Brand</button>
+          <button class="paw-drawer__tab paw-seg__btn" data-tab="listings" role="tab" aria-selected="false" type="button">Listings</button>
+          <button class="paw-drawer__tab paw-seg__btn" data-tab="deals" role="tab" aria-selected="false" type="button">Deals</button>
+        </div>
+
+        <div class="paw-drawer__body">
+          <section class="paw-drawer__panelbody is-active" data-panel="brand" role="tabpanel" aria-label="My Brand">
+            <div class="paw-drawer__panelinner" id="pawWorksBrandPanel">
+              <div class="paw-drawer__loading">Loading your Brand<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>
+            </div>
+          </section>
+
+          <section class="paw-drawer__panelbody" data-panel="listings" role="tabpanel" aria-label="Listings">
+            <div class="paw-drawer__panelinner">
+              <div class="paw-drawer__emptytitle">Listings (coming next)</div>
+              <div class="paw-drawer__emptycopy">
+                Phase 1 wires the drawer + session context. Listing saves will be enabled once Worker endpoints exist.
+              </div>
+            </div>
+          </section>
+
+          <section class="paw-drawer__panelbody" data-panel="deals" role="tabpanel" aria-label="Deals">
+            <div class="paw-drawer__panelinner">
+              <div class="paw-drawer__emptytitle">Deals (coming next)</div>
+              <div class="paw-drawer__emptycopy">
+                Deals/Transactions will be available once the Worker supports save + retrieval for this bucket.
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="paw-drawer__foot">
+          <div class="paw-drawer__context" aria-label="Current session context">
+            <span class="paw-drawer__contextlabel">Current:</span>
+            <span class="paw-drawer__contextvalue" id="pawWorksContextValue">None</span>
+          </div>
+
+          <div class="paw-drawer__actions">
+            <button class="btn" id="pawWorksGoSaved" type="button">Saved Works</button>
+            <button class="btn primary" id="pawWorksDetach" type="button" style="display:none">Detach</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(__drawer);
+
+    __drawerPanel = $("#pawWorksDrawer .paw-drawer__panel");
+    __drawerBackdrop = $("#pawWorksDrawer .paw-drawer__backdrop");
+
+    __tabBtns = $all("#pawWorksDrawer .paw-drawer__tab");
+    __brandPanel = document.getElementById("pawWorksBrandPanel");
+
+    wireDrawerEvents();
+  }
+
+  function setDrawerOpen(on){
+    if (!__drawer) return;
+    var open = !!on;
+    __drawer.classList.toggle("show", open);
+    __drawer.setAttribute("aria-hidden", open ? "false" : "true");
+    document.body.classList.toggle("paw-drawer-open", open);
+
+    if (open) {
+      // Refresh context + brand data each open (cheap, keeps UI honest).
+      try { renderContextRow(); } catch(_){}
+      try { refreshBrandPanel(); } catch(_){}
+      // Focus close for accessibility
+      try{
+        var c = $("#pawWorksDrawer .paw-drawer__close");
+        setTimeout(function(){ try{ c && c.focus(); }catch(_){} }, 25);
+      }catch(_){}
+    }
+  }
+
+  function wireDrawerEvents(){
+    if (!__drawer) return;
+
+    // Close on backdrop/close button clicks
+    __drawer.addEventListener("click", function(e){
+      try{
+        var t = e.target;
+        if (t && t.getAttribute && t.getAttribute("data-paw-close") === "1") setDrawerOpen(false);
+      }catch(_){}
+    });
+
+    // ESC closes drawer
+    document.addEventListener("keydown", function(e){
+      if (e.key !== "Escape") return;
+      try{
+        if (__drawer && __drawer.classList.contains("show")) setDrawerOpen(false);
+      }catch(_){}
+    });
+
+    // Tabs
+    __tabBtns.forEach(function(btn){
+      btn.addEventListener("click", function(){
+        activateTab(btn.getAttribute("data-tab"));
+      });
+    });
+
+    // Go to Saved Works (full page)
+    var go = document.getElementById("pawWorksGoSaved");
+    if (go){
+      go.addEventListener("click", function(){
+        // Navigate inside the iframe. Circle may override with its own routing.
+        try { window.location.href = "./myworks.html?embed=1"; } catch(_) {}
+      });
+    }
+
+    // Detach
+    var det = document.getElementById("pawWorksDetach");
+    if (det){
+      det.addEventListener("click", function(){
+        detachWork();
+      });
+    }
+
+    // Minimal focus trap inside drawer panel
+    if (__drawerPanel){
+      __drawerPanel.addEventListener("keydown", function(e){
+        if (e.key !== "Tab") return;
+        var focusables = __drawerPanel.querySelectorAll("button,[href],input,textarea,select,[tabindex]:not([tabindex='-1'])");
+        var list = Array.prototype.slice.call(focusables).filter(function(el){ return !el.disabled && el.offsetParent !== null; });
+        if (!list.length) return;
+        var first = list[0];
+        var last = list[list.length - 1];
+        if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+      });
+    }
+  }
+
+  function activateTab(tab){
+    var t = String(tab || "brand");
+    __tabBtns.forEach(function(b){
+      var on = (b.getAttribute("data-tab") === t);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    $all("#pawWorksDrawer .paw-drawer__panelbody").forEach(function(p){
+      var on = (p.getAttribute("data-panel") === t);
+      p.classList.toggle("is-active", on);
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Context actions
+  // ------------------------------------------------------------
+  function renderContextRow(){
+    var v = document.getElementById("pawWorksContextValue");
+    var det = document.getElementById("pawWorksDetach");
+    if (!v) return;
+
+    if (__pawActiveWork && __pawActiveWork.label){
+      v.textContent = String(__pawActiveWork.label);
+      if (det) det.style.display = "";
+    } else {
+      v.textContent = "None";
+      if (det) det.style.display = "none";
+    }
+  }
+
+  function attachWork(work){
+    __pawActiveWork = work || null;
+    updateWorkPill();
+    renderContextRow();
+  }
+
+  function detachWork(){
+    __pawActiveWork = null;
+    updateWorkPill();
+    renderContextRow();
+    // Keep drawer open; this is a safe action.
+    try{
+      if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Detached from this session.");
+    }catch(_){}
+  }
+
+  // Exposed for tool-shell to include in payloads later.
+  function getActiveWork(){
+    return __pawActiveWork ? Object.assign({}, __pawActiveWork) : null;
+  }
+
+  // ------------------------------------------------------------
+  // Brand panel (wired to Worker)
+  // ------------------------------------------------------------
+  async function fetchBrand(){
+    if (!__apiEndpoint) return null;
+    var url = String(__apiEndpoint).replace(/\/+$/,"") + "/mystuff/brand";
+    var headers = { "Content-Type":"application/json" };
+    try{
+      var t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (t) headers["Authorization"] = "Bearer " + t;
+    }catch(_){}
+    var res = await fetch(url, { method:"GET", headers: headers });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok) throw new Error((data && (data.error || data.message)) || "Could not load My Brand");
+    return data;
+  }
+
+  async function fetchBrandSummary(){
+    if (!__apiEndpoint) return "";
+    var url = String(__apiEndpoint).replace(/\/+$/,"") + "/mystuff/brand/summary";
+    var headers = { "Content-Type":"application/json" };
+    try{
+      var t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (t) headers["Authorization"] = "Bearer " + t;
+    }catch(_){}
+    var res = await fetch(url, { method:"GET", headers: headers });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok) return "";
+    return (data && typeof data.summary === "string") ? data.summary.trim() : "";
+  }
+
+  function brandDisplayName(brand){
+    var b = brand || {};
+    // Prefer display_name, fallback to "My Brand"
+    var dn = norm(b.display_name);
+    return dn ? "My Brand" : "My Brand";
+  }
+
+  async function refreshBrandPanel(){
+    if (!__brandPanel) return;
+
+    // Auth may not be ready on first paint; fail softly.
+    __brandPanel.innerHTML = '<div class="paw-drawer__loading">Loading your Brand<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>';
+
+    try{
+      __brandCache = await fetchBrand();
+    }catch(e){
+      // Likely auth not ready or endpoint error. Keep message non-technical.
+      __brandPanel.innerHTML = `
+        <div class="paw-drawer__emptytitle">My Brand isn’t available yet</div>
+        <div class="paw-drawer__emptycopy">If you haven’t created it, open Saved Works and create My Brand first.</div>
+        <div class="paw-drawer__panelactions">
+          <button class="btn primary" type="button" id="pawBrandGoCreate">Open Saved Works</button>
+        </div>
+      `;
+      var go = document.getElementById("pawBrandGoCreate");
+      if (go) go.onclick = function(){ try{ window.location.href = "./myworks.html?embed=1"; }catch(_){} };
+      return;
+    }
+
+    if (!__brandCache || !__brandCache.exists){
+      __brandPanel.innerHTML = `
+        <div class="paw-drawer__emptytitle">No My Brand yet</div>
+        <div class="paw-drawer__emptycopy">Create it once, then PAW can write like you when it adds value.</div>
+        <div class="paw-drawer__panelactions">
+          <button class="btn primary" type="button" id="pawBrandCreateBtn">Create My Brand</button>
+        </div>
+      `;
+      var c = document.getElementById("pawBrandCreateBtn");
+      if (c) c.onclick = function(){ try{ window.location.href = "./myworks.html?embed=1"; }catch(_){} };
+      return;
+    }
+
+    var updated = (__brandCache.meta && __brandCache.meta.updated_at) ? String(__brandCache.meta.updated_at) : "";
+    var updatedNice = "";
+    try{ if (updated) updatedNice = (new Date(updated)).toLocaleString(); }catch(_){}
+
+    // Render saved brand summary (derived)
+    var summary = "";
+    try { summary = await fetchBrandSummary(); } catch(_) {}
+    if (!summary) summary = "Saved — ready to use when it adds value.";
+
+    var attached = (__pawActiveWork && __pawActiveWork.bucket === "brand");
+
+    __brandPanel.innerHTML = `
+      <div class="paw-drawer__item">
+        <div class="paw-drawer__itemhead">
+          <div>
+            <div class="paw-drawer__itemtitle">My Brand</div>
+            <div class="paw-drawer__itemmeta">${updatedNice ? ("Last updated: " + escapeHtml(updatedNice)) : "Saved"}</div>
+          </div>
+          <div class="paw-drawer__itemactions">
+            <button class="btn ${attached ? "" : "primary"}" type="button" id="pawBrandAttachBtn">${attached ? "Attached" : "Attach"}</button>
+          </div>
+        </div>
+
+        <div class="paw-drawer__itemsnap">${escapeHtml(summary)}</div>
+      </div>
+    `;
+
+    var a = document.getElementById("pawBrandAttachBtn");
+    if (a){
+      a.onclick = function(){
+        if (__pawActiveWork && __pawActiveWork.bucket === "brand") {
+          // clicking "Attached" does nothing; user can detach from footer
+          return;
+        }
+        attachWork({ bucket:"brand", id:"brand", label:"My Brand" });
+        try{
+          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Attached: My Brand");
+        }catch(_){}
+        // Re-render to flip button state
+        refreshBrandPanel();
+      };
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Public init (called from tool-shell init)
+  // ------------------------------------------------------------
+  function init(apiEndpoint){
+    __apiEndpoint = String(apiEndpoint || "");
+
+    injectDrawerOnce();
+    updateWorkPill();
+
+    // Wire the Work button
+    var btn = document.getElementById("pawMyStuffBtn");
+    if (btn){
+      btn.addEventListener("click", function(){
+        setDrawerOpen(true);
+      });
+    }
+  }
+
+  // Expose minimal API (no persistence, session-only)
+  window.__PAWWorks = {
+    init: init,
+    getActiveWork: getActiveWork,
+    attachWork: attachWork,
+    detachWork: detachWork,
+    _open: function(){ setDrawerOpen(true); },
+    _close: function(){ setDrawerOpen(false); }
+  };
+
+})();
