@@ -468,7 +468,7 @@ function removeNode(node) {
       tool: toolId || "",
       message: "",
       history: Array.isArray(history) ? history : [],
-      prefs: prefs && typeof prefs === \"object\" ? prefs : {},
+      prefs: prefs && typeof prefs === "object" ? prefs : {},
     };
 
     // Session context (My Works) — sent for future prompting, but does not imply persistence.
@@ -503,7 +503,7 @@ function removeNode(node) {
       helloWorksIconOnce();
 
       // My Works drawer + session context (Phase 1)
-      try { if (window.__PAWWorks && window.__PAWWorks.init) window.__PAWWorks.init(apiEndpoint || \"\"); } catch (_) {}
+      try { if (window.__PAWWorks && window.__PAWWorks.init) window.__PAWWorks.init(apiEndpoint || ""); } catch (_) {}
 
       const apiEndpoint = safeText(config.apiEndpoint);
       const toolId = safeText(config.toolId);
