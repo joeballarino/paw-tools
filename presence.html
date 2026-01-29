@@ -545,5 +545,240 @@ Examples
     })();
   </script>
 
+
+  <!-- ==========================================================
+       My Works Drawer (Phase 1)
+       ----------------------------------------------------------
+       PURPOSE:
+       - Reliable, in-tool "Work context" drawer for Circle embeds.
+       - Buckets: My Brand / Listings / Transactions.
+       - Actions: Use (attach), Save (navigate), Edit (navigate).
+       - Nothing is saved automatically.
+       ========================================================== -->
+  <div id="pawWorksDrawer" class="paw-drawer" aria-hidden="true">
+    <div id="pawWorksBackdrop" class="paw-drawer__backdrop" aria-hidden="true"></div>
+
+    <div class="paw-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="pawWorksTitle">
+      <div style="padding:14px 14px 10px; border-bottom:1px solid rgba(15,23,42,.08); background: radial-gradient(640px 220px at 20% 0%, rgba(5,195,249,.12), rgba(255,255,255,0) 60%), #ffffff; display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div>
+          <div id="pawWorksTitle" style="margin:0; font-size:15px; font-weight:950; color:rgba(15,23,42,.92); letter-spacing:-0.01em; line-height:1.15;">My Works</div>
+          <div id="pawWorksSub" style="margin-top:6px; font-size:12.5px; font-weight:700; color:rgba(15,23,42,.68); line-height:1.35; max-width:520px;">
+            Attach what you’re working on. Nothing is saved unless you choose to save it.
+          </div>
+        </div>
+        <button id="pawWorksClose" type="button" aria-label="Close" style="border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.92); width:34px; height:34px; border-radius:10px; cursor:pointer; font-weight:900; color:rgba(15,23,42,.72);">✕</button>
+      </div>
+
+      <div style="padding:12px 14px; border-bottom:1px solid rgba(15,23,42,.08); background:#fff;">
+        <div id="pawWorksActive" style="font-size:12px; font-weight:800; color:rgba(15,23,42,.68);">
+          Work: <span id="pawWorksActiveLabel" style="font-weight:950; color:rgba(15,23,42,.92);">Ready</span>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div class="paw-seg" role="tablist" aria-label="My Works tabs" style="width:100%; border-radius:14px;">
+            <button class="util-btn paw-seg__btn" id="pawTabBrand" role="tab" aria-selected="true" type="button">My Brand</button>
+            <button class="util-btn paw-seg__btn" id="pawTabListings" role="tab" aria-selected="false" type="button">Listings</button>
+            <button class="util-btn paw-seg__btn" id="pawTabTransactions" role="tab" aria-selected="false" type="button">Transactions</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:14px; overflow:auto; -webkit-overflow-scrolling:touch;">
+        <div id="pawPanelBrand" role="tabpanel" aria-labelledby="pawTabBrand">
+          <div style="font-size:14px; font-weight:800; color:rgba(15,23,42,.90); margin-bottom:6px;">My Brand</div>
+          <div style="font-size:13px; font-weight:650; color:rgba(15,23,42,.68); line-height:1.45;">
+            Use your saved brand when it adds value. Edit or save in My Works.
+          </div>
+
+          <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px;">
+            <button class="btn" type="button" data-works-action="edit" data-bucket="brand">Edit in My Works</button>
+            <button class="btn primary" type="button" data-works-action="use" data-bucket="brand" data-label="My Brand">Use My Brand</button>
+          </div>
+        </div>
+
+        <div id="pawPanelListings" role="tabpanel" aria-labelledby="pawTabListings" style="display:none;">
+          <div style="font-size:14px; font-weight:800; color:rgba(15,23,42,.90); margin-bottom:6px;">Listings</div>
+          <div style="font-size:13px; font-weight:650; color:rgba(15,23,42,.68); line-height:1.45;">
+            Attach a listing work item for this session. Save and manage listings in My Works.
+          </div>
+
+          <div style="margin-top:12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.92); border-radius:14px; padding:12px;">
+            <div style="font-size:12px; font-weight:900; color:rgba(15,23,42,.72); margin-bottom:8px;">Quick attach (session only)</div>
+            <input id="pawListingName" type="text" placeholder="Name this listing work (e.g., 123 Oak St)" style="width:100%; border:1px solid rgba(15,23,42,.16); border-radius:12px; padding:10px 12px; font-size:14px; font-weight:650; outline:none;">
+            <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:10px;">
+              <button class="btn" type="button" data-works-action="save" data-bucket="listing">Save / Manage in My Works</button>
+              <button class="btn primary" type="button" data-works-action="use_custom" data-bucket="listing">Use This Listing</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="pawPanelTransactions" role="tabpanel" aria-labelledby="pawTabTransactions" style="display:none;">
+          <div style="font-size:14px; font-weight:800; color:rgba(15,23,42,.90); margin-bottom:6px;">Transactions</div>
+          <div style="font-size:13px; font-weight:650; color:rgba(15,23,42,.68); line-height:1.45;">
+            Attach a transaction work item for this session. Save and manage transactions in My Works.
+          </div>
+
+          <div style="margin-top:12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.92); border-radius:14px; padding:12px;">
+            <div style="font-size:12px; font-weight:900; color:rgba(15,23,42,.72); margin-bottom:8px;">Quick attach (session only)</div>
+            <input id="pawTxnName" type="text" placeholder="Name this transaction (e.g., Smith Buyer Deal)" style="width:100%; border:1px solid rgba(15,23,42,.16); border-radius:12px; padding:10px 12px; font-size:14px; font-weight:650; outline:none;">
+            <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:10px;">
+              <button class="btn" type="button" data-works-action="save" data-bucket="transaction">Save / Manage in My Works</button>
+              <button class="btn primary" type="button" data-works-action="use_custom" data-bucket="transaction">Use This Transaction</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:12px 14px; border-top:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.98); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div style="font-size:12px; font-weight:750; color:rgba(15,23,42,.60); line-height:1.25;">
+          Tip: Use attaches context for this session. Save happens only when you choose.
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end; flex-wrap:wrap;">
+          <button class="btn" type="button" data-works-action="detach">Detach</button>
+          <button class="btn primary" type="button" data-works-action="open_myworks">Open My Works</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    (function(){
+      var WORK_KEY = "paw:active_work:v1"; // sessionStorage only
+
+      var $btn = document.getElementById("pawMyStuffBtn");
+      var $drawer = document.getElementById("pawWorksDrawer");
+      var $backdrop = document.getElementById("pawWorksBackdrop");
+      var $close = document.getElementById("pawWorksClose");
+      var $activeLabel = document.getElementById("pawWorksActiveLabel");
+
+      var $tabBrand = document.getElementById("pawTabBrand");
+      var $tabListings = document.getElementById("pawTabListings");
+      var $tabTx = document.getElementById("pawTabTransactions");
+
+      var $panelBrand = document.getElementById("pawPanelBrand");
+      var $panelListings = document.getElementById("pawPanelListings");
+      var $panelTx = document.getElementById("pawPanelTransactions");
+
+      var $listingName = document.getElementById("pawListingName");
+      var $txnName = document.getElementById("pawTxnName");
+
+      function safeParse(s){ try { return JSON.parse(s); } catch(_) { return null; } }
+      function readWork(){
+        try{
+          var raw = sessionStorage.getItem(WORK_KEY);
+          if(!raw) return null;
+          var w = safeParse(raw);
+          return (w && typeof w === "object") ? w : null;
+        }catch(_){ return null; }
+      }
+      function writeWork(w){
+        try{
+          if(!w){ sessionStorage.removeItem(WORK_KEY); return; }
+          sessionStorage.setItem(WORK_KEY, JSON.stringify(w));
+        }catch(_){}
+      }
+
+      function setBtnLabel(label){
+        try{
+          if(!$btn) return;
+          var lab = $btn.querySelector(".works-label");
+          if(lab) lab.textContent = "Work: " + (label || "Ready");
+        }catch(_){}
+      }
+
+      function syncActive(){
+        var w = readWork();
+        var label = (w && w.label) ? String(w.label) : "Ready";
+        if($activeLabel) $activeLabel.textContent = label;
+        setBtnLabel(label);
+      }
+
+      function openDrawer(){
+        if(!$drawer) return;
+        syncActive();
+        $drawer.classList.add("show");
+        $drawer.setAttribute("aria-hidden","false");
+        try{ document.body.classList.add("drawer-open"); }catch(_){}
+      }
+      function closeDrawer(){
+        if(!$drawer) return;
+        $drawer.classList.remove("show");
+        $drawer.setAttribute("aria-hidden","true");
+        try{ document.body.classList.remove("drawer-open"); }catch(_){}
+      }
+
+      function setTab(which){
+        var w = String(which || "brand");
+        var map = {
+          brand: { tab:$tabBrand, panel:$panelBrand },
+          listings: { tab:$tabListings, panel:$panelListings },
+          transactions: { tab:$tabTx, panel:$panelTx }
+        };
+        Object.keys(map).forEach(function(k){
+          var on = (k === w);
+          try{ if(map[k].tab) map[k].tab.setAttribute("aria-selected", on ? "true":"false"); }catch(_){}
+          try{ if(map[k].panel) map[k].panel.style.display = on ? "block":"none"; }catch(_){}
+        });
+      }
+
+      function openMyWorksPage(){
+        try{ window.location.href = "https://paw-tools.pages.dev/myworks.html?embed=1"; }catch(_){}
+      }
+
+      function handleAction(act, bucket, target){
+        var a = String(act||"");
+        var b = String(bucket||"");
+
+        if(a === "detach"){ writeWork(null); syncActive(); return; }
+        if(a === "open_myworks"){ openMyWorksPage(); return; }
+        if(a === "edit" || a === "save"){ openMyWorksPage(); return; }
+
+        if(a === "use"){
+          var label = "Ready";
+          try{
+            if(target && target.getAttribute) label = target.getAttribute("data-label") || label;
+          }catch(_){}
+          writeWork({ v:1, bucket:b, label:label });
+          syncActive(); closeDrawer(); return;
+        }
+
+        if(a === "use_custom"){
+          var name = "";
+          if(b === "listing" && $listingName) name = String($listingName.value||"").trim();
+          if(b === "transaction" && $txnName) name = String($txnName.value||"").trim();
+          if(!name) name = (b === "listing") ? "Listing" : "Transaction";
+          writeWork({ v:1, bucket:b, label:name });
+          syncActive(); closeDrawer(); return;
+        }
+      }
+
+      // Open/close wiring
+      try{ if($btn) $btn.addEventListener("click", function(){ openDrawer(); }); }catch(_){}
+      try{ if($close) $close.addEventListener("click", function(){ closeDrawer(); }); }catch(_){}
+      try{ if($backdrop) $backdrop.addEventListener("click", function(){ closeDrawer(); }); }catch(_){}
+      document.addEventListener("keydown", function(e){ if(e && e.key === "Escape") closeDrawer(); });
+
+      // Tabs wiring
+      try{ if($tabBrand) $tabBrand.addEventListener("click", function(){ setTab("brand"); }); }catch(_){}
+      try{ if($tabListings) $tabListings.addEventListener("click", function(){ setTab("listings"); }); }catch(_){}
+      try{ if($tabTx) $tabTx.addEventListener("click", function(){ setTab("transactions"); }); }catch(_){}
+
+      // Actions (delegated)
+      document.addEventListener("click", function(e){
+        var t = e && e.target ? e.target : null;
+        if(!t || !t.getAttribute) return;
+        var act = t.getAttribute("data-works-action");
+        if(!act) return;
+        var bucket = t.getAttribute("data-bucket") || "";
+        try{ e.preventDefault(); }catch(_){}
+        handleAction(act, bucket, t);
+      });
+
+      setTab("brand");
+      syncActive();
+    })();
+  </script>
+
 </body>
 </html>
