@@ -561,8 +561,12 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   padding-left:2px;
 }
 .composer textarea::placeholder{
-  color:rgba(15,23,42,.48);
-  font-weight:600;
+  /* Modern placeholder styling (shared across tools)
+     - Softer weight + slightly smaller size keeps the UI feeling modern (less "computerish"). */
+  color:rgba(15,23,42,.46);
+  font-weight:500;
+  font-size:13px;
+  letter-spacing:.1px;
 }
 
 /* Mobile comfort: give the composer a little more room so example placeholders
@@ -573,16 +577,16 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   }
   .composer-main{ gap:6px; }
   .composer textarea{
-    min-height:86px;
+    min-height:96px;
   }
 }
 .composer textarea{
   flex:1;
-  min-height:54px;
+  min-height:68px;
 
   /* Auto-grow textarea (LOCKED)
      - JS handles live resizing; CSS provides safe bounds. */
-  max-height:var(--composer-max-height, 320px);
+  max-height:var(--composer-max-height, 280px);
   resize:none;
   overflow-y:hidden;
 
