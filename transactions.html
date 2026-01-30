@@ -1045,5 +1045,101 @@ async function analyzeSelectedFile(){
     })();
   </script>
 
+
+  <!-- ==========================================================
+       PAW Iframe Height Reporter (v1.1 - loop-safe)
+       ----------------------------------------------------------
+       PURPOSE:
+       - Reports the tool's *content* height to the Circle parent page.
+       - Enables "grow-to-fit" embeds with no internal scrollbars.
+       - Avoids runaway resize loops caused by viewport-based CSS (e.g., 100vh).
+       CONTRACT:
+       - Sends: { type: "paw_iframe_height_request_v1", height: <number> }
+       ========================================================== -->
+  <script>
+    (function () {
+      if (window.__PAW_HEIGHT_REPORTER_V11__) return;
+      window.__PAW_HEIGHT_REPORTER_V11__ = true;
+
+      var lastSent = 0;
+      var rafPending = false;
+      var IGNORE_DELTA_PX = 8;
+
+      function px(n){ n = Number(n); return isFinite(n) ? n : 0; }
+
+      function measureContentHeight() {
+        try {
+          // Prefer the visible "panel" container (consistent across PAW tools)
+          var panel = document.querySelector(".panel");
+          if (panel && panel.getBoundingClientRect) {
+            var r = panel.getBoundingClientRect();
+            return Math.ceil(px(r.height));
+          }
+
+          // Fallback: sum key areas if present
+          var topbar = document.querySelector(".panel-topbar");
+          var messages = document.getElementById("messages") || document.querySelector(".messages");
+          var composer = document.querySelector(".composer");
+
+          var h = 0;
+          if (topbar && topbar.getBoundingClientRect) h += px(topbar.getBoundingClientRect().height);
+          if (messages && messages.getBoundingClientRect) h += px(messages.getBoundingClientRect().height);
+          if (composer && composer.getBoundingClientRect) h += px(composer.getBoundingClientRect().height);
+
+          if (h > 0) return Math.ceil(h);
+
+          // Last-resort fallback (for simpler layouts)
+          var d = document.documentElement;
+          return Math.ceil(Math.max(px(d.scrollHeight), px(d.offsetHeight)));
+        } catch (_) {
+          return 0;
+        }
+      }
+
+      function postHeight(force) {
+        var h = measureContentHeight();
+        if (!h) return;
+
+        if (!force && Math.abs(h - lastSent) < IGNORE_DELTA_PX) return;
+        lastSent = h;
+
+        try {
+          window.parent.postMessage(
+            { type: "paw_iframe_height_request_v1", height: h },
+            "*"
+          );
+        } catch (_) {}
+      }
+
+      function schedule(force) {
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(function () {
+          rafPending = false;
+          postHeight(force);
+        });
+      }
+
+      // Initial + settle passes (fonts/images/layout settle)
+      schedule(true);
+      setTimeout(function(){ schedule(true); }, 120);
+      setTimeout(function(){ schedule(true); }, 400);
+
+      // DOM changes (chat streaming, drawer/modal open/close, etc.)
+      try {
+        var mo = new MutationObserver(function(){ schedule(false); });
+        mo.observe(document.body, { childList:true, subtree:true, characterData:true });
+      } catch (_) {}
+
+      // Images loading after insertion
+      document.addEventListener("load", function(e){
+        try { if (e.target && e.target.tagName === "IMG") schedule(false); } catch (_) {}
+      }, true);
+
+      // Resize/orientation/keyboard changes
+      window.addEventListener("resize", function(){ schedule(true); });
+    })();
+  </script>
+
 </body>
 </html>
