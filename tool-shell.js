@@ -503,9 +503,9 @@ function removeNode(node) {
       helloWorksIconOnce();
 
       // My Works drawer + session context (Phase 1)
-      try { if (window.__PAWWorks && window.__PAWWorks.init) window.__PAWWorks.init(apiEndpoint || ""); } catch (_) {}
 
       const apiEndpoint = safeText(config.apiEndpoint);
+      try { if (window.__PAWWorks && window.__PAWWorks.init) window.__PAWWorks.init(apiEndpoint || ""); } catch (_) {}
       const toolId = safeText(config.toolId);
 
       // Phase 3: initialize Circle identity + token minting (in-memory only)
