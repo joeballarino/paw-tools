@@ -581,7 +581,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   }
 }
 .composer textarea{
-  flex:1;
+  /* NOTE: removed flex sizing so textarea can auto-grow by height */
   min-height:68px;
 
   /* Auto-grow textarea (LOCKED)
