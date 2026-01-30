@@ -1,12 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <!--
-    PAW Embed Guard (required):
-    These tool pages are built for Circle embedding.
-    If someone opens this page directly (not in an iframe), redirect to proagentworks.com.
-    Keep this lightweight; no dependencies.
-  -->
   <script>
     (function () {
       try {
@@ -14,7 +8,6 @@
           window.location.replace("https://proagentworks.com");
         }
       } catch (e) {
-        // If cross-origin framing prevents access to window.top, fail closed.
         window.location.replace("https://proagentworks.com");
       }
     })();
@@ -22,13 +15,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Assistant</title>
-
-  <!--
-    NOTE: paw-ui.css is SHARED across tools.
-    Keep header markup consistent:
-    panel-topbar > topbar-row0 > tool-head + topbar-right (utility-pair).
-    Changing shared classes affects multiple tools.
-  -->
   <link rel="stylesheet" href="./paw-ui.css">
 </head>
 
@@ -37,25 +23,83 @@
     <div class="frame">
       <div class="panel">
 
+        <!-- Top Bar -->
         <div class="panel-topbar">
           <div class="topbar-row0">
             <div class="tool-head">
-              <button id="pawMyStuffBtn" class="paw-mystuff-btn paw-works-btn" type="button" aria-label="Work context">
+              <button id="pawMyStuffBtn" class="paw-mystuff-btn paw-works-btn" type="button" aria-expanded="false">
                 <img class="works-paw" src="https://paw-tools.pages.dev/paw.png" alt="" aria-hidden="true">
                 <span class="works-label">Work: Ready</span>
                 <span class="works-chevron" aria-hidden="true">▾</span>
               </button>
             </div>
 
-            
-
             <div class="topbar-right">
-  
-
-              <div class="utility-pair paw-seg" role="group" aria-label="Tool utilities">
+              <div class="utility-pair paw-seg" role="group">
                 <button id="reset" class="util-btn paw-seg__btn" type="button">Reset</button>
                 <button id="tips" class="util-btn paw-seg__btn" type="button">Tips &amp; How To</button>
               </div>
+            </div>
+          </div>
+
+          <!-- In-page expandable Works section -->
+          <div id="worksInline" style="display:none; padding:12px 14px 14px; border-top:1px solid rgba(15,23,42,.08); background:#fff;">
+            <div style="max-width:920px;">
+              <div style="font-size:14px; font-weight:900; margin-bottom:6px;">My Works</div>
+              <div style="font-size:12.5px; font-weight:650; color:rgba(15,23,42,.68); margin-bottom:12px;">
+                Attach context for this session. Nothing is saved unless you choose to save it.
+              </div>
+
+              <!-- Core My Brand -->
+              <section style="margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:900;">My Brand</div>
+                <div style="font-size:12.5px; color:rgba(15,23,42,.68); margin-top:4px;">
+                  Using your brand voice when it adds value.
+                </div>
+                <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
+                  <button class="btn" data-action="edit-brand" type="button">Edit in My Works</button>
+                  <button class="btn primary" data-action="use-brand" type="button">Use My Brand</button>
+                </div>
+              </section>
+
+              <!-- Brand Assets -->
+              <section style="margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:900;">Brand Assets</div>
+                <div style="font-size:12.5px; color:rgba(15,23,42,.68); margin-top:4px;">
+                  Attach a saved guide or reusable brand content (optional).
+                </div>
+                <div style="margin-top:8px;">
+                  <button class="btn" data-action="open-myworks" type="button">Browse Brand Assets</button>
+                </div>
+              </section>
+
+              <!-- Listings -->
+              <section style="margin-bottom:16px;">
+                <div style="font-size:13px; font-weight:900;">Listings</div>
+                <div style="font-size:12.5px; color:rgba(15,23,42,.68); margin-top:4px;">
+                  Attach a listing for this session.
+                </div>
+                <input id="inlineListingName" type="text" placeholder="Name this listing (session only)"
+                  style="width:100%; margin-top:8px; border:1px solid rgba(15,23,42,.16); border-radius:12px; padding:10px;">
+                <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
+                  <button class="btn" data-action="open-myworks" type="button">Save / Manage</button>
+                  <button class="btn primary" data-action="use-listing" type="button">Use This Listing</button>
+                </div>
+              </section>
+
+              <!-- Transactions -->
+              <section>
+                <div style="font-size:13px; font-weight:900;">Transactions</div>
+                <div style="font-size:12.5px; color:rgba(15,23,42,.68); margin-top:4px;">
+                  Attach a transaction for this session.
+                </div>
+                <input id="inlineTxnName" type="text" placeholder="Name this transaction (session only)"
+                  style="width:100%; margin-top:8px; border:1px solid rgba(15,23,42,.16); border-radius:12px; padding:10px;">
+                <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
+                  <button class="btn" data-action="open-myworks" type="button">Save / Manage</button>
+                  <button class="btn primary" data-action="use-transaction" type="button">Use This Transaction</button>
+                </div>
+              </section>
             </div>
           </div>
         </div>
@@ -63,7 +107,6 @@
         <div id="messages" class="messages"></div>
 
         <div class="composer">
-          
           <div class="composer-main">
             <div class="composer-help">Ask anything, or paste text to rewrite.</div>
             <textarea id="input" placeholder="Example: Rewrite this to sound confident and warm"></textarea>
@@ -77,578 +120,29 @@
     </div>
   </div>
 
-  <!-- Resume Draft Modal (Assistant tool) -->
-  <div id="pawResumeModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawResumeTitle">
-      <div class="modal-head">
-        <div id="pawResumeTitle" class="modal-title">Resume draft?</div>
-        <button class="modal-close" id="pawResumeClose" aria-label="Close" type="button">✕</button>
-      </div>
-      <div class="modal-body">
-        <div id="pawResumeMeta" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45; margin-bottom:14px;">
-          We found a saved draft on this device.
-        </div>
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-          <button id="pawResumeFresh" class="btn" type="button">Start fresh</button>
-          <button id="pawResumeGo" class="btn primary" type="button">Resume</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
   <script src="https://paw-tools.pages.dev/tool-shell.js"></script>
 
   <script>
-    (function () {
-      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
-
-      const DISCLAIMER_TEXT =
-        "Important: This assistant provides guidance intended to support your work. It is not brokerage policy guidance, legal advice, and compliance cannot be guaranteed.";
-
-      const DISCLAIMER_TRIGGER =
-        /(fair housing|mls|compliance|legal|law|attorney|contract|offer|addendum|inspection|lien|title|short sale|agency|disclosure)/i;
-
-      const TIPS_TEXT =
-`What to paste
-• A question you want answered
-• An email, text, or draft you want rewritten
-• A situation + what you want to happen next
-
-Best results when you include
-• Who it’s for (lead, buyer, seller, past client)
-• The goal (book a call, set a showing, handle an objection)
-• Tone (shorter, warmer, more direct)
-
-Examples
-• “Rewrite this text to sound confident and friendly…”
-• “Give me 3 replies to this objection: …”`;
-
-      const shell = window.PAWToolShell.init({
-        apiEndpoint: API_ENDPOINT,
-        toolId: "assistant",
-        inputPlaceholder: "e.g., Rewrite this to sound confident and friendly",
-        tipsText: TIPS_TEXT,
-
-        // One-time compliance note (shown only when trigger words appear in the user message)
-        complianceNoteText: DISCLAIMER_TEXT,
-        complianceTrigger: DISCLAIMER_TRIGGER,
-
-        sendHistoryItems: 10,
-        maxHistoryItems: 20,
-        deliverableMode: false
-      });
-
-      // ==========================================================
-      // Local Save + Resume (Assistant tool)
-      // ----------------------------------------------------------
-      // Same contract as Listing:
-      // - localStorage only, never silent restore
-      // - Reset / Start fresh deletes the draft and wipes UI
-      // ==========================================================
-
-      const DRAFT_KEY = "paw:assistant:draft:v1";
-
-      // Draft safety caps (localStorage is limited; large pastes can exceed quotas)
-      const MAX_DRAFT_INPUT_CHARS = 50000;
-      const MAX_DRAFT_HISTORY_ITEMS = 30;
-      const MAX_DRAFT_SHELL_INPUT_CHARS = 8000;
-
-      function trunc(s, max){
-        s = (s == null) ? "" : String(s);
-        if (!max || max <= 0) return "";
-        return s.length > max ? s.slice(0, max) : s;
-      }
-
-
-      const $resumeModal = document.getElementById("pawResumeModal");
-      const $resumeClose = document.getElementById("pawResumeClose");
-      const $resumeMeta = document.getElementById("pawResumeMeta");
-      const $resumeFresh = document.getElementById("pawResumeFresh");
-      const $resumeGo = document.getElementById("pawResumeGo");
-
-      function storageGet(key){
-        try {
-          const raw = localStorage.getItem(key);
-          if (!raw) return null;
-          return JSON.parse(raw);
-        } catch (_) { return null; }
-      }
-      function storageSet(key, val){
-        try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (_) { return false; }
-      }
-      function storageDel(key){
-        try { localStorage.removeItem(key); return true; } catch (_) { return false; }
-      }
-
-      let __draftSaveT = null;
-      let __draftSaveFailWarned = false; // prevent repeated toasts
-
-      function scheduleDraftSave(){
-        try {
-          if (__draftSaveT) clearTimeout(__draftSaveT);
-          __draftSaveT = setTimeout(saveDraftNow, 350);
-        } catch (_) {}
-      }
-
-      function saveDraftNow(){
-        try {
-          const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
-          const st = {
-            history: Array.isArray(rawShellState.history) ? rawShellState.history.slice(-MAX_DRAFT_HISTORY_ITEMS) : [],
-            input: trunc(rawShellState.input, MAX_DRAFT_SHELL_INPUT_CHARS)
-          };
-          const hasAny = (st.input && st.input.trim()) || (Array.isArray(st.history) && st.history.length);
-          if (!hasAny) { storageDel(DRAFT_KEY); return; }
-
-          const ok = storageSet(DRAFT_KEY, {
-            v: 1,
-            updatedAt: new Date().toISOString(),
-            toolId: "assistant",
-            shell: st
-          });
-          if (!ok && !__draftSaveFailWarned) {
-            __draftSaveFailWarned = true;
-            try { if (shell && shell.toast) shell.toast("Draft couldn’t be saved on this device/browser."); } catch (_) {}
-          }
-
-        } catch (_) {}
-      }
-
-      function openResumeModal(draft){
-        try {
-          if (!$resumeModal) return;
-          const d = draft || {};
-          const ts = d.updatedAt ? new Date(d.updatedAt) : null;
-          const when = ts && !isNaN(ts.getTime()) ? ts.toLocaleString() : "";
-          $resumeMeta.textContent = `We found a saved draft on this device.` + (when ? ` Last saved: ${when}.` : "");
-
-          $resumeModal.classList.add("show");
-          $resumeModal.setAttribute("aria-hidden", "false");
-        } catch (_) {}
-      }
-      function closeResumeModal(){
-        try {
-          if (!$resumeModal) return;
-          $resumeModal.classList.remove("show");
-          $resumeModal.setAttribute("aria-hidden", "true");
-        } catch (_) {}
-      }
-
-      function fullReset(){
-        try { storageDel(DRAFT_KEY); } catch (_) {}
-        closeResumeModal();
-        try { if (shell && shell.reset) shell.reset(); } catch (_) {}
-      }
-
-      // Intercept Reset so we can guarantee draft deletion.
-      try {
-        const $reset = document.getElementById("reset");
-        if ($reset) {
-          $reset.addEventListener("click", (e) => {
-            try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
-            try {
-              const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
-              const hasAny =
-                (rawShellState && Array.isArray(rawShellState.history) && rawShellState.history.length) ||
-                (rawShellState && typeof rawShellState.input === "string" && rawShellState.input.trim().length);
-              if (hasAny) {
-                const ok = window.confirm("Reset will clear this session and start fresh. Continue?");
-                if (!ok) return;
-              }
-            } catch (_) {}
-            fullReset();
-          }, true);
-        }
-      } catch (_) {}
-
-      // Autosave on composer input changes
-      try {
-        const $input = document.getElementById("input") || document.getElementById("prompt");
-        if ($input) {
-          $input.addEventListener("input", scheduleDraftSave);
-          $input.addEventListener("change", scheduleDraftSave);
-        }
-      } catch (_) {}
-
-      window.addEventListener("beforeunload", () => { try { saveDraftNow(); } catch (_) {} });
-
-      // Resume controls
-      try { if ($resumeClose) $resumeClose.addEventListener("click", () => closeResumeModal()); } catch (_) {}
-      try {
-        if ($resumeModal) $resumeModal.addEventListener("click", (e) => { if (e.target === $resumeModal) closeResumeModal(); });
-      } catch (_) {}
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeResumeModal(); } });
-
-      try {
-        if ($resumeFresh) $resumeFresh.addEventListener("click", () => {
-          closeResumeModal();
-          fullReset();
-        });
-      } catch (_) {}
-
-      try {
-        if ($resumeGo) $resumeGo.addEventListener("click", () => {
-          const d = storageGet(DRAFT_KEY);
-          closeResumeModal();
-          if (d && d.shell && shell && shell.setState) shell.setState(d.shell);
-        });
-      } catch (_) {}
-
-      // On load: show resume prompt (never silent restore)
-      const existingDraft = storageGet(DRAFT_KEY);
-      if (existingDraft) openResumeModal(existingDraft);
-
-    })();
-  </script>
-
-  <!-- ==========================================================
-       My Works Drawer (Phase 1)
-       ----------------------------------------------------------
-       PURPOSE:
-       - Reliable, in-tool "Work context" drawer for Circle embeds.
-       - Buckets: My Brand / Listings / Transactions.
-       - Actions: Use (attach), Save (navigate), Edit (navigate).
-       - Nothing is saved automatically.
-       ========================================================== -->
-  <div id="pawWorksDrawer" class="paw-drawer" aria-hidden="true">
-    <div id="pawWorksBackdrop" class="paw-drawer__backdrop" aria-hidden="true"></div>
-
-    <div class="paw-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="pawWorksTitle">
-      <div style="padding:14px 14px 10px; border-bottom:1px solid rgba(15,23,42,.08); background: radial-gradient(640px 220px at 20% 0%, rgba(5,195,249,.12), rgba(255,255,255,0) 60%), #ffffff; display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
-        <div>
-          <div id="pawWorksTitle" style="margin:0; font-size:15px; font-weight:950; color:rgba(15,23,42,.92); letter-spacing:-0.01em; line-height:1.15;">My Works</div>
-          <div id="pawWorksSub" style="margin-top:6px; font-size:12.5px; font-weight:700; color:rgba(15,23,42,.68); line-height:1.35; max-width:520px;">
-            Attach what you’re working on. Nothing is saved unless you choose to save it.
-          </div>
-        </div>
-        <button id="pawWorksClose" type="button" aria-label="Close" style="border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.92); width:34px; height:34px; border-radius:10px; cursor:pointer; font-weight:900; color:rgba(15,23,42,.72);">✕</button>
-      </div>
-
-      <div style="padding:12px 14px; border-bottom:1px solid rgba(15,23,42,.08); background:#fff;">
-        <div id="pawWorksActive" style="font-size:12px; font-weight:800; color:rgba(15,23,42,.68);">
-          Work: <span id="pawWorksActiveLabel" style="font-weight:950; color:rgba(15,23,42,.92);">Ready</span>
-        </div>
-
-        <div style="margin-top:12px;">
-          <div class="paw-seg" role="tablist" aria-label="My Works tabs" style="width:100%; border-radius:14px;">
-            <button class="util-btn paw-seg__btn" id="pawTabBrand" role="tab" aria-selected="true" type="button">My Brand</button>
-            <button class="util-btn paw-seg__btn" id="pawTabListings" role="tab" aria-selected="false" type="button">Listings</button>
-            <button class="util-btn paw-seg__btn" id="pawTabTransactions" role="tab" aria-selected="false" type="button">Transactions</button>
-          </div>
-        </div>
-      </div>
-
-      <div style="padding:14px; overflow:auto; -webkit-overflow-scrolling:touch;">
-        <div id="pawPanelBrand" role="tabpanel" aria-labelledby="pawTabBrand">
-          <div style="font-size:14px; font-weight:800; color:rgba(15,23,42,.90); margin-bottom:6px;">My Brand</div>
-          <div style="font-size:13px; font-weight:650; color:rgba(15,23,42,.68); line-height:1.45;">
-            Use your saved brand when it adds value. Edit or save in My Works.
-          </div>
-
-          <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px;">
-            <button class="btn" type="button" data-works-action="edit" data-bucket="brand">Edit in My Works</button>
-            <button class="btn primary" type="button" data-works-action="use" data-bucket="brand" data-label="My Brand">Use My Brand</button>
-          </div>
-        </div>
-
-        <div id="pawPanelListings" role="tabpanel" aria-labelledby="pawTabListings" style="display:none;">
-          <div style="font-size:14px; font-weight:800; color:rgba(15,23,42,.90); margin-bottom:6px;">Listings</div>
-          <div style="font-size:13px; font-weight:650; color:rgba(15,23,42,.68); line-height:1.45;">
-            Attach a listing work item for this session. Save and manage listings in My Works.
-          </div>
-
-          <div style="margin-top:12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.92); border-radius:14px; padding:12px;">
-            <div style="font-size:12px; font-weight:900; color:rgba(15,23,42,.72); margin-bottom:8px;">Quick attach (session only)</div>
-            <input id="pawListingName" type="text" placeholder="Example: Rewrite this to sound confident and warm" style="width:100%; border:1px solid rgba(15,23,42,.16); border-radius:12px; padding:10px 12px; font-size:14px; font-weight:650; outline:none;">
-            <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:10px;">
-              <button class="btn" type="button" data-works-action="save" data-bucket="listing">Save / Manage in My Works</button>
-              <button class="btn primary" type="button" data-works-action="use_custom" data-bucket="listing">Use This Listing</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="pawPanelTransactions" role="tabpanel" aria-labelledby="pawTabTransactions" style="display:none;">
-          <div style="font-size:14px; font-weight:800; color:rgba(15,23,42,.90); margin-bottom:6px;">Transactions</div>
-          <div style="font-size:13px; font-weight:650; color:rgba(15,23,42,.68); line-height:1.45;">
-            Attach a transaction work item for this session. Save and manage transactions in My Works.
-          </div>
-
-          <div style="margin-top:12px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.92); border-radius:14px; padding:12px;">
-            <div style="font-size:12px; font-weight:900; color:rgba(15,23,42,.72); margin-bottom:8px;">Quick attach (session only)</div>
-            <input id="pawTxnName" type="text" placeholder="Example: Rewrite this to sound confident and warm" style="width:100%; border:1px solid rgba(15,23,42,.16); border-radius:12px; padding:10px 12px; font-size:14px; font-weight:650; outline:none;">
-            <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:10px;">
-              <button class="btn" type="button" data-works-action="save" data-bucket="transaction">Save / Manage in My Works</button>
-              <button class="btn primary" type="button" data-works-action="use_custom" data-bucket="transaction">Use This Transaction</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style="padding:12px 14px; border-top:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.98); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-        <div style="font-size:12px; font-weight:750; color:rgba(15,23,42,.60); line-height:1.25;">
-          Tip: Use attaches context for this session. Save happens only when you choose.
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end; flex-wrap:wrap;">
-          <button class="btn" type="button" data-works-action="detach">Detach</button>
-          <button class="btn primary" type="button" data-works-action="open_myworks">Open My Works</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <script>
     (function(){
-      var WORK_KEY = "paw:active_work:v1"; // sessionStorage only
+      var btn = document.getElementById('pawMyStuffBtn');
+      var panel = document.getElementById('worksInline');
 
-      var $btn = document.getElementById("pawMyStuffBtn");
-      var $drawer = document.getElementById("pawWorksDrawer");
-      var $backdrop = document.getElementById("pawWorksBackdrop");
-      var $close = document.getElementById("pawWorksClose");
-      var $activeLabel = document.getElementById("pawWorksActiveLabel");
-
-      var $tabBrand = document.getElementById("pawTabBrand");
-      var $tabListings = document.getElementById("pawTabListings");
-      var $tabTx = document.getElementById("pawTabTransactions");
-
-      var $panelBrand = document.getElementById("pawPanelBrand");
-      var $panelListings = document.getElementById("pawPanelListings");
-      var $panelTx = document.getElementById("pawPanelTransactions");
-
-      var $listingName = document.getElementById("pawListingName");
-      var $txnName = document.getElementById("pawTxnName");
-
-      function safeParse(s){ try { return JSON.parse(s); } catch(_) { return null; } }
-      function readWork(){
-        try{
-          var raw = sessionStorage.getItem(WORK_KEY);
-          if(!raw) return null;
-          var w = safeParse(raw);
-          return (w && typeof w === "object") ? w : null;
-        }catch(_){ return null; }
-      }
-      function writeWork(w){
-        try{
-          if(!w){ sessionStorage.removeItem(WORK_KEY); return; }
-          sessionStorage.setItem(WORK_KEY, JSON.stringify(w));
-        }catch(_){}
-      }
-
-      function setBtnLabel(label){
-        try{
-          if(!$btn) return;
-          var lab = $btn.querySelector(".works-label");
-          if(lab) lab.textContent = "Work: " + (label || "Ready");
-        }catch(_){}
-      }
-
-      function syncActive(){
-        var w = readWork();
-        var label = (w && w.label) ? String(w.label) : "Ready";
-        if($activeLabel) $activeLabel.textContent = label;
-        setBtnLabel(label);
-      }
-
-      function openDrawer(){
-        if(!$drawer) return;
-        syncActive();
-        $drawer.classList.add("show");
-        $drawer.setAttribute("aria-hidden","false");
-        try{ document.body.classList.add("drawer-open"); }catch(_){}
-      }
-      function closeDrawer(){
-        if(!$drawer) return;
-        $drawer.classList.remove("show");
-        $drawer.setAttribute("aria-hidden","true");
-        try{ document.body.classList.remove("drawer-open"); }catch(_){}
-      }
-
-      function setTab(which){
-        var w = String(which || "brand");
-        var map = {
-          brand: { tab:$tabBrand, panel:$panelBrand },
-          listings: { tab:$tabListings, panel:$panelListings },
-          transactions: { tab:$tabTx, panel:$panelTx }
-        };
-        Object.keys(map).forEach(function(k){
-          var on = (k === w);
-          try{ if(map[k].tab) map[k].tab.setAttribute("aria-selected", on ? "true":"false"); }catch(_){}
-          try{ if(map[k].panel) map[k].panel.style.display = on ? "block":"none"; }catch(_){}
-        });
-      }
-
-      function openMyWorksPage(){
-        try{ window.location.href = "https://paw-tools.pages.dev/myworks.html?embed=1"; }catch(_){}
-      }
-
-      function handleAction(act, bucket, target){
-        var a = String(act||"");
-        var b = String(bucket||"");
-
-        if(a === "detach"){ writeWork(null); syncActive(); return; }
-        if(a === "open_myworks"){ openMyWorksPage(); return; }
-        if(a === "edit" || a === "save"){ openMyWorksPage(); return; }
-
-        if(a === "use"){
-          var label = "Ready";
-          try{
-            if(target && target.getAttribute) label = target.getAttribute("data-label") || label;
-          }catch(_){}
-          writeWork({ v:1, bucket:b, label:label });
-          syncActive(); closeDrawer(); return;
-        }
-
-        if(a === "use_custom"){
-          var name = "";
-          if(b === "listing" && $listingName) name = String($listingName.value||"").trim();
-          if(b === "transaction" && $txnName) name = String($txnName.value||"").trim();
-          if(!name) name = (b === "listing") ? "Listing" : "Transaction";
-          writeWork({ v:1, bucket:b, label:name });
-          syncActive(); closeDrawer(); return;
-        }
-      }
-
-      // Open/close wiring
-      try{ if($btn) $btn.addEventListener("click", function(){ openDrawer(); }); }catch(_){}
-      try{ if($close) $close.addEventListener("click", function(){ closeDrawer(); }); }catch(_){}
-      try{ if($backdrop) $backdrop.addEventListener("click", function(){ closeDrawer(); }); }catch(_){}
-      document.addEventListener("keydown", function(e){ if(e && e.key === "Escape") closeDrawer(); });
-
-      // Tabs wiring
-      try{ if($tabBrand) $tabBrand.addEventListener("click", function(){ setTab("brand"); }); }catch(_){}
-      try{ if($tabListings) $tabListings.addEventListener("click", function(){ setTab("listings"); }); }catch(_){}
-      try{ if($tabTx) $tabTx.addEventListener("click", function(){ setTab("transactions"); }); }catch(_){}
-
-      // Actions (delegated)
-      document.addEventListener("click", function(e){
-        var t = e && e.target ? e.target : null;
-        if(!t || !t.getAttribute) return;
-        var act = t.getAttribute("data-works-action");
-        if(!act) return;
-        var bucket = t.getAttribute("data-bucket") || "";
-        try{ e.preventDefault(); }catch(_){}
-        handleAction(act, bucket, t);
+      btn.addEventListener('click', function(){
+        var open = panel.style.display === 'block';
+        panel.style.display = open ? 'none' : 'block';
+        btn.setAttribute('aria-expanded', open ? 'false' : 'true');
       });
 
-      setTab("brand");
-      syncActive();
+      document.addEventListener('click', function(e){
+        var a = e.target && e.target.getAttribute ? e.target.getAttribute('data-action') : '';
+        if(!a) return;
+
+        if(a === 'open-myworks'){
+          window.location.href = 'https://paw-tools.pages.dev/myworks.html?embed=1';
+        }
+      });
     })();
   </script>
-
-
-  <script>
-/**
- * PAW Iframe Height Reporter (v1.1 - content-based)
- * ------------------------------------------------------------
- * Fix for "infinite growth" loops:
- * Some embed CSS patterns use min-height: 100vh (or similar) on the tool container.
- * When the parent increases iframe height, the iframe viewport grows, which increases 100vh,
- * which increases the container height, which we would re-measure as "more content" and
- * report again — causing runaway scrolling.
- *
- * This version measures the *content stack* (topbar + messages scrollHeight + composer)
- * instead of document/body height, so viewport-driven min-heights won't create feedback loops.
- *
- * Contract (unchanged):
- * - Sends: { type: "paw_iframe_height_request_v1", height: <number> }
- * - Parent decides how to clamp/apply (desktop vs mobile).
- */
-(function () {
-  if (window.__PAW_HEIGHT_REPORTER__) return;
-  window.__PAW_HEIGHT_REPORTER__ = true;
-
-  var lastSent = 0;
-  var rafPending = false;
-
-  // Ignore tiny oscillations
-  var IGNORE_DELTA_PX = 12;
-
-  function px(n){
-    n = Number(n);
-    return (isFinite(n) && n > 0) ? n : 0;
-  }
-
-  function getStackHeight() {
-    try {
-      var panel = document.querySelector(".panel");
-      var topbar = panel ? panel.querySelector(".panel-topbar") : null;
-      var messages = document.getElementById("messages");
-      var composer = document.querySelector(".composer");
-
-      // Base stack: topbar + composer + messages content height (scrollHeight reflects content, not viewport)
-      var h =
-        px(topbar ? topbar.offsetHeight : 0) +
-        px(composer ? composer.offsetHeight : 0) +
-        px(messages ? messages.scrollHeight : 0);
-
-      // Add a small safety buffer for borders/padding that aren't captured above
-      h += 24;
-
-      // Fallback: if we can't find expected nodes, revert to robust document measurement.
-      if (!h || h < 200) {
-        var d = document.documentElement;
-        var b = document.body;
-        h = Math.max(
-          px(d && d.scrollHeight),
-          px(b && b.scrollHeight),
-          px(d && d.offsetHeight),
-          px(b && b.offsetHeight)
-        );
-      }
-
-      return h;
-    } catch (_) {
-      return 0;
-    }
-  }
-
-  function postHeight(force) {
-    var h = Math.ceil(getStackHeight());
-    if (!h) return;
-
-    if (!force && Math.abs(h - lastSent) < IGNORE_DELTA_PX) return;
-    lastSent = h;
-
-    try {
-      window.parent.postMessage(
-        { type: "paw_iframe_height_request_v1", height: h },
-        "*"
-      );
-    } catch (_) {}
-  }
-
-  function schedule(force) {
-    if (rafPending) return;
-    rafPending = true;
-    requestAnimationFrame(function () {
-      rafPending = false;
-      postHeight(!!force);
-    });
-  }
-
-  // Initial + delayed passes (fonts/images/layout settle)
-  schedule(true);
-  setTimeout(function(){ schedule(true); }, 120);
-  setTimeout(function(){ schedule(true); }, 450);
-
-  // Watch DOM mutations (chat streaming, message inserts, etc.)
-  try {
-    var mo = new MutationObserver(function () { schedule(false); });
-    mo.observe(document.body, { childList: true, subtree: true, characterData: true });
-  } catch (_) {}
-
-  // Images loading after DOM insert
-  document.addEventListener("load", function (e) {
-    try { if (e.target && e.target.tagName === "IMG") schedule(false); } catch (_) {}
-  }, true);
-
-  // Resize/orientation/keyboard changes: do a forced re-measure
-  window.addEventListener("resize", function () { schedule(true); });
-
-})();
-</script>
-
 
 </body>
 </html>
