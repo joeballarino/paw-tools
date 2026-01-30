@@ -536,5 +536,105 @@ Examples
     })();
   </script>
 
+
+  <script>
+  /**
+   * PAW Iframe Height Reporter (v1)
+   * ------------------------------------------------------------
+   * Purpose:
+   * - Reports the tool's content height to the Circle parent page.
+   * - Enables "grow-to-fit" embeds with no internal scrollbars.
+   *
+   * Design goals:
+   * - Robust against streaming chat, modals, drawers, images.
+   * - Throttled to avoid resize jitter.
+   * - Silent failure if parent listener is absent.
+   *
+   * Contract:
+   * - Sends: { type: "paw_iframe_height_request_v1", height: <number> }
+   * - Parent decides how to clamp/apply (desktop vs mobile).
+   */
+  (function () {
+    if (window.__PAW_HEIGHT_REPORTER__) return;
+    window.__PAW_HEIGHT_REPORTER__ = true;
+
+    var lastSent = 0;
+    var rafPending = false;
+    var IGNORE_DELTA_PX = 8;
+
+    function measureHeight() {
+      try {
+        var d = document.documentElement;
+        var b = document.body;
+        return Math.max(
+          d.scrollHeight,
+          b ? b.scrollHeight : 0,
+          d.offsetHeight,
+          b ? b.offsetHeight : 0
+        );
+      } catch (_) {
+        return 0;
+      }
+    }
+
+    function sendHeight(force) {
+      var h = measureHeight();
+      if (!h) return;
+
+      if (!force && Math.abs(h - lastSent) < IGNORE_DELTA_PX) return;
+      lastSent = h;
+
+      try {
+        window.parent.postMessage(
+          { type: "paw_iframe_height_request_v1", height: h },
+          "*"
+        );
+      } catch (_) {}
+    }
+
+    function scheduleSend(force) {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(function () {
+        rafPending = false;
+        sendHeight(force);
+      });
+    }
+
+    // Initial + delayed passes (fonts/images/layout settle)
+    scheduleSend(true);
+    setTimeout(function(){ scheduleSend(true); }, 120);
+    setTimeout(function(){ scheduleSend(true); }, 400);
+
+    // Watch DOM mutations (chat streaming, drawer, modal, etc.)
+    try {
+      var mo = new MutationObserver(function () {
+        scheduleSend(false);
+      });
+      mo.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      });
+    } catch (_) {}
+
+    // Images loading after DOM insert
+    document.addEventListener("load", function (e) {
+      try {
+        if (e.target && e.target.tagName === "IMG") {
+          scheduleSend(false);
+        }
+      } catch (_) {}
+    }, true);
+
+    // Window resize (orientation change, keyboard)
+    window.addEventListener("resize", function () {
+      scheduleSend(true);
+    });
+
+  })();
+  </script>
+
+
 </body>
 </html>
