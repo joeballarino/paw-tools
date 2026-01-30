@@ -538,102 +538,116 @@ Examples
 
 
   <script>
-  /**
-   * PAW Iframe Height Reporter (v1)
-   * ------------------------------------------------------------
-   * Purpose:
-   * - Reports the tool's content height to the Circle parent page.
-   * - Enables "grow-to-fit" embeds with no internal scrollbars.
-   *
-   * Design goals:
-   * - Robust against streaming chat, modals, drawers, images.
-   * - Throttled to avoid resize jitter.
-   * - Silent failure if parent listener is absent.
-   *
-   * Contract:
-   * - Sends: { type: "paw_iframe_height_request_v1", height: <number> }
-   * - Parent decides how to clamp/apply (desktop vs mobile).
-   */
-  (function () {
-    if (window.__PAW_HEIGHT_REPORTER__) return;
-    window.__PAW_HEIGHT_REPORTER__ = true;
+/**
+ * PAW Iframe Height Reporter (v1.1 - content-based)
+ * ------------------------------------------------------------
+ * Fix for "infinite growth" loops:
+ * Some embed CSS patterns use min-height: 100vh (or similar) on the tool container.
+ * When the parent increases iframe height, the iframe viewport grows, which increases 100vh,
+ * which increases the container height, which we would re-measure as "more content" and
+ * report again — causing runaway scrolling.
+ *
+ * This version measures the *content stack* (topbar + messages scrollHeight + composer)
+ * instead of document/body height, so viewport-driven min-heights won't create feedback loops.
+ *
+ * Contract (unchanged):
+ * - Sends: { type: "paw_iframe_height_request_v1", height: <number> }
+ * - Parent decides how to clamp/apply (desktop vs mobile).
+ */
+(function () {
+  if (window.__PAW_HEIGHT_REPORTER__) return;
+  window.__PAW_HEIGHT_REPORTER__ = true;
 
-    var lastSent = 0;
-    var rafPending = false;
-    var IGNORE_DELTA_PX = 8;
+  var lastSent = 0;
+  var rafPending = false;
 
-    function measureHeight() {
-      try {
+  // Ignore tiny oscillations
+  var IGNORE_DELTA_PX = 12;
+
+  function px(n){
+    n = Number(n);
+    return (isFinite(n) && n > 0) ? n : 0;
+  }
+
+  function getStackHeight() {
+    try {
+      var panel = document.querySelector(".panel");
+      var topbar = panel ? panel.querySelector(".panel-topbar") : null;
+      var messages = document.getElementById("messages");
+      var composer = document.querySelector(".composer");
+
+      // Base stack: topbar + composer + messages content height (scrollHeight reflects content, not viewport)
+      var h =
+        px(topbar ? topbar.offsetHeight : 0) +
+        px(composer ? composer.offsetHeight : 0) +
+        px(messages ? messages.scrollHeight : 0);
+
+      // Add a small safety buffer for borders/padding that aren't captured above
+      h += 24;
+
+      // Fallback: if we can't find expected nodes, revert to robust document measurement.
+      if (!h || h < 200) {
         var d = document.documentElement;
         var b = document.body;
-        return Math.max(
-          d.scrollHeight,
-          b ? b.scrollHeight : 0,
-          d.offsetHeight,
-          b ? b.offsetHeight : 0
+        h = Math.max(
+          px(d && d.scrollHeight),
+          px(b && b.scrollHeight),
+          px(d && d.offsetHeight),
+          px(b && b.offsetHeight)
         );
-      } catch (_) {
-        return 0;
       }
+
+      return h;
+    } catch (_) {
+      return 0;
     }
+  }
 
-    function sendHeight(force) {
-      var h = measureHeight();
-      if (!h) return;
+  function postHeight(force) {
+    var h = Math.ceil(getStackHeight());
+    if (!h) return;
 
-      if (!force && Math.abs(h - lastSent) < IGNORE_DELTA_PX) return;
-      lastSent = h;
+    if (!force && Math.abs(h - lastSent) < IGNORE_DELTA_PX) return;
+    lastSent = h;
 
-      try {
-        window.parent.postMessage(
-          { type: "paw_iframe_height_request_v1", height: h },
-          "*"
-        );
-      } catch (_) {}
-    }
-
-    function scheduleSend(force) {
-      if (rafPending) return;
-      rafPending = true;
-      requestAnimationFrame(function () {
-        rafPending = false;
-        sendHeight(force);
-      });
-    }
-
-    // Initial + delayed passes (fonts/images/layout settle)
-    scheduleSend(true);
-    setTimeout(function(){ scheduleSend(true); }, 120);
-    setTimeout(function(){ scheduleSend(true); }, 400);
-
-    // Watch DOM mutations (chat streaming, drawer, modal, etc.)
     try {
-      var mo = new MutationObserver(function () {
-        scheduleSend(false);
-      });
-      mo.observe(document.body, {
-        childList: true,
-        subtree: true,
-        characterData: true
-      });
+      window.parent.postMessage(
+        { type: "paw_iframe_height_request_v1", height: h },
+        "*"
+      );
     } catch (_) {}
+  }
 
-    // Images loading after DOM insert
-    document.addEventListener("load", function (e) {
-      try {
-        if (e.target && e.target.tagName === "IMG") {
-          scheduleSend(false);
-        }
-      } catch (_) {}
-    }, true);
-
-    // Window resize (orientation change, keyboard)
-    window.addEventListener("resize", function () {
-      scheduleSend(true);
+  function schedule(force) {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(function () {
+      rafPending = false;
+      postHeight(!!force);
     });
+  }
 
-  })();
-  </script>
+  // Initial + delayed passes (fonts/images/layout settle)
+  schedule(true);
+  setTimeout(function(){ schedule(true); }, 120);
+  setTimeout(function(){ schedule(true); }, 450);
+
+  // Watch DOM mutations (chat streaming, message inserts, etc.)
+  try {
+    var mo = new MutationObserver(function () { schedule(false); });
+    mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+  } catch (_) {}
+
+  // Images loading after DOM insert
+  document.addEventListener("load", function (e) {
+    try { if (e.target && e.target.tagName === "IMG") schedule(false); } catch (_) {}
+  }, true);
+
+  // Resize/orientation/keyboard changes: do a forced re-measure
+  window.addEventListener("resize", function () { schedule(true); });
+
+})();
+</script>
 
 
 </body>
