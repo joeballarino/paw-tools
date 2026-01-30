@@ -2077,11 +2077,9 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     // IMPORTANT: In Circle/React embeds, the topbar button may appear after scripts run.
     // We wire the Works button/drawer when ready to prevent "click does nothing" regressions.
     wireWorksWhenReady();
-  });
-    }
   }
 
-  // Expose minimal API (no persistence, session-only)
+// Expose minimal API (no persistence, session-only)
   window.__PAWWorks = {
     init: init,
     getActiveWork: getActiveWork,
