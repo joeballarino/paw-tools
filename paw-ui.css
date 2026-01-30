@@ -1009,6 +1009,50 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 }
 
 /* ==========================================================
+   PAW — My Works Inline Expander (shared) — Phase 1B
+   ----------------------------------------------------------
+   Engineering intent:
+   - Inline expand/collapse under topbar (no modal, no backdrop).
+   - Tool iframe should grow; avoid internal scrollbars.
+   - Keep existing inner classnames (.paw-drawer__*) so content can
+     be iterated centrally in tool-shell.js without per-tool edits.
+   ========================================================== */
+.paw-workexpander{
+  display:none;
+  margin-top: 10px;
+}
+.paw-workexpander.is-open{ display:block; }
+
+/* Re-skin the former drawer panel for inline layout */
+.paw-workexpander .paw-drawer__panel{
+  position:relative;
+  top:auto;
+  right:auto;
+  bottom:auto;
+  width:100%;
+  max-width: 980px;
+  margin: 0 auto;
+  transform:none;
+  opacity: 1;
+  transition:none;
+  border-radius: 16px;
+}
+
+/* Let the page grow (no internal scrolling container) */
+.paw-workexpander .paw-drawer__body{
+  overflow: visible;
+}
+
+/* Work button chevron matches disclosure behavior */
+#pawMyStuffBtn.is-expanded .works-chevron{
+  transform: rotate(180deg);
+}
+#pawMyStuffBtn .works-chevron{
+  display:inline-block;
+  transition: transform .16s ease;
+}
+
+/* ==========================================================
    PAW — My Works Drawer (shared) — Phase 1
    ----------------------------------------------------------
    NOTE:
