@@ -1626,9 +1626,11 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   // Session-only context (in-memory, resets on reload).
   var __pawActiveWork = null; // { bucket:"brand"|"listings"|"deals", id:string, label:string }
 
-  // Works expander DOM refs (inline, under topbar)
+  // Drawer DOM refs
   var __drawer = null;
   var __drawerPanel = null;
+  var __drawerBackdrop = null;
+
   var __tabBtns = null; // NodeList
   var __panels = null;  // {brand, listings, deals}
   var __brandPanel = null;
@@ -1672,22 +1674,20 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   }
 
   // ------------------------------------------------------------
-  // Works Expander injection (shared across all tools)
+  // Drawer injection (shared across all tools)
   // ------------------------------------------------------------
-  // Engineering intent:
-  // - Replace the modal/drawer with an inline expanding section under the topbar.
-  // - Keep content centralized here so all tools stay consistent.
-  // - Do NOT lock body scroll; tool iframe should grow (no internal scrollbars).
-  function injectWorksExpanderOnce(){
-    if (__drawer) return; // reuse __drawer var to avoid touching other code
+  function injectDrawerOnce(){
+    if (__drawer) return;
 
     __drawer = document.createElement("div");
-    __drawer.className = "paw-workexpander";
-    __drawer.id = "pawWorksInline";
+    __drawer.className = "paw-drawer";
+    __drawer.id = "pawWorksDrawer";
     __drawer.setAttribute("aria-hidden","true");
 
     __drawer.innerHTML = `
-      <div class="paw-drawer__panel" role="region" aria-labelledby="pawWorksTitle">
+      <div class="paw-drawer__backdrop" data-paw-close="1"></div>
+
+      <div class="paw-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="pawWorksTitle">
         <div class="paw-drawer__head">
           <div>
             <div id="pawWorksTitle" class="paw-drawer__title">My Works</div>
@@ -1713,7 +1713,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
             <div class="paw-drawer__panelinner">
               <div class="paw-drawer__emptytitle">Listings (coming next)</div>
               <div class="paw-drawer__emptycopy">
-                Phase 1 wires the expander + session context. Listing saves will be enabled once Worker endpoints exist.
+                Phase 1 wires the drawer + session context. Listing saves will be enabled once Worker endpoints exist.
               </div>
             </div>
           </section>
@@ -1742,42 +1742,23 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
       </div>
     `;
 
-    // Insert directly under the topbar row (requested behavior).
-    // Fallback to appending to body if the expected anchor is missing.
-    try{
-      var anchor = document.querySelector(".panel-topbar .topbar-row0");
-      if (anchor && anchor.parentNode){
-        anchor.parentNode.insertBefore(__drawer, anchor.nextSibling);
-      } else {
-        document.body.appendChild(__drawer);
-      }
-    }catch(_){
-      document.body.appendChild(__drawer);
-    }
+    document.body.appendChild(__drawer);
 
-    __drawerPanel = $("#pawWorksInline .paw-drawer__panel");
+    __drawerPanel = $("#pawWorksDrawer .paw-drawer__panel");
+    __drawerBackdrop = $("#pawWorksDrawer .paw-drawer__backdrop");
 
-    __tabBtns = $all("#pawWorksInline .paw-drawer__tab");
+    __tabBtns = $all("#pawWorksDrawer .paw-drawer__tab");
     __brandPanel = document.getElementById("pawWorksBrandPanel");
 
-    wireWorksExpanderEvents();
+    wireDrawerEvents();
   }
 
-  function setWorksExpanderOpen(on){
+  function setDrawerOpen(on){
     if (!__drawer) return;
     var open = !!on;
-    __drawer.classList.toggle("is-open", open);
+    __drawer.classList.toggle("show", open);
     __drawer.setAttribute("aria-hidden", open ? "false" : "true");
-
-    // Keep the button state in sync (chevron + a11y)
-    try{
-      var btn = document.getElementById("pawMyStuffBtn");
-      if (btn){
-        btn.classList.toggle("is-expanded", open);
-        btn.setAttribute("aria-expanded", open ? "true" : "false");
-        btn.setAttribute("aria-controls", "pawWorksInline");
-      }
-    }catch(_){}
+    document.body.classList.toggle("paw-drawer-open", open);
 
     if (open) {
       // Refresh context + brand data each open (cheap, keeps UI honest).
@@ -1785,120 +1766,318 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
       try { refreshBrandPanel(); } catch(_){}
       // Focus close for accessibility
       try{
-        var c = $("#pawWorksInline .paw-drawer__close");
+        var c = $("#pawWorksDrawer .paw-drawer__close");
         setTimeout(function(){ try{ c && c.focus(); }catch(_){} }, 25);
       }catch(_){}
     }
   }
 
-  function wireWorksExpanderEvents(){
+  function wireDrawerEvents(){
     if (!__drawer) return;
 
-    // Close on close button clicks
+    // Close on backdrop/close button clicks
     __drawer.addEventListener("click", function(e){
       try{
         var t = e.target;
-        if (t && t.getAttribute && t.getAttribute("data-paw-close") === "1"){
-          e.preventDefault();
-          setWorksExpanderOpen(false);
-          return;
-        }
+        if (t && t.getAttribute && t.getAttribute("data-paw-close") === "1") setDrawerOpen(false);
       }catch(_){}
     });
 
-    // Close on Escape (only when open)
+    // ESC closes drawer
     document.addEventListener("keydown", function(e){
+      if (e.key !== "Escape") return;
       try{
-        if (e.key === "Escape" && __drawer && __drawer.classList.contains("is-open")){
-          setWorksExpanderOpen(false);
-        }
+        if (__drawer && __drawer.classList.contains("show")) setDrawerOpen(false);
       }catch(_){}
     });
 
     // Tabs
-    __panels = {
-      brand: $("#pawWorksInline [data-panel='brand']"),
-      listings: $("#pawWorksInline [data-panel='listings']"),
-      deals: $("#pawWorksInline [data-panel='deals']")
-    };
-
-    if (__tabBtns && __tabBtns.length){
-      __tabBtns.forEach(function(btn){
-        btn.addEventListener("click", function(){
-          try{
-            var tab = btn.getAttribute("data-tab");
-            switchWorksTab(tab);
-          }catch(_){}
-        });
+    __tabBtns.forEach(function(btn){
+      btn.addEventListener("click", function(){
+        activateTab(btn.getAttribute("data-tab"));
       });
-    }
+    });
 
-    // Saved Works navigation
-    var goSaved = document.getElementById("pawWorksGoSaved");
-    if (goSaved){
-      goSaved.addEventListener("click", function(){
-        try{
-          // Keep consistent: "Saved Works" lives at myworks.html (inside Circle iframe)
-          window.location.href = "myworks.html";
-        }catch(_){}
+    // Go to Saved Works (full page)
+    var go = document.getElementById("pawWorksGoSaved");
+    if (go){
+      go.addEventListener("click", function(){
+        // Navigate inside the iframe. Circle may override with its own routing.
+        try { window.location.href = "./myworks.html?embed=1"; } catch(_) {}
       });
     }
 
     // Detach
-    var detachBtn = document.getElementById("pawWorksDetach");
-    if (detachBtn){
-      detachBtn.addEventListener("click", function(){
-        try{
-          detachWork();
-          renderContextRow();
-          updateWorkPill();
-          setWorksExpanderOpen(false);
-        }catch(_){}
+    var det = document.getElementById("pawWorksDetach");
+    if (det){
+      det.addEventListener("click", function(){
+        detachWork();
+      });
+    }
+
+    // Minimal focus trap inside drawer panel
+    if (__drawerPanel){
+      __drawerPanel.addEventListener("keydown", function(e){
+        if (e.key !== "Tab") return;
+        var focusables = __drawerPanel.querySelectorAll("button,[href],input,textarea,select,[tabindex]:not([tabindex='-1'])");
+        var list = Array.prototype.slice.call(focusables).filter(function(el){ return !el.disabled && el.offsetParent !== null; });
+        if (!list.length) return;
+        var first = list[0];
+        var last = list[list.length - 1];
+        if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
       });
     }
   }
 
-  // Helper: switch tab in expander
-  function switchWorksTab(tab){
+  function activateTab(tab){
+    var t = String(tab || "brand");
+    __tabBtns.forEach(function(b){
+      var on = (b.getAttribute("data-tab") === t);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    $all("#pawWorksDrawer .paw-drawer__panelbody").forEach(function(p){
+      var on = (p.getAttribute("data-panel") === t);
+      p.classList.toggle("is-active", on);
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Context actions
+  // ------------------------------------------------------------
+  function renderContextRow(){
+    var v = document.getElementById("pawWorksContextValue");
+    var det = document.getElementById("pawWorksDetach");
+    if (!v) return;
+
+    if (__pawActiveWork && __pawActiveWork.label){
+      v.textContent = String(__pawActiveWork.label);
+      if (det) det.style.display = "";
+    } else {
+      v.textContent = "None";
+      if (det) det.style.display = "none";
+    }
+  }
+
+  function attachWork(work){
+    __pawActiveWork = work || null;
+    updateWorkPill();
+    renderContextRow();
+  }
+
+  function detachWork(){
+    __pawActiveWork = null;
+    updateWorkPill();
+    renderContextRow();
+    // Keep drawer open; this is a safe action.
     try{
-      var which = String(tab || "brand");
-      if (!__panels) return;
-
-      Object.keys(__panels).forEach(function(k){
-        var on = (k === which);
-        try{
-          var p = __panels[k];
-          if (p) p.classList.toggle("is-active", on);
-        }catch(_){}
-      });
-
-      if (__tabBtns && __tabBtns.length){
-        __tabBtns.forEach(function(b){
-          try{
-            var on = (b.getAttribute("data-tab") === which);
-            b.setAttribute("aria-selected", on ? "true" : "false");
-          }catch(_){}
-        });
-      }
+      if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Detached from this session.");
     }catch(_){}
+  }
+
+  // Exposed for tool-shell to include in payloads later.
+  function getActiveWork(){
+    return __pawActiveWork ? Object.assign({}, __pawActiveWork) : null;
+  }
+
+  // ------------------------------------------------------------
+  // Brand panel (wired to Worker)
+  // ------------------------------------------------------------
+  async function fetchBrand(){
+    if (!__apiEndpoint) return null;
+    var url = String(__apiEndpoint).replace(/\/+$/,"") + "/mystuff/brand";
+    var headers = { "Content-Type":"application/json" };
+    try{
+      var t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (t) headers["Authorization"] = "Bearer " + t;
+    }catch(_){}
+    var res = await fetch(url, { method:"GET", headers: headers });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok) throw new Error((data && (data.error || data.message)) || "Could not load My Brand");
+    return data;
+  }
+
+  async function fetchBrandSummary(){
+    if (!__apiEndpoint) return "";
+    var url = String(__apiEndpoint).replace(/\/+$/,"") + "/mystuff/brand/summary";
+    var headers = { "Content-Type":"application/json" };
+    try{
+      var t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (t) headers["Authorization"] = "Bearer " + t;
+    }catch(_){}
+    var res = await fetch(url, { method:"GET", headers: headers });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok) return "";
+    return (data && typeof data.summary === "string") ? data.summary.trim() : "";
+  }
+
+  function brandDisplayName(brand){
+    var b = brand || {};
+    // Prefer display_name, fallback to "My Brand"
+    var dn = norm(b.display_name);
+    return dn ? "My Brand" : "My Brand";
+  }
+
+  async function refreshBrandPanel(){
+    if (!__brandPanel) return;
+
+    // Auth may not be ready on first paint; fail softly.
+    __brandPanel.innerHTML = '<div class="paw-drawer__loading">Loading your Brand<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>';
+
+    try{
+      __brandCache = await fetchBrand();
+    }catch(e){
+      // Likely auth not ready or endpoint error. Keep message non-technical.
+      __brandPanel.innerHTML = `
+        <div class="paw-drawer__emptytitle">My Brand isn’t available yet</div>
+        <div class="paw-drawer__emptycopy">If you haven’t created it, open Saved Works and create My Brand first.</div>
+        <div class="paw-drawer__panelactions">
+          <button class="btn primary" type="button" id="pawBrandGoCreate">Open Saved Works</button>
+        </div>
+      `;
+      var go = document.getElementById("pawBrandGoCreate");
+      if (go) go.onclick = function(){ try{ window.location.href = "./myworks.html?embed=1"; }catch(_){} };
+      return;
+    }
+
+    if (!__brandCache || !__brandCache.exists){
+      __brandPanel.innerHTML = `
+        <div class="paw-drawer__emptytitle">No My Brand yet</div>
+        <div class="paw-drawer__emptycopy">Create it once, then PAW can write like you when it adds value.</div>
+        <div class="paw-drawer__panelactions">
+          <button class="btn primary" type="button" id="pawBrandCreateBtn">Create My Brand</button>
+        </div>
+      `;
+      var c = document.getElementById("pawBrandCreateBtn");
+      if (c) c.onclick = function(){ try{ window.location.href = "./myworks.html?embed=1"; }catch(_){} };
+      return;
+    }
+
+    var updated = (__brandCache.meta && __brandCache.meta.updated_at) ? String(__brandCache.meta.updated_at) : "";
+    var updatedNice = "";
+    try{ if (updated) updatedNice = (new Date(updated)).toLocaleString(); }catch(_){}
+
+    // Render saved brand summary (derived)
+    var summary = "";
+    try { summary = await fetchBrandSummary(); } catch(_) {}
+    if (!summary) summary = "Saved — ready to use when it adds value.";
+
+    var attached = (__pawActiveWork && __pawActiveWork.bucket === "brand");
+
+    __brandPanel.innerHTML = `
+      <div class="paw-drawer__item">
+        <div class="paw-drawer__itemhead">
+          <div>
+            <div class="paw-drawer__itemtitle">My Brand</div>
+            <div class="paw-drawer__itemmeta">${updatedNice ? ("Last updated: " + escapeHtml(updatedNice)) : "Saved"}</div>
+          </div>
+          <div class="paw-drawer__itemactions">
+            <button class="btn ${attached ? "" : "primary"}" type="button" id="pawBrandAttachBtn">${attached ? "Attached" : "Attach"}</button>
+          </div>
+        </div>
+
+        <div class="paw-drawer__itemsnap">${escapeHtml(summary)}</div>
+      </div>
+    `;
+
+    var a = document.getElementById("pawBrandAttachBtn");
+    if (a){
+      a.onclick = function(){
+        if (__pawActiveWork && __pawActiveWork.bucket === "brand") {
+          // clicking "Attached" does nothing; user can detach from footer
+          return;
+        }
+        attachWork({ bucket:"brand", id:"brand", label:"My Brand" });
+        try{
+          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Attached: My Brand");
+        }catch(_){}
+        // Re-render to flip button state
+        refreshBrandPanel();
+      };
+    }
   }
 
   // ------------------------------------------------------------
   // Public init (called from tool-shell init)
+
+  // ------------------------------------------------------------
+  // Robust Works wiring (Circle/React safe)
+  // ------------------------------------------------------------
+  // In Circle embeds, the topbar can be rendered AFTER scripts run (hydration/routing).
+  // If we bind immediately and #pawMyStuffBtn isn't in the DOM yet, the button does nothing.
+  //
+  // Strategy:
+  // - Wait for #pawMyStuffBtn to exist, then wire exactly once (idempotent).
+  // - Keep the observer short-lived (disconnect after wiring / hard timeout).
+  function wireWorksWhenReady(){
+    try{
+      var btn = document.getElementById("pawMyStuffBtn");
+      if (btn && btn.getAttribute("data-works-wired") === "1") return;
+
+      if (btn){
+        // Ensure drawer markup exists before wiring.
+        injectDrawerOnce();
+        updateWorkPill();
+        helloWorksIconOnce();
+
+        btn.setAttribute("data-works-wired","1");
+        btn.addEventListener("click", function(){
+          try{ setDrawerOpen(true); }catch(_){}
+        });
+
+        // Debug helper (safe): lets us test quickly from console.
+        window.togglePawWorkExpander = function(){
+          try{
+            // If drawer exists, toggle; otherwise just open.
+            var open = __drawer && __drawer.classList && __drawer.classList.contains("show");
+            setDrawerOpen(!open);
+          }catch(_){}
+        };
+
+        return;
+      }
+
+      // Not ready yet — watch for DOM changes until the button appears.
+      if (window.__pawWorksObserverActive) return;
+      window.__pawWorksObserverActive = true;
+
+      var startedAt = Date.now();
+      var maxMs = 12000;
+
+      var obs = new MutationObserver(function(){
+        try{
+          if (Date.now() - startedAt > maxMs){
+            try{ obs.disconnect(); }catch(_){}
+            window.__pawWorksObserverActive = false;
+            return;
+          }
+          var b = document.getElementById("pawMyStuffBtn");
+          if (b){
+            try{ obs.disconnect(); }catch(_){}
+            window.__pawWorksObserverActive = false;
+            wireWorksWhenReady();
+          }
+        }catch(_){}
+      });
+
+      try{
+        obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
+      }catch(_){
+        window.__pawWorksObserverActive = false;
+        setTimeout(function(){ try{ wireWorksWhenReady(); }catch(_){} }, 350);
+      }
+    }catch(_){}
+  }
+
+
   // ------------------------------------------------------------
   function init(apiEndpoint){
-
     __apiEndpoint = String(apiEndpoint || "");
 
-    injectWorksExpanderOnce();
-    updateWorkPill();
-
-    // Wire the Work button
-    var btn = document.getElementById("pawMyStuffBtn");
-    if (btn){
-      btn.addEventListener("click", function(){
-        setWorksExpanderOpen(!(__drawer && __drawer.classList && __drawer.classList.contains('is-open')));
-      });
+    // IMPORTANT: In Circle/React embeds, the topbar button may appear after scripts run.
+    // We wire the Works button/drawer when ready to prevent "click does nothing" regressions.
+    wireWorksWhenReady();
+  });
     }
   }
 
@@ -1908,8 +2087,8 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     getActiveWork: getActiveWork,
     attachWork: attachWork,
     detachWork: detachWork,
-    _open: function(){ setWorksExpanderOpen(!(__drawer && __drawer.classList && __drawer.classList.contains('is-open'))); },
-    _close: function(){ setWorksExpanderOpen(false); }
+    _open: function(){ setDrawerOpen(true); },
+    _close: function(){ setDrawerOpen(false); }
   };
 
 })();
