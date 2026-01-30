@@ -409,7 +409,7 @@ function removeNode(node) {
   // ==========================================================
   function helloWorksIconOnce(){
     try{
-      var btn = document.getElementById("pawMyStuffBtn");
+      var btn = document.getElementById("pawMyStuffBtn") || document.querySelector("button.paw-mystuff-btn, a.paw-mystuff-btn");
       if(!btn) return;
 
       // Prevent double-run if init() is called more than once.
@@ -1999,87 +1999,23 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
 
   // ------------------------------------------------------------
   // Public init (called from tool-shell init)
-
-  // ------------------------------------------------------------
-  // Robust Works wiring (Circle/React safe)
-  // ------------------------------------------------------------
-  // In Circle embeds, the topbar can be rendered AFTER scripts run (hydration/routing).
-  // If we bind immediately and #pawMyStuffBtn isn't in the DOM yet, the button does nothing.
-  //
-  // Strategy:
-  // - Wait for #pawMyStuffBtn to exist, then wire exactly once (idempotent).
-  // - Keep the observer short-lived (disconnect after wiring / hard timeout).
-  function wireWorksWhenReady(){
-    try{
-      var btn = document.getElementById("pawMyStuffBtn");
-      if (btn && btn.getAttribute("data-works-wired") === "1") return;
-
-      if (btn){
-        // Ensure drawer markup exists before wiring.
-        injectDrawerOnce();
-        updateWorkPill();
-        helloWorksIconOnce();
-
-        btn.setAttribute("data-works-wired","1");
-        btn.addEventListener("click", function(){
-          try{ setDrawerOpen(true); }catch(_){}
-        });
-
-        // Debug helper (safe): lets us test quickly from console.
-        window.togglePawWorkExpander = function(){
-          try{
-            // If drawer exists, toggle; otherwise just open.
-            var open = __drawer && __drawer.classList && __drawer.classList.contains("show");
-            setDrawerOpen(!open);
-          }catch(_){}
-        };
-
-        return;
-      }
-
-      // Not ready yet — watch for DOM changes until the button appears.
-      if (window.__pawWorksObserverActive) return;
-      window.__pawWorksObserverActive = true;
-
-      var startedAt = Date.now();
-      var maxMs = 12000;
-
-      var obs = new MutationObserver(function(){
-        try{
-          if (Date.now() - startedAt > maxMs){
-            try{ obs.disconnect(); }catch(_){}
-            window.__pawWorksObserverActive = false;
-            return;
-          }
-          var b = document.getElementById("pawMyStuffBtn");
-          if (b){
-            try{ obs.disconnect(); }catch(_){}
-            window.__pawWorksObserverActive = false;
-            wireWorksWhenReady();
-          }
-        }catch(_){}
-      });
-
-      try{
-        obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
-      }catch(_){
-        window.__pawWorksObserverActive = false;
-        setTimeout(function(){ try{ wireWorksWhenReady(); }catch(_){} }, 350);
-      }
-    }catch(_){}
-  }
-
-
   // ------------------------------------------------------------
   function init(apiEndpoint){
     __apiEndpoint = String(apiEndpoint || "");
 
-    // IMPORTANT: In Circle/React embeds, the topbar button may appear after scripts run.
-    // We wire the Works button/drawer when ready to prevent "click does nothing" regressions.
-    wireWorksWhenReady();
+    injectDrawerOnce();
+    updateWorkPill();
+
+    // Wire the Work button
+    var btn = document.getElementById("pawMyStuffBtn");
+    if (btn){
+      btn.addEventListener("click", function(){
+        setDrawerOpen(true);
+      });
+    }
   }
 
-// Expose minimal API (no persistence, session-only)
+  // Expose minimal API (no persistence, session-only)
   window.__PAWWorks = {
     init: init,
     getActiveWork: getActiveWork,
