@@ -744,6 +744,62 @@ if ($input) {
         }
       }
 
+
+// ==========================================================
+// Layout ping for Circle iframe auto-height (LOCKED)
+// ----------------------------------------------------------
+// Problem:
+// - Tool pages include an iframe height reporter that relies on DOM MutationObserver
+//   (childList/characterData) to know when to re-measure.
+// - Textarea auto-grow changes layout styles, but does NOT mutate the DOM.
+// Result:
+// - The textarea may technically resize, but the parent iframe height won't update,
+//   making it appear "stuck" in Circle.
+// Solution:
+// - Maintain a tiny hidden "ping" node in <body> and update its textContent whenever
+//   we change layout (e.g., textarea height). This triggers the MutationObserver and
+//   causes the existing reporter to re-measure.
+//
+// Notes:
+// - This is intentionally lightweight and throttled to rAF.
+// - No tool-specific code; works everywhere tool-shell.js runs.
+// ==========================================================
+let __pawLayoutPingEl = null;
+let __pawLayoutPingN = 0;
+let __pawLayoutPingRaf = 0;
+
+function pawScheduleLayoutPing(){
+  try{
+    if (__pawLayoutPingRaf) return;
+    __pawLayoutPingRaf = requestAnimationFrame(function(){
+      __pawLayoutPingRaf = 0;
+
+      // Ensure node exists (lazy to avoid touching DOM during early head execution)
+      if (!document || !document.body) return;
+      if (!__pawLayoutPingEl){
+        __pawLayoutPingEl = document.getElementById("__paw_layout_ping");
+        if (!__pawLayoutPingEl){
+          __pawLayoutPingEl = document.createElement("span");
+          __pawLayoutPingEl.id = "__paw_layout_ping";
+          __pawLayoutPingEl.setAttribute("aria-hidden", "true");
+          __pawLayoutPingEl.style.cssText =
+            "position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;";
+          __pawLayoutPingEl.appendChild(document.createTextNode("0"));
+          document.body.appendChild(__pawLayoutPingEl);
+        }
+      }
+
+      // CharacterData mutation: triggers the page-level MutationObserver height reporter.
+      __pawLayoutPingN += 1;
+      if (__pawLayoutPingEl.firstChild && __pawLayoutPingEl.firstChild.nodeType === 3){
+        __pawLayoutPingEl.firstChild.nodeValue = String(__pawLayoutPingN);
+      } else {
+        __pawLayoutPingEl.textContent = String(__pawLayoutPingN);
+      }
+    });
+  } catch(_){}
+}
+
 // ==========================================================
 // Auto-grow textarea (LOCKED)
 // ----------------------------------------------------------
@@ -772,6 +828,8 @@ function autoGrowTextarea($ta){
     } else {
       $ta.style.overflowY = "hidden";
     }
+    // Notify Circle iframe auto-height reporter that layout changed.
+    pawScheduleLayoutPing();
   } catch(_){}
 }
 
@@ -780,6 +838,8 @@ function resetAutoGrowTextarea($ta){
     if(!$ta) return;
     $ta.style.height = "";
     $ta.style.overflowY = "";
+    // Notify Circle iframe auto-height reporter that layout changed.
+    pawScheduleLayoutPing();
   }catch(_){}
 }
 
