@@ -1694,36 +1694,21 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
           <button class="paw-drawer__close" type="button" aria-label="Close" data-paw-close="1">✕</button>
         </div>
 
-        <div class="paw-drawer__tabs paw-seg" role="tablist" aria-label="My Works tabs">
-          <button class="paw-drawer__tab paw-seg__btn" data-tab="brand" role="tab" aria-selected="true" type="button">My Brand</button>
-          <button class="paw-drawer__tab paw-seg__btn" data-tab="listings" role="tab" aria-selected="false" type="button">Listings</button>
-          <button class="paw-drawer__tab paw-seg__btn" data-tab="deals" role="tab" aria-selected="false" type="button">Deals</button>
-        </div>
-
         <div class="paw-drawer__body">
-          <section class="paw-drawer__panelbody is-active" data-panel="brand" role="tabpanel" aria-label="My Brand">
-            <div class="paw-drawer__panelinner" id="pawWorksBrandPanel">
-              <div class="paw-drawer__loading">Loading your Brand<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>
-            </div>
-          </section>
-
-          <section class="paw-drawer__panelbody" data-panel="listings" role="tabpanel" aria-label="Listings">
-            <div class="paw-drawer__panelinner">
-              <div class="paw-drawer__emptytitle">Listings (coming next)</div>
-              <div class="paw-drawer__emptycopy">
-                Phase 1 wires the drawer + session context. Listing saves will be enabled once Worker endpoints exist.
+          <div class="paw-drawer__panelinner">
+            <div class="paw-drawer__emptytitle">My Works is being updated</div>
+            <div class="paw-drawer__emptycopy">
+              We’re upgrading this area to match the improved My Works model:
+              <ul class="paw-bullets" style="margin:10px 0 0 18px">
+                <li><strong>My Brand</strong> (Settings + Brand Assets)</li>
+                <li><strong>Listings</strong></li>
+                <li><strong>Transactions</strong></li>
+              </ul>
+              <div style="margin-top:10px">
+                For now, use <strong>Saved Works</strong> to view and manage your items.
               </div>
             </div>
-          </section>
-
-          <section class="paw-drawer__panelbody" data-panel="deals" role="tabpanel" aria-label="Deals">
-            <div class="paw-drawer__panelinner">
-              <div class="paw-drawer__emptytitle">Deals (coming next)</div>
-              <div class="paw-drawer__emptycopy">
-                Deals/Transactions will be available once the Worker supports save + retrieval for this bucket.
-              </div>
-            </div>
-          </section>
+          </div>
         </div>
 
         <div class="paw-drawer__foot">
@@ -1738,6 +1723,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
           </div>
         </div>
       </div>
+    
     `;
 
     // Inline expansion: insert directly under the tool topbar so the page can grow naturally.
@@ -1749,10 +1735,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     }catch(_){ document.body.appendChild(__drawer); }
 
     __drawerPanel = $("#pawWorksDrawer .paw-drawer__panel");
-    __drawerBackdrop = $("#pawWorksDrawer .paw-drawer__backdrop");
-
-    __tabBtns = $all("#pawWorksDrawer .paw-drawer__tab");
-    __brandPanel = document.getElementById("pawWorksBrandPanel");
+    __tabBtns = [];
 
     wireDrawerEvents();
   }
@@ -1777,7 +1760,6 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     if (open) {
       // Refresh context + brand data each open (cheap, keeps UI honest).
       try { renderContextRow(); } catch(_){}
-      try { refreshBrandPanel(); } catch(_){}
 
       // Gentle scroll assist: if the expander opens below a sticky header,
       // nudge it into view without yanking the user away.
@@ -1805,13 +1787,6 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
       try{
         if (__drawer && __drawer.classList.contains("is-open")) setDrawerOpen(false);
       }catch(_){}
-    });
-
-    // Tabs
-    __tabBtns.forEach(function(btn){
-      btn.addEventListener("click", function(){
-        activateTab(btn.getAttribute("data-tab"));
-      });
     });
 
     // Go to Saved Works (full page)
