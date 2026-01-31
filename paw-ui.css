@@ -705,11 +705,33 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
    ----------------------------------------------------------
    Purpose:
    - When My Works is open, the tool surface is hidden.
-   - Disable scroll anchoring to prevent "runaway" scroll/jitter while the iframe resizes.
+   - Prevent scroll "runaway" inside Circle iframes by:
+       1) disabling scroll anchoring, and
+       2) locking outer document scrolling while the mode is active.
+   - Any needed scrolling should happen inside the My Works surface.
    ========================================================== */
+html.paw-works-mode,
 body.paw-works-mode{
   overflow-anchor: none;
+  /* Lock outer scroll so the iframe resizer cannot "fight" the browser scroll position. */
+  overflow: hidden;
 }
+
+/* When in Works mode, allow the My Works body area to scroll if content grows. */
+body.paw-works-mode .paw-workexpander{
+  /* Fill the available viewport height under the topbar area. */
+  max-height: calc(100vh - 90px);
+}
+body.paw-works-mode .paw-workexpander .paw-drawer__panel{
+  /* Ensure the panel participates in the max-height constraint */
+  max-height: calc(100vh - 90px);
+}
+body.paw-works-mode .paw-workexpander .paw-drawer__body{
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(100vh - 190px);
+}
+
 
 /* ===== Tips modal ===== */
 .modal{
@@ -1050,7 +1072,7 @@ body.paw-works-mode{
   border-radius: 16px;
   /* Inline My Works should feel like a page section, not a floating modal. */
   box-shadow: var(--shadow-soft);
-\}
+}
 
 /* Let the page grow (no internal scrolling container) */
 .paw-workexpander .paw-drawer__body{

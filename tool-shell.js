@@ -1647,6 +1647,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   // Scroll position preservation for My Works mode swap.
   // Product intent: entering My Works should feel like a focused "mode", not a page that drifts.
   var __worksPrevScrollY = 0;
+  var __worksPrevScrollRestoration = "";
   var __worksIsRestoringScroll = false;
 
   var __tabBtns = null; // reserved for Bite 3+
@@ -1772,17 +1773,32 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     var panel = document.querySelector(".panel");
     if (!panel) panel = document.body;
 
+    // NOTE (product intent):
+    // - Works is a temporary "mode" (not a drawer).
+    // - In Circle iframes, repeated height/scroll adjustments can cause a
+    //   runaway scroll feel. We stabilize by:
+    //     1) snapping to a known scroll position once,
+    //     2) locking outer page scroll while the mode is active, and
+    //     3) restoring the user's previous scroll position on exit.
     if (want){
-      // Preserve where the user was in the tool, then move to a stable top position.
-      // This prevents "runaway scroll" when the tool surface is hidden and the iframe height changes.
+      // Preserve the user's position so we can return them when Works closes.
       try{
         __worksPrevScrollY = (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0);
       }catch(_){ __worksPrevScrollY = 0; }
+
+      // Prevent the browser from trying to "helpfully" restore scroll while the DOM swaps.
       try{
-        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-      }catch(_){
-        try{ window.scrollTo(0,0); }catch(__){}
-      }
+        __worksPrevScrollRestoration = (history && history.scrollRestoration) ? history.scrollRestoration : "";
+        if (history && typeof history.scrollRestoration === "string") history.scrollRestoration = "manual";
+      }catch(_){}
+
+      // Snap to the top ONCE (no smooth scrolling) before we lock scrolling via CSS.
+      // This ensures the Works surface is always visible.
+      try{
+        window.scrollTo(0,0);
+        try{ document.documentElement.scrollTop = 0; }catch(_){}
+        try{ document.body.scrollTop = 0; }catch(_){}
+      }catch(_){}
 
       // Capture + hide everything in the panel EXCEPT:
       // - the topbar (where the Works button lives)
@@ -1794,8 +1810,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
         kids.forEach(function(el){
           if (!el || el === __drawer || el === topbar) return;
 
-          // Avoid double-hiding or touching unrelated injected nodes (e.g., modals/toasts)
-          // We only hide direct siblings in the main panel flow.
+          // Avoid touching unrelated injected nodes (e.g., modals/toasts).
           var prev = (el.style && typeof el.style.display === "string") ? el.style.display : "";
           el.setAttribute("data-paw-works-hide","1");
           el.setAttribute("data-paw-prev-display", prev);
@@ -1803,6 +1818,9 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
           __worksHiddenEls.push(el);
         });
       }catch(_){}
+
+      // Works mode class is applied to BOTH html + body (CSS uses both).
+      try{ document.documentElement.classList.add("paw-works-mode"); }catch(_){}
       try{ document.body.classList.add("paw-works-mode"); }catch(_){}
     } else {
       // Restore what we hid, exactly as it was.
@@ -1816,29 +1834,32 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
         });
       }catch(_){}
       __worksHiddenEls = [];
+
+      try{ document.documentElement.classList.remove("paw-works-mode"); }catch(_){}
       try{ document.body.classList.remove("paw-works-mode"); }catch(_){}
 
-      // Return the user to where they were before opening My Works.
-      // We do this AFTER the DOM is restored so the browser has the correct scroll range.
+      // Restore scroll restoration preference.
+      try{
+        if (history && typeof history.scrollRestoration === "string"){
+          history.scrollRestoration = __worksPrevScrollRestoration || "auto";
+        }
+      }catch(_){}
+
+      // Return the user to where they were before opening Works.
+      // We do this AFTER the DOM is restored and the scroll lock is removed.
       try{
         if (!__worksIsRestoringScroll){
           __worksIsRestoringScroll = true;
           setTimeout(function(){
-            try{
-              window.scrollTo({ top: __worksPrevScrollY || 0, left: 0, behavior: "auto" });
-            }catch(_){
-              try{ window.scrollTo(0, __worksPrevScrollY || 0); }catch(__){}
-            }
+            try{ window.scrollTo(0, __worksPrevScrollY || 0); }catch(_){}
             __worksIsRestoringScroll = false;
           }, 0);
         }
       }catch(_){ __worksIsRestoringScroll = false; }
     }
 
-    // Ensure the embed reporter sees the layout change (Circle iframe height).
-    // NOTE: We intentionally avoid repeated/continuous pings here; a couple is enough.
+    // Single layout ping after mode switch; avoids repeated pings that can amplify iframe jitter.
     try{ pawScheduleLayoutPing(); }catch(_ ){}
-    try{ setTimeout(function(){ pawScheduleLayoutPing(); }, 160); }catch(_ ){}
   }
 
 
