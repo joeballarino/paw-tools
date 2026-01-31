@@ -309,7 +309,104 @@
       margin-top: 14px;
     }
 
+    
     /* ------------------------------------------------------------
+       Brand Settings Inline Editor (accordion + compact growth)
+       ------------------------------------------------------------ */
+    body.paw-mystuff .hide{ display:none !important; }
+
+    body.paw-mystuff .mw-editor{
+      max-width: 980px;
+      margin-top: 6px;
+    }
+    body.paw-mystuff .mw-editor-wrap{
+      border: 1px solid rgba(15,23,42,.10);
+      border-radius: 16px;
+      background: #fff;
+      overflow: auto;
+      max-height: 520px; /* compact default */
+      transition: max-height .18s ease;
+    }
+    body.paw-mystuff .mw-editor-wrap.mw-grown{
+      max-height: 760px; /* expands after interaction */
+    }
+    body.paw-mystuff .mw-editor-top{
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid rgba(15,23,42,.08);
+      background:
+        radial-gradient(640px 220px at 20% 0%, rgba(14,165,233,.15), transparent 60%),
+        radial-gradient(520px 180px at 85% 0%, rgba(59,130,246,.10), transparent 55%),
+        linear-gradient(#fff, #fff);
+    }
+    body.paw-mystuff .mw-editor-title{
+      font-size: 16px;
+      font-weight: 950;
+      letter-spacing:-0.01em;
+      color: rgba(15,23,42,.92);
+    }
+    body.paw-mystuff .mw-editor-sub{
+      margin: 6px 0 0;
+      font-size: 13.5px;
+      color: rgba(15,23,42,.72);
+      line-height: 1.45;
+      max-width: 920px;
+    }
+
+    body.paw-mystuff .mw-acc{ padding: 10px 12px 6px; }
+    body.paw-mystuff .mw-acc-item{
+      border: 1px solid rgba(15,23,42,.10);
+      border-radius: 14px;
+      margin: 10px 0;
+      overflow: hidden;
+      background: rgba(248,250,252,.6);
+    }
+    body.paw-mystuff .mw-acc-toggle{
+      width: 100%;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 11px 12px;
+      background: rgba(255,255,255,.8);
+      border: 0;
+      cursor: pointer;
+      font-weight: 850;
+      color: rgba(15,23,42,.86);
+      text-align:left;
+    }
+    body.paw-mystuff .mw-chev{
+      display:inline-block;
+      font-size: 14px;
+      opacity: .7;
+      transform: rotate(0deg);
+      transition: transform .16s ease;
+    }
+    body.paw-mystuff .mw-acc-item.open .mw-chev{ transform: rotate(180deg); }
+
+    body.paw-mystuff .mw-acc-panel{
+      display:none;
+      padding: 0 12px 12px;
+      background: transparent;
+    }
+    body.paw-mystuff .mw-acc-item.open .mw-acc-panel{ display:block; }
+
+    /* Reuse existing drawer-field styles for inputs, but make them feel native inline */
+    body.paw-mystuff .mw-acc-panel .drawer-field{ padding-top: 10px; }
+
+    body.paw-mystuff .mw-editor-foot{
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-top: 1px solid rgba(15,23,42,.08);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(6px);
+    }
+/* ------------------------------------------------------------
        Desktop: Snapshot + Contact side-by-side
        ------------------------------------------------------------
        - Snapshot is the primary column (wider)
@@ -883,110 +980,11 @@
        - Nothing is saved automatically.
        - This keeps Circle navigation clean and keeps My Brand always editable.
   -->
-  <div id="brandDrawer" class="drawer" aria-hidden="true">
-    <div class="drawer-backdrop" data-drawer-close="1"></div>
+  
 
-    <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="brandDrawerTitle">
-      <div class="drawer-head">
-        <div>
-          <div id="brandDrawerTitle" class="drawer-title">Brand Settings</div>
-          <p class="drawer-sub">
-            These settings help PAW write like you — and generate bios, profiles, and “About Me” content.
-            You can update this anytime.
-          </p>
-        </div>
-        <button class="drawer-close" type="button" aria-label="Close" data-drawer-close="1">✕</button>
-      </div>
+  <!-- Brand Settings editor is now inline in the Brand Settings tab (no overlay drawer). -->
 
-      <div class="drawer-body">
-        <div class="drawer-field">
-          <label for="mb_voice">Voice &amp; Tone</label>
-          <div class="hint">How should PAW generally sound when writing as you?</div>
-          <input id="mb_voice" type="text" placeholder="Example: Professional, friendly, confident" autocomplete="off">
-        </div>
-
-        <div class="drawer-field">
-          <label for="mb_audience">Primary Audience</label>
-          <div class="hint">Who are you most often speaking to?</div>
-          <input id="mb_audience" type="text" placeholder="Example: First-time buyers, sellers, relocations" autocomplete="off">
-        </div>
-
-        <div class="drawer-field">
-          <label for="mb_about">About You</label>
-          <div class="hint">In your own words, how would you describe yourself as an agent?</div>
-          <textarea id="mb_about" placeholder="A few sentences is plenty. This doesn’t need to be perfect."></textarea>
-        </div>
-
-        <div class="drawer-field">
-          <label for="mb_diff">What Makes You Different</label>
-          <div class="hint">Anything you want highlighted or emphasized.</div>
-          <textarea id="mb_diff" placeholder="Experience, local expertise, communication style, background, approach, etc."></textarea>
-        </div>
-
-        <div class="drawer-field">
-          <label for="mb_desig">Professional Designations (Optional)</label>
-          <div class="hint">Enter exactly how you want them to appear after your name. Example: <b>CRS, GRI</b></div>
-          <input id="mb_desig" type="text" placeholder="Optional" autocomplete="off">
-        </div>
-
-        <div class="drawer-section" aria-label="Signature and contact (optional)">
-          <div class="drawer-section-title">Contact data (Optional)</div>
-          <div class="drawer-section-sub">
-            Used when it adds value for bios, profiles, and “About Me” content. Leave anything blank if you don’t want it used.
-          </div>
-
-          
-          <div class="drawer-field">
-            <label for="mb_name">Display Name</label>
-            <div class="hint">Optional. Used for profiles when it adds value. Example: First Last</div>
-            <input id="mb_name" type="text" placeholder="Optional" autocomplete="name">
-          </div>
-
-          <div class="drawer-field">
-            <label for="mb_phone">Phone</label>
-            <div class="hint">Optional. Example: (555) 555-5555</div>
-            <input id="mb_phone" type="text" placeholder="Optional" autocomplete="tel">
-          </div>
-
-          <div class="drawer-field">
-            <label for="mb_email">Email</label>
-            <div class="hint">Optional. Use the email you want included in signatures (not necessarily your Circle login).</div>
-            <input id="mb_email" type="text" placeholder="Optional" autocomplete="email">
-          </div>
-
-          <div class="drawer-field">
-            <label for="mb_website">Website / Booking Link</label>
-            <div class="hint">Optional. Example: your site or a scheduling link.</div>
-            <input id="mb_website" type="text" placeholder="Optional" autocomplete="url">
-          </div>
-
-          <div class="drawer-field">
-            <label for="mb_market">Market (City, ST)</label>
-            <div class="hint">Optional. Helps PAW stay locally accurate. Example: Tampa, FL</div>
-            <input id="mb_market" type="text" placeholder="Optional" autocomplete="off">
-          </div>
-
-          <div class="drawer-field">
-            <label for="mb_license">License #</label>
-            <div class="hint">Optional. If you include this in signatures, enter it exactly as you want it to appear.</div>
-            <input id="mb_license" type="text" placeholder="Optional" autocomplete="off">
-          </div>
-        </div>
-
-      </div>
-
-      <div class="drawer-foot">
-        <div class="drawer-note">Future content will use your latest Brand Settings.</div>
-        <div class="drawer-actions">
-          <button class="btn" type="button" data-drawer-close="1">Cancel</button>
-          <button class="btn primary" id="mb_save" type="button">Save Brand Settings</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <script src="./tool-shell.js"></script>
+<script src="./tool-shell.js"></script>
 
   <script>
     (function(){
@@ -1081,80 +1079,117 @@
 
       
       // ------------------------------------------------------------
-      // Brand Settings Slide-Over (Phase 2 UI-only)
       // ------------------------------------------------------------
-      const $drawer = document.getElementById('brandDrawer');
-      const $drawerPanel = $drawer ? $drawer.querySelector('.drawer-panel') : null;
-      const $mbSave = document.getElementById('mb_save');
+      // Brand Settings Inline Editor (Phase 4)
+      // ------------------------------------------------------------
+      // Why:
+      // - Brand Settings are a "living profile" and should feel like part of My Works,
+      //   not a blocking overlay.
+      // - Saved view remains the same. Edit/Create swaps into an inline form
+      //   with expandable sections (chevrons) to preserve the compact 520px feel.
+      //
+      // Guardrails:
+      // - Nothing saves automatically. Save is explicit.
+      // - Cancel always reverts back to the saved view (or empty intro).
+      // - Markup is rendered dynamically inside the Brand Settings tab panel.
+
       let lastFocus = null;
 
-      function openBrandDrawer(triggerEl){
+      function enterBrandEditMode(triggerEl){
         try{
           lastFocus = triggerEl || document.activeElement;
-          if(!$drawer) return;
 
-          document.body.classList.add('drawer-open');
-          $drawer.classList.add('show');
-          $drawer.setAttribute('aria-hidden','false');
+          const panel = document.getElementById('panel-settings');
+          if (!panel) return;
+
+          panel.classList.add('mw-editing');
+
+          const saved = panel.querySelector('#brandSavedView');
+          const editor = panel.querySelector('#brandEditor');
+          if (saved) saved.classList.add('hide');
+          if (editor) editor.classList.remove('hide');
 
           // Focus first field for a professional feel
-          const first = document.getElementById('mb_voice');
-          setTimeout(() => { try{ first && first.focus(); }catch(e){} }, 20);
-                  }catch(e){}
+          const first = panel.querySelector('#mb_voice');
+          setTimeout(() => { try{ first && first.focus(); }catch(e){} }, 30);
+        }catch(e){}
       }
 
-      function closeBrandDrawer(){
+      function exitBrandEditMode(){
         try{
-          if(!$drawer) return;
-          $drawer.classList.remove('show');
-          $drawer.setAttribute('aria-hidden','true');
-          document.body.classList.remove('drawer-open');
+          const panel = document.getElementById('panel-settings');
+          if (!panel) return;
+
+          panel.classList.remove('mw-editing');
+
+          const saved = panel.querySelector('#brandSavedView');
+          const editor = panel.querySelector('#brandEditor');
+          if (saved) saved.classList.remove('hide');
+          if (editor) editor.classList.add('hide');
 
           // Restore focus
           setTimeout(() => { try{ lastFocus && lastFocus.focus && lastFocus.focus(); }catch(e){} }, 0);
         }catch(e){}
       }
 
-      // Click-to-close for backdrop + close buttons
-      if($drawer){
-        $drawer.addEventListener('click', (e) => {
-          const t = e.target;
-          if (t && t.getAttribute && t.getAttribute('data-drawer-close') === '1') closeBrandDrawer();
-        });
-      }
+      function wireBrandEditor(panel, opts){
+        // opts: { mode: "create" | "edit" }
+        try{
+          if (!panel) return;
 
-      // Minimal focus trap so Tab stays inside the panel
-      if($drawerPanel){
-        $drawerPanel.addEventListener('keydown', (e) => {
-          if(e.key !== 'Tab') return;
-          const focusables = $drawerPanel.querySelectorAll('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])');
-          const list = Array.prototype.slice.call(focusables).filter(el => !el.disabled && el.offsetParent !== null);
-          if(list.length === 0) return;
+          // Accordion toggles
+          const toggles = panel.querySelectorAll('[data-acc-toggle="1"]');
+          toggles.forEach(btn => {
+            btn.addEventListener('click', () => {
+              try{
+                const item = btn.closest('.mw-acc-item');
+                if (!item) return;
 
-          const first = list[0];
-          const last = list[list.length - 1];
-          if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
-          else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-        });
-      }
+                const isOpen = item.classList.contains('open');
+                // Allow multiple open sections; just toggle this one
+                item.classList.toggle('open', !isOpen);
+                btn.setAttribute('aria-expanded', String(!isOpen));
 
-      if($mbSave){
-        $mbSave.addEventListener('click', async () => {
-          // Phase 3: persist Brand Settings into D1 via the Worker.
-          // Nothing is saved automatically; this only runs on explicit Save.
-          try{
-            const brand = readBrandForm();
-            await apiSaveBrand(brand);
-            closeBrandDrawer();
-            await refreshBrandUI();
-            toast('Brand Settings saved.');
-          }catch(e){
-            toast('Couldn’t save Brand Settings. Please try again.');
+                // Grow the editor area once the user engages with sections
+                const wrap = panel.querySelector('#brandEditorWrap');
+                if (wrap) wrap.classList.add('mw-grown');
+              }catch(e){}
+            });
+          });
+
+          // Cancel
+          const cancel = panel.querySelector('#mb_cancel');
+          if (cancel){
+            cancel.onclick = async () => {
+              try{
+                if (opts && opts.mode === "create"){
+                  // Re-render to reset fields to empty state editor
+                  renderBrandEmpty();
+                } else {
+                  // Return to saved view without persisting
+                  exitBrandEditMode();
+                }
+              }catch(_){}
+            };
           }
-        });
-      }
 
-      // ------------------------------------------------------------
+          // Save (explicit)
+          const save = panel.querySelector('#mb_save');
+          if (save){
+            save.onclick = async () => {
+              try{
+                const brand = readBrandForm();
+                await apiSaveBrand(brand);
+                await refreshBrandUI();
+                toast('Brand Settings saved.');
+              }catch(e){
+                toast('Couldn’t save Brand Settings. Please try again.');
+              }
+            };
+          }
+        }catch(e){}
+      }
+// ------------------------------------------------------------
       // Phase 3: Backend wiring (Auth + Brand persistence)
       // ------------------------------------------------------------
       const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
@@ -1256,13 +1291,142 @@
       }
 
       
-      function renderBrandSaved(brand, meta){
+      
+      // ------------------------------------------------------------
+      // Brand Settings Editor Markup (inline)
+      // ------------------------------------------------------------
+      // NOTE:
+      // - Uses the same field IDs as earlier versions (mb_*) so existing
+      //   readBrandForm() and fillBrandForm() continue to work.
+      // - Sections are collapsible to keep the panel compact by default.
+      function buildBrandEditorHtml(mode){
+        const isCreate = mode === "create";
+        return `
+          <div id="brandEditor" class="mw-editor ${isCreate ? "" : "hide"}">
+            <div id="brandEditorWrap" class="mw-editor-wrap">
+              <div class="mw-editor-top">
+                <div class="mw-editor-title">${isCreate ? "Set up Brand Settings" : "Edit Brand Settings"}</div>
+                <div class="mw-editor-sub">
+                  These settings help PAW write like you — and generate bios, profiles, and “About Me” content.
+                  You can update this anytime.
+                </div>
+              </div>
+
+              <div class="mw-acc">
+                <div class="mw-acc-item open">
+                  <button type="button" class="mw-acc-toggle" data-acc-toggle="1" aria-expanded="true">
+                    Voice &amp; Audience <span class="mw-chev">▾</span>
+                  </button>
+                  <div class="mw-acc-panel">
+                    <div class="drawer-field">
+                      <label for="mb_voice">Voice &amp; Tone</label>
+                      <div class="hint">How should PAW generally sound when writing as you?</div>
+                      <input id="mb_voice" type="text" placeholder="Example: Professional, friendly, confident" autocomplete="off">
+                    </div>
+
+                    <div class="drawer-field">
+                      <label for="mb_audience">Primary Audience</label>
+                      <div class="hint">Who are you most often speaking to?</div>
+                      <input id="mb_audience" type="text" placeholder="Example: First-time buyers, sellers, relocations" autocomplete="off">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mw-acc-item">
+                  <button type="button" class="mw-acc-toggle" data-acc-toggle="1" aria-expanded="false">
+                    About You <span class="mw-chev">▾</span>
+                  </button>
+                  <div class="mw-acc-panel">
+                    <div class="drawer-field">
+                      <label for="mb_about">About You</label>
+                      <div class="hint">In your own words, how would you describe yourself as an agent?</div>
+                      <textarea id="mb_about" placeholder="A few sentences is plenty. This doesn’t need to be perfect."></textarea>
+                    </div>
+
+                    <div class="drawer-field">
+                      <label for="mb_diff">What Makes You Different</label>
+                      <div class="hint">Anything you want highlighted or emphasized.</div>
+                      <textarea id="mb_diff" placeholder="Experience, local expertise, communication style, background, approach, etc."></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mw-acc-item">
+                  <button type="button" class="mw-acc-toggle" data-acc-toggle="1" aria-expanded="false">
+                    Professional Details <span class="mw-chev">▾</span>
+                  </button>
+                  <div class="mw-acc-panel">
+                    <div class="drawer-field">
+                      <label for="mb_desig">Professional Designations (Optional)</label>
+                      <div class="hint">Enter exactly how you want them to appear after your name. Example: <b>CRS, GRI</b></div>
+                      <input id="mb_desig" type="text" placeholder="CRS, GRI" autocomplete="off">
+                    </div>
+
+                    <div class="drawer-field">
+                      <label for="mb_license">License / Brokerage (Optional)</label>
+                      <div class="hint">Include anything you want on-profile (license #, brokerage name, etc.).</div>
+                      <input id="mb_license" type="text" placeholder="Example: ABC Realty • NC Lic #12345" autocomplete="off">
+                    </div>
+
+                    <div class="drawer-field">
+                      <label for="mb_market">Market Served (Optional)</label>
+                      <div class="hint">Where do you primarily serve?</div>
+                      <input id="mb_market" type="text" placeholder="Example: Hendersonville, NC and surrounding areas" autocomplete="off">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mw-acc-item">
+                  <button type="button" class="mw-acc-toggle" data-acc-toggle="1" aria-expanded="false">
+                    Signature &amp; Contact <span class="mw-chev">▾</span>
+                  </button>
+                  <div class="mw-acc-panel">
+                    <div class="drawer-field">
+                      <label for="mb_name">Display Name (Optional)</label>
+                      <div class="hint">How you want your name shown in content and signatures.</div>
+                      <input id="mb_name" type="text" placeholder="Example: Joe Ballarino" autocomplete="off">
+                    </div>
+
+                    <div class="drawer-field">
+                      <label for="mb_email">Email (Optional)</label>
+                      <input id="mb_email" type="email" placeholder="name@domain.com" autocomplete="off">
+                    </div>
+
+                    <div class="drawer-field">
+                      <label for="mb_phone">Phone (Optional)</label>
+                      <input id="mb_phone" type="tel" placeholder="(555) 555-5555" autocomplete="off">
+                    </div>
+
+                    <div class="drawer-field">
+                      <label for="mb_website">Website (Optional)</label>
+                      <input id="mb_website" type="text" placeholder="Example: YourSite.com" autocomplete="off">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mw-editor-foot">
+                <div class="drawer-note">Future content will use your latest Brand Settings.</div>
+                <div class="drawer-actions">
+                  <button class="btn" id="mb_cancel" type="button">${isCreate ? "Reset" : "Cancel"}</button>
+                  <button class="btn primary" id="mb_save" type="button">Save Brand Settings</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+function renderBrandSaved(brand, meta){
         // My Works is a "saved items" view, not a raw data dump.
         // We show a single saved Brand Settings entry + two helpful previews:
         //  - PAW’s snapshot (derived, not saved)
         //  - Contact data (derived display of fields the user chose to provide)
         const panel = document.getElementById('panel-settings');
         if (!panel) return;
+
+        // Ensure saved view is the default state after any refresh.
+        try{ panel.classList.remove('mw-editing'); }catch(_){}
+
 
         const b = brand || {};
         const updated = (meta && meta.updated_at) ? String(meta.updated_at) : "";
@@ -1285,7 +1449,8 @@
           : ``;
 
         panel.innerHTML = `
-          <div class="mw-brandunit">
+          <div id="brandSavedView">
+            <div class="mw-brandunit">
             <div class="mw-brandhead">
               <div>
                 <h3 class="mw-brandtitle">Brand Settings</h3>
@@ -1312,14 +1477,19 @@
               ${contactHtml}
             </div>
 </div>
+          </div>
+          ${buildBrandEditorHtml("edit")}
         `;
+
+        // Wire editor (accordion + Save/Cancel)
+        try{ wireBrandEditor(panel, { mode: "edit" }); }catch(_){ }
 
         // Wire actions
         const editBtn = document.getElementById('brandEditBtn');
         if (editBtn) {
           editBtn.addEventListener('click', () => {
             fillBrandForm(b);
-            openBrandDrawer(editBtn);
+            enterBrandEditMode(editBtn);
           });
         }
 
@@ -1351,26 +1521,22 @@
 
       function renderBrandEmpty(){
 
-        // Restore original "empty state" UI (same copy as Phase 1/2).
+        // Inline setup experience (no overlay):
+        // - Users land directly in the Brand Settings tab.
+        // - The form is collapsible to keep the panel compact.
         const panel = document.getElementById('panel-settings');
         if (!panel) return;
 
-        panel.innerHTML = `
-          <div class="empty">
-            <h3>Set up Brand Settings</h3>
-            <p>
-              Brand Settings tell PAW how to write and present you — and saves the details needed to instantly generate bios,
-              profiles, and “About Me” content without starting from scratch each time.
-            </p>
-            <div class="empty-actions">
-              <button class="btn primary" data-action="create-brand-settings" type="button">Set Up Brand Settings</button>
-                          </div>
-          </div>
+        panel.innerHTML = buildBrandEditorHtml("create");
 
-          <div class="list-placeholder">
-            <b>Coming next:</b> Once Brand Settings are saved, you can edit or delete them anytime.
-          </div>
-        `;
+        // Ensure a clean slate
+        try{ fillBrandForm({}); }catch(_){}
+
+        // Wire editor (accordion + Save/Reset)
+        try{ wireBrandEditor(panel, { mode: "create" }); }catch(_){}
+
+        // Make sure we're in "editing" mode visually
+        try{ panel.classList.add('mw-editing'); }catch(_){}
       }
 
       async function refreshBrandUI(){
