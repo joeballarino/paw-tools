@@ -1680,14 +1680,12 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     if (__drawer) return;
 
     __drawer = document.createElement("div");
-    __drawer.className = "paw-drawer";
+    __drawer.className = "paw-workexpander";
     __drawer.id = "pawWorksDrawer";
     __drawer.setAttribute("aria-hidden","true");
 
     __drawer.innerHTML = `
-      <div class="paw-drawer__backdrop" data-paw-close="1"></div>
-
-      <div class="paw-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="pawWorksTitle">
+      <div class="paw-drawer__panel" role="region" aria-labelledby="pawWorksTitle">
         <div class="paw-drawer__head">
           <div>
             <div id="pawWorksTitle" class="paw-drawer__title">My Works</div>
@@ -1742,7 +1740,13 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
       </div>
     `;
 
-    document.body.appendChild(__drawer);
+    // Inline expansion: insert directly under the tool topbar so the page can grow naturally.
+    // (No backdrop, no fixed positioning, no inner scroll container.)
+    try{
+      var topbar = document.querySelector(".panel-topbar");
+      if (topbar && topbar.parentNode) topbar.insertAdjacentElement("afterend", __drawer);
+      else document.body.appendChild(__drawer);
+    }catch(_){ document.body.appendChild(__drawer); }
 
     __drawerPanel = $("#pawWorksDrawer .paw-drawer__panel");
     __drawerBackdrop = $("#pawWorksDrawer .paw-drawer__backdrop");
@@ -1756,18 +1760,30 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   function setDrawerOpen(on){
     if (!__drawer) return;
     var open = !!on;
-    __drawer.classList.toggle("show", open);
+
+    // Inline expander state (no modal backdrop, no body scroll lock)
+    __drawer.classList.toggle("is-open", open);
     __drawer.setAttribute("aria-hidden", open ? "false" : "true");
-    document.body.classList.toggle("paw-drawer-open", open);
+
+    // Sync the Work button chevron + accessibility state
+    try{
+      var btn = document.getElementById("pawMyStuffBtn");
+      if (btn){
+        btn.classList.toggle("is-expanded", open);
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+    }catch(_){}
 
     if (open) {
       // Refresh context + brand data each open (cheap, keeps UI honest).
       try { renderContextRow(); } catch(_){}
       try { refreshBrandPanel(); } catch(_){}
-      // Focus close for accessibility
+
+      // Gentle scroll assist: if the expander opens below a sticky header,
+      // nudge it into view without yanking the user away.
       try{
-        var c = $("#pawWorksDrawer .paw-drawer__close");
-        setTimeout(function(){ try{ c && c.focus(); }catch(_){} }, 25);
+        var r = __drawer.getBoundingClientRect();
+        if (r && r.top < 40) __drawer.scrollIntoView({ block: "start", behavior: "smooth" });
       }catch(_){}
     }
   }
@@ -1787,7 +1803,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     document.addEventListener("keydown", function(e){
       if (e.key !== "Escape") return;
       try{
-        if (__drawer && __drawer.classList.contains("show")) setDrawerOpen(false);
+        if (__drawer && __drawer.classList.contains("is-open")) setDrawerOpen(false);
       }catch(_){}
     });
 
@@ -2005,12 +2021,16 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
 
     injectDrawerOnce();
     updateWorkPill();
+    try{ var b = document.getElementById("pawMyStuffBtn"); if (b) b.setAttribute("aria-expanded","false"); }catch(_){}
 
     // Wire the Work button
     var btn = document.getElementById("pawMyStuffBtn");
     if (btn){
       btn.addEventListener("click", function(){
-        setDrawerOpen(true);
+        try{
+          var isOpen = __drawer && __drawer.classList && __drawer.classList.contains("is-open");
+          setDrawerOpen(!isOpen);
+        }catch(_){ setDrawerOpen(true); }
       });
     }
   }
