@@ -275,9 +275,9 @@
     body.paw-mystuff .mw-kv b{ font-weight: 750; color: rgba(15,23,42,.72); }
 
     /* ------------------------------------------------------------
-       Saved My Brand (single cohesive unit)
+       Saved Brand Settings (single cohesive unit)
        ------------------------------------------------------------
-       - My Brand + Snapshot + Contact data are one saved object.
+       - Brand Settings + Snapshot + Contact data are one saved object.
        - No “card” containers; grouping is done with spacing + type.
        - This unit can later be followed by additional saved brand items.
     */
@@ -434,7 +434,7 @@
     }
   
     /* ------------------------------------------------------------
-       My Brand Slide-Over (Phase 2 UI)
+       Brand Settings Slide-Over (Phase 2 UI)
        ------------------------------------------------------------
        - Keeps Circle nav clean (no extra Circle pages)
        - UI-only: no persistence yet
@@ -704,7 +704,8 @@
             <div class="mystuff-head">
 <div class="tabs-row">
                           <div class="tabs paw-seg" role="tablist" aria-label="My Works tabs">
-                            <button class="tab-btn" id="tab-brand" role="tab" aria-selected="true" aria-controls="panel-brand" type="button">My Brand</button>
+                            <button class="tab-btn" id="tab-assets" role="tab" aria-selected="true" aria-controls="panel-assets" type="button">Brand Assets</button>
+                            <button class="tab-btn" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button">Brand Settings</button>
                             <button class="tab-btn" id="tab-listings" role="tab" aria-selected="false" aria-controls="panel-listings" type="button">Listings</button>
                             <button class="tab-btn" id="tab-transactions" role="tab" aria-selected="false" aria-controls="panel-transactions" type="button">Transactions</button>
                           </div>
@@ -723,20 +724,37 @@
           
 
           <!-- Panels -->
-          <section id="panel-brand" class="tab-panel active" role="tabpanel" aria-labelledby="tab-brand">
+          
+          <section id="panel-assets" class="tab-panel active" role="tabpanel" aria-labelledby="tab-assets">
             <div class="empty">
-              <h3>Set up My Brand</h3>
+              <h3>No saved Brand Assets yet</h3>
               <p>
-                My Brand helps PAW write like you — and saves the details needed to instantly generate bios,
-                profiles, and “About Me” content without starting from scratch each time.
+                Brand Assets are saved brand content you’ve intentionally created — like bios, “About Me” versions,
+                guides, blogs, or messaging frameworks. PAW never creates or changes these unless you save them.
               </p>
               <div class="empty-actions">
-                <button class="btn primary" data-action="create-brand" type="button">Create My Brand</button>
+                <button class="btn primary" data-action="create-brand-asset" type="button">Create a Brand Asset</button>
+              </div>
+            </div>
+
+            <div class="list-placeholder">
+              <b>Coming next:</b> Saved brand assets will show up here as a simple list you can open, rename, or delete.
+            </div>
+          </section>
+
+
+<section id="panel-settings" class="tab-panel" role="tabpanel" aria-labelledby="tab-settings">
+            <div class="empty">
+              <h3>Set up Brand Settings</h3>
+              <p>
+                Brand Settings tell PAW how to write and present you — voice, tone, audience, and optional contact details. PAW uses this automatically when it adds value.</p>
+              <div class="empty-actions">
+                <button class="btn primary" data-action="create-brand-settings" type="button">Set Up Brand Settings</button>
                               </div>
             </div>
 
             <div class="list-placeholder">
-              <b>Coming next:</b> Once My Brand is created, it will appear here for you to edit or delete anytime.
+              <b>Coming next:</b> Once Brand Settings are saved, you can edit or delete them anytime.
             </div>
           </section>
 
@@ -826,12 +844,12 @@
   <div id="brandDeleteModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="brandDeleteTitle">
       <div class="modal-head">
-        <div id="brandDeleteTitle" class="modal-title">Delete My Brand?</div>
+        <div id="brandDeleteTitle" class="modal-title">Delete Brand Settings?</div>
         <button class="modal-close" id="brandDeleteClose" aria-label="Close" type="button">✕</button>
       </div>
       <div class="modal-body">
         <div style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45;">
-          This permanently deletes your saved My Brand. This cannot be undone.
+          This permanently deletes your saved Brand Settings. This cannot be undone.
         </div>
         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px; flex-wrap:wrap;">
           <button class="btn" id="brandDeleteCancel" type="button">Cancel</button>
@@ -858,7 +876,7 @@
   </div>
 
   <!-- ------------------------------------------------------------
-       My Brand Slide-Over
+       Brand Settings Slide-Over
        ------------------------------------------------------------
        NOTE:
        - This editor saves into My Works only when the user clicks Save.
@@ -871,9 +889,9 @@
     <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="brandDrawerTitle">
       <div class="drawer-head">
         <div>
-          <div id="brandDrawerTitle" class="drawer-title">My Brand</div>
+          <div id="brandDrawerTitle" class="drawer-title">Brand Settings</div>
           <p class="drawer-sub">
-            This helps PAW write like you — and generate bios, profiles, and “About Me” content.
+            These settings help PAW write like you — and generate bios, profiles, and “About Me” content.
             You can update this anytime.
           </p>
         </div>
@@ -958,10 +976,10 @@
       </div>
 
       <div class="drawer-foot">
-        <div class="drawer-note">Future content will use your latest My Brand.</div>
+        <div class="drawer-note">Future content will use your latest Brand Settings.</div>
         <div class="drawer-actions">
           <button class="btn" type="button" data-drawer-close="1">Cancel</button>
-          <button class="btn primary" id="mb_save" type="button">Save My Brand</button>
+          <button class="btn primary" id="mb_save" type="button">Save Brand Settings</button>
         </div>
       </div>
     </div>
@@ -992,7 +1010,8 @@
       // Tabs (Phase 1)
       // ------------------------------------------------------------
       const tabs = [
-        { btn: document.getElementById('tab-brand'), panel: document.getElementById('panel-brand') },
+        { btn: document.getElementById('tab-assets'), panel: document.getElementById('panel-assets') },
+        { btn: document.getElementById('tab-settings'), panel: document.getElementById('panel-settings') },
         { btn: document.getElementById('tab-listings'), panel: document.getElementById('panel-listings') },
         { btn: document.getElementById('tab-transactions'), panel: document.getElementById('panel-transactions') },
       ];
@@ -1062,7 +1081,7 @@
 
       
       // ------------------------------------------------------------
-      // My Brand Slide-Over (Phase 2 UI-only)
+      // Brand Settings Slide-Over (Phase 2 UI-only)
       // ------------------------------------------------------------
       const $drawer = document.getElementById('brandDrawer');
       const $drawerPanel = $drawer ? $drawer.querySelector('.drawer-panel') : null;
@@ -1121,16 +1140,16 @@
 
       if($mbSave){
         $mbSave.addEventListener('click', async () => {
-          // Phase 3: persist My Brand into D1 via the Worker.
+          // Phase 3: persist Brand Settings into D1 via the Worker.
           // Nothing is saved automatically; this only runs on explicit Save.
           try{
             const brand = readBrandForm();
             await apiSaveBrand(brand);
             closeBrandDrawer();
             await refreshBrandUI();
-            toast('My Brand saved.');
+            toast('Brand Settings saved.');
           }catch(e){
-            toast('Couldn’t save My Brand. Please try again.');
+            toast('Couldn’t save Brand Settings. Please try again.');
           }
         });
       }
@@ -1240,10 +1259,10 @@
       
       function renderBrandSaved(brand, meta){
         // My Works is a "saved items" view, not a raw data dump.
-        // We show a single saved My Brand entry + two helpful previews:
+        // We show a single saved Brand Settings entry + two helpful previews:
         //  - PAW’s snapshot (derived, not saved)
         //  - Contact data (derived display of fields the user chose to provide)
-        const panel = document.getElementById('panel-brand');
+        const panel = document.getElementById('panel-settings');
         if (!panel) return;
 
         const b = brand || {};
@@ -1270,7 +1289,7 @@
           <div class="mw-brandunit">
             <div class="mw-brandhead">
               <div>
-                <h3 class="mw-brandtitle">My Brand</h3>
+                <h3 class="mw-brandtitle">Brand Settings</h3>
                 <div class="mw-meta">
                   Saved${updatedNice ? ` • Last updated: ${escapeHtml(updatedNice)}` : ``}
                 </div>
@@ -1318,9 +1337,9 @@
                 try{
                   await apiDeleteBrand();
                   await refreshBrandUI();
-                  toast("My Brand deleted.");
+                  toast("Brand Settings deleted.");
                 }catch(e){
-                  toast("Couldn’t delete My Brand. Please try again.");
+                  toast("Couldn’t delete Brand Settings. Please try again.");
                 }
               };
             }
@@ -1334,23 +1353,23 @@
       function renderBrandEmpty(){
 
         // Restore original "empty state" UI (same copy as Phase 1/2).
-        const panel = document.getElementById('panel-brand');
+        const panel = document.getElementById('panel-settings');
         if (!panel) return;
 
         panel.innerHTML = `
           <div class="empty">
-            <h3>Set up My Brand</h3>
+            <h3>Set up Brand Settings</h3>
             <p>
-              My Brand helps PAW write like you — and saves the details needed to instantly generate bios,
+              Brand Settings tell PAW how to write and present you — and saves the details needed to instantly generate bios,
               profiles, and “About Me” content without starting from scratch each time.
             </p>
             <div class="empty-actions">
-              <button class="btn primary" data-action="create-brand" type="button">Create My Brand</button>
+              <button class="btn primary" data-action="create-brand-settings" type="button">Set Up Brand Settings</button>
                           </div>
           </div>
 
           <div class="list-placeholder">
-            <b>Coming next:</b> Once My Brand is created, it will appear here for you to edit or delete anytime.
+            <b>Coming next:</b> Once Brand Settings are saved, you can edit or delete them anytime.
           </div>
         `;
       }
@@ -1470,7 +1489,8 @@ document.addEventListener('click', (e) => {
         if (!el.matches('[data-action]')) return;
 
         const a = el.getAttribute('data-action') || '';
-        if (a === 'create-brand') { openBrandDrawer(el); return; }
+        if (a === 'create-brand-settings') { openBrandDrawer(el); return; }
+        if (a === 'create-brand-asset') { pawNavigate('PRESENCE'); return; }
         if (a === 'learn-brand') showComing('Next: examples + a guided setup that makes it easy to capture your voice and bio details.');
         if (a === 'create-listing') { pawNavigate('LISTINGS'); return; }
         if (a === 'create-transaction') { pawNavigate('TRANSACTIONS'); return; }
@@ -1486,7 +1506,7 @@ document.addEventListener('click', (e) => {
     
 
       // ------------------------------------------------------------
-      // Boot: initialize auth and load saved My Brand (if any)
+      // Boot: initialize auth and load saved Brand Settings (if any)
       // ------------------------------------------------------------
       try{
         if (window.PAWToolShell && window.PAWToolShell.authInit) {
