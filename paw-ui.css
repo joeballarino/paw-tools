@@ -711,6 +711,91 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 html.paw-works-mode,
 body.paw-works-mode{
   overflow-anchor: none;
+  overflow: hidden; /* Full-page Works mode: prevent tool scroll behind */
+}
+
+
+/* ==========================================================
+   My Works Mode (placeholder full-page surface)
+   - No modal, no drawer, no inline expansion.
+   - Tool UI is fully hidden while this is shown.
+   ========================================================== */
+#pawWorksModeRoot{
+  position: fixed;
+  inset: 0;
+  display: none;            /* JS toggles to flex */
+  flex-direction: column;
+  background: #fff;
+  z-index: 9996;            /* Above tool UI */
+}
+
+.paw-works-mode__top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15,23,42,.10);
+}
+
+.paw-works-mode__title{
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.paw-works-mode__exit{
+  appearance:none;
+  border:1px solid rgba(15,23,42,.18);
+  background:#fff;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor:pointer;
+}
+
+.paw-works-mode__body{
+  padding: 16px;
+  overflow: auto; /* Works content scrolls inside the Works surface */
+}
+
+.paw-works-mode__note{
+  border:1px solid rgba(15,23,42,.10);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(248,250,252,.85);
+}
+
+.paw-works-mode__note-title{
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.paw-works-mode__note-copy{
+  color: rgba(15,23,42,.72);
+  line-height: 1.35;
+}
+
+.paw-works-mode__section{
+  margin-top: 14px;
+  border:1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.paw-works-mode__section-title{
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.paw-works-mode__buckets{
+  margin: 0;
+  padding-left: 18px;
+}
+
+.paw-works-mode__actions{
+  display:flex;
+  gap:10px;
+  flex-wrap: wrap;
 }
 
 
@@ -986,80 +1071,14 @@ body.paw-works-mode{
 }
 
 
-.paw-drawer{
-  position:fixed;
-  inset:0;
-  display:none;
-  z-index:9992;
-}
-.paw-drawer.show{ display:block; }
-
-.paw-drawer__backdrop{
-  position:absolute;
-  inset:0;
-  background: rgba(2,6,23,.52);
-  backdrop-filter: blur(2px);
-}
-
-.paw-drawer__panel{
-  position:absolute;
-  top: 10px;
-  right: 10px;
-  bottom: 10px;
-  width: min(560px, calc(100vw - 20px));
-  background:#fff;
-  border:1px solid rgba(15,23,42,.10);
-  border-radius:16px;
-  box-shadow: 0 28px 70px rgba(0,0,0,.22);
-  overflow:hidden;
-  transform: translateX(12px);
-  opacity: 0;
-  transition: transform .18s ease, opacity .18s ease;
-  display:flex;
-  flex-direction:column;
-}
-.paw-drawer.show .paw-drawer__panel{
-  transform: translateX(0);
-  opacity: 1;
-}
-
 /* ==========================================================
    PAW — My Works Inline Expander (shared) — Phase 1B
    ----------------------------------------------------------
    Engineering intent:
    - Inline expand/collapse under topbar (no modal, no backdrop).
    - Tool iframe should grow; avoid internal scrollbars.
-   - Keep existing inner classnames (.paw-drawer__*) so content can
-     be iterated centrally in tool-shell.js without per-tool edits.
-   ========================================================== */
-.paw-workexpander{
-  display:none;
-  margin-top: 10px;
-}
-.paw-workexpander.is-open{ display:block; }
-
 /* Re-skin the former drawer panel for inline layout */
-.paw-workexpander .paw-drawer__panel{
-  position:relative;
-  top:auto;
-  right:auto;
-  bottom:auto;
-  width:100%;
-  max-width: 980px;
-  margin: 0 auto;
-  transform:none;
-  opacity: 1;
-  transition:none;
-  border-radius: 16px;
-  /* Inline My Works should feel like a page section, not a floating modal. */
-  box-shadow: var(--shadow-soft);
-}
-
 /* Let the page grow (no internal scrolling container) */
-.paw-workexpander .paw-drawer__body{
-  overflow: visible;
-}
-
 /* Work button chevron matches disclosure behavior */
 #pawMyStuffBtn.is-expanded .works-chevron{
   transform: rotate(180deg);
@@ -1075,195 +1094,12 @@ body.paw-works-mode{
    NOTE:
    - Drawer is injected + controlled by tool-shell.js.
    - This is a shared component: keep styling calm + consistent.
-   - Body class .paw-drawer-open prevents background scroll.
-   ========================================================== */
-
-body.paw-drawer-open{
-  overflow:hidden;
-  touch-action:none;
-}
-
 /* Drawer head */
-.paw-drawer__head{
-  padding:14px 14px 10px;
-  border-bottom:1px solid rgba(15,23,42,.08);
-  background:
-    radial-gradient(640px 220px at 20% 0%, rgba(5,195,249,.12), rgba(255,255,255,0) 60%),
-    #ffffff;
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.paw-drawer__title{
-  font-size:15px;
-  font-weight:950;
-  color:var(--text-strong);
-  letter-spacing:-0.01em;
-  line-height:1.15;
-}
-
-.paw-drawer__sub{
-  margin-top:6px;
-  font-size:12.5px;
-  font-weight:700;
-  color:rgba(15,23,42,.68);
-  line-height:1.35;
-  max-width:520px;
-}
-
-.paw-drawer__close{
-  border: 1px solid rgba(15,23,42,.12);
-  background: rgba(255,255,255,.92);
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  cursor:pointer;
-  font-weight: 900;
-  color: rgba(15,23,42,.72);
-}
-
 /* Tabs */
-.paw-drawer__tabs{
-  margin:10px 14px 0;
-}
-
-.paw-drawer__tabs .paw-seg__btn{
-  height:36px;
-  font-weight:850;
-}
-
 /* Body */
-.paw-drawer__body{
-  padding:12px 14px 14px;
-  overflow:auto;
-  -webkit-overflow-scrolling:touch;
-  flex:1 1 auto;
-}
-
-.paw-drawer__panelbody{ display:none; }
-.paw-drawer__panelbody.is-active{ display:block; }
-
-.paw-drawer__panelinner{
-  max-width: 640px;
-}
-
-.paw-drawer__loading{
-  font-size:14px;
-  font-weight:700;
-  color:rgba(15,23,42,.70);
-  padding:10px 2px;
-}
-
 /* Saved item block */
-.paw-drawer__item{
-  border:1px solid rgba(15,23,42,.08);
-  background:rgba(255,255,255,.92);
-  border-radius:16px;
-  padding:12px 12px 12px;
-}
-
-.paw-drawer__itemhead{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.paw-drawer__itemtitle{
-  font-size:14px;
-  font-weight:950;
-  color:rgba(15,23,42,.92);
-  letter-spacing:-0.01em;
-}
-
-.paw-drawer__itemmeta{
-  margin-top:4px;
-  font-size:12px;
-  font-weight:700;
-  color:rgba(15,23,42,.56);
-}
-
-.paw-drawer__itemactions{ display:flex; gap:10px; align-items:center; }
-
-.paw-drawer__itemsnap{
-  margin-top:10px;
-  font-size:13.5px;
-  font-weight:600;
-  color:rgba(15,23,42,.78);
-  line-height:1.45;
-}
-
 /* Empty copy */
-.paw-drawer__emptytitle{
-  font-size:14px;
-  font-weight:950;
-  color:rgba(15,23,42,.92);
-  letter-spacing:-0.01em;
-}
-
-.paw-drawer__emptycopy{
-  margin-top:6px;
-  font-size:13.5px;
-  font-weight:650;
-  color:rgba(15,23,42,.66);
-  line-height:1.45;
-  max-width: 640px;
-}
-
-.paw-drawer__panelactions{
-  margin-top:12px;
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-
 /* Footer */
-.paw-drawer__foot{
-  padding:12px 14px;
-  border-top:1px solid rgba(15,23,42,.08);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  background:rgba(255,255,255,.98);
-}
-
-.paw-drawer__context{
-  font-size:12px;
-  font-weight:750;
-  color:rgba(15,23,42,.62);
-  display:flex;
-  gap:6px;
-  align-items:baseline;
-  min-width:0;
-}
-
-.paw-drawer__contextvalue{
-  font-weight:900;
-  color:rgba(15,23,42,.82);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  max-width:240px;
-}
-
-.paw-drawer__actions{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  justify-content:flex-end;
-  flex-wrap:wrap;
-}
-
 /* Mobile */
 @media (max-width: 560px){
-  .paw-drawer__tabs{ margin-left:12px; margin-right:12px; }
-  .paw-drawer__body{ padding-left:12px; padding-right:12px; }
-  .paw-drawer__foot{ flex-direction:column; align-items:stretch; }
-  .paw-drawer__actions{ justify-content:stretch; }
-  .paw-drawer__actions .btn{ width:100%; height:44px; }
-  .paw-drawer__contextvalue{ max-width:100%; }
 }

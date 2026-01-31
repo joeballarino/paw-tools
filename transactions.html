@@ -341,6 +341,17 @@ body.paw-contracts #analyzeBtn[disabled]{
   </div>
 
   <script src="https://paw-tools.pages.dev/tool-shell.js"></script>
+  <script>
+    // PAW Tool Shell init (required for consistent My Works mode across tools)
+    try {
+      if (window.PAWToolShell && window.PAWToolShell.init) {
+        window.PAWToolShell.init({
+          apiEndpoint: "", // Placeholder until this tool uses the Worker
+          toolId: "transactions"
+        });
+      }
+    } catch (_) {}
+  </script>
 
   <!-- ==========================================================
        PAW Iframe Height Reporter (v1.1 - loop-safe, STANDARD)
