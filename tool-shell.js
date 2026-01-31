@@ -1788,7 +1788,14 @@ function ensureWorksRoot(){
 }
 
 function findToolRoot(){
-  var el = document.querySelector("body > .app") || document.querySelector(".app");
+  // All PAW tools render inside a shared ".panel" surface.
+  // Older builds sometimes wrapped this in ".app". We prefer ".panel"
+  // because it maps to the tool surface we want to fully replace.
+  var el =
+    document.querySelector(".panel") ||
+    document.querySelector("body > .app") ||
+    document.querySelector(".app") ||
+    document.querySelector("main");
   return el || null;
 }
 
@@ -2196,5 +2203,38 @@ function init(apiEndpoint){
     _open: function(){ enterWorksMode(); },
     _close: function(){ exitWorksMode(); }
   };
+
+
+  // ------------------------------------------------------------
+  // Auto-bootstrap (safety net)
+  // ------------------------------------------------------------
+  // Some legacy tool pages historically relied on tool-local wiring.
+  // Now that Works is shell-controlled, we still need the Work button
+  // to respond even if a tool page forgets to call PAWToolShell.init().
+  //
+  // This *only* wires the Work button toggle. It does NOT persist data,
+  // does NOT call the Worker, and is safe to run multiple times because
+  // init() guards with data-paw-works="1".
+  (function bootstrapWorksButton(){
+    function tryInit(){
+      try{
+        var btn = document.getElementById("pawMyStuffBtn");
+        if (!btn) return false;
+        if (window.__PAWWorks && typeof window.__PAWWorks.init === "function"){
+          window.__PAWWorks.init(__apiEndpoint || "");
+          return true;
+        }
+      }catch(_){}
+      return false;
+    }
+
+    // Try immediately (for pages where header is already in DOM)
+    if (tryInit()) return;
+
+    // Otherwise, wait for DOM ready.
+    try{
+      document.addEventListener("DOMContentLoaded", function(){ tryInit(); }, { once:true });
+    }catch(_){}
+  })();
 
 })();
