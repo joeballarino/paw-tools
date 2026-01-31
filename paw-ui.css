@@ -711,91 +711,6 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 html.paw-works-mode,
 body.paw-works-mode{
   overflow-anchor: none;
-  overflow: hidden; /* Full-page Works mode: prevent tool scroll behind */
-}
-
-
-/* ==========================================================
-   My Works Mode (placeholder full-page surface)
-   - No modal, no drawer, no inline expansion.
-   - Tool UI is fully hidden while this is shown.
-   ========================================================== */
-#pawWorksModeRoot{
-  position: fixed;
-  inset: 0;
-  display: none;            /* JS toggles to flex */
-  flex-direction: column;
-  background: #fff;
-  z-index: 9996;            /* Above tool UI */
-}
-
-.paw-works-mode__top{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(15,23,42,.10);
-}
-
-.paw-works-mode__title{
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.paw-works-mode__exit{
-  appearance:none;
-  border:1px solid rgba(15,23,42,.18);
-  background:#fff;
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-weight: 700;
-  cursor:pointer;
-}
-
-.paw-works-mode__body{
-  padding: 16px;
-  overflow: auto; /* Works content scrolls inside the Works surface */
-}
-
-.paw-works-mode__note{
-  border:1px solid rgba(15,23,42,.10);
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: rgba(248,250,252,.85);
-}
-
-.paw-works-mode__note-title{
-  font-weight: 800;
-  margin-bottom: 4px;
-}
-
-.paw-works-mode__note-copy{
-  color: rgba(15,23,42,.72);
-  line-height: 1.35;
-}
-
-.paw-works-mode__section{
-  margin-top: 14px;
-  border:1px solid rgba(15,23,42,.08);
-  border-radius: 14px;
-  padding: 12px 14px;
-}
-
-.paw-works-mode__section-title{
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-
-.paw-works-mode__buckets{
-  margin: 0;
-  padding-left: 18px;
-}
-
-.paw-works-mode__actions{
-  display:flex;
-  gap:10px;
-  flex-wrap: wrap;
 }
 
 
@@ -1070,36 +985,97 @@ body.paw-works-mode{
   }
 }
 
-
 /* ==========================================================
-   PAW — My Works Inline Expander (shared) — Phase 1B
+   My Works Mode (placeholder full-page surface)
    ----------------------------------------------------------
-   Engineering intent:
-   - Inline expand/collapse under topbar (no modal, no backdrop).
-   - Tool iframe should grow; avoid internal scrollbars.
-/* Re-skin the former drawer panel for inline layout */
-/* Let the page grow (no internal scrolling container) */
-/* Work button chevron matches disclosure behavior */
-#pawMyStuffBtn.is-expanded .works-chevron{
-  transform: rotate(180deg);
-}
-#pawMyStuffBtn .works-chevron{
-  display:inline-block;
-  transition: transform .16s ease;
+   - No modal, no drawer, no inline expansion.
+   - Tool UI is fully hidden while this is shown.
+   - The existing Work button is moved into this header so it stays
+     in the same spot and acts as the "Back to Tool" toggle.
+   ========================================================== */
+
+html.paw-works-mode,
+body.paw-works-mode{
+  overflow-anchor: none;
+  overflow: hidden; /* Prevent tool scroll behind Works mode */
 }
 
-/* ==========================================================
-   PAW — My Works Drawer (shared) — Phase 1
-   ----------------------------------------------------------
-   NOTE:
-   - Drawer is injected + controlled by tool-shell.js.
-   - This is a shared component: keep styling calm + consistent.
-/* Drawer head */
-/* Tabs */
-/* Body */
-/* Saved item block */
-/* Empty copy */
-/* Footer */
-/* Mobile */
-@media (max-width: 560px){
+#pawWorksModeRoot{
+  position: fixed;
+  inset: 0;
+  display: none;            /* JS toggles to flex */
+  flex-direction: column;
+  background: #fff;
+  z-index: 9996;            /* Above tool UI */
+}
+
+/* Top bar: matches the tool header padding so the Work button stays aligned */
+.paw-works-mode__top{
+  position: relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15,23,42,.10);
+}
+
+/* Where the real Work button is mounted while in Works mode */
+.paw-works-mode__top-left{
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.paw-works-mode__title{
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.paw-works-mode__body{
+  padding: 16px;
+  overflow: auto; /* Works content scrolls inside the Works surface */
+}
+
+.paw-works-mode__note{
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 16px;
+  padding: 14px 14px;
+  background: rgba(5,195,249,.05);
+  margin-bottom: 14px;
+}
+
+.paw-works-mode__note-title{
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.paw-works-mode__note-copy{
+  opacity: .86;
+  line-height: 1.35;
+}
+
+.paw-works-mode__section{
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 16px;
+  padding: 14px 14px;
+  margin-bottom: 14px;
+}
+
+.paw-works-mode__section-title{
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.paw-works-mode__buckets{
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.55;
+}
+
+.paw-works-mode__actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 10px;
 }

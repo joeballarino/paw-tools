@@ -1604,271 +1604,588 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
 })();
 
 // ==========================================================
-// My Works (session-only, shell-controlled "mode")
-// ==========================================================
+// My Works Drawer (shared) — Phase 1
+// ----------------------------------------------------------
+// PURPOSE:
+// - The Work pill ("Work: Ready") is present on every tool.
+// - Phase 1 makes it REAL: clicking opens a drawer that can
+//   attach/detach a single active Work to the current session.
+// - Nothing is saved automatically.
+// - Brand is wired to the Worker (GET /mystuff/brand). Listings/Deals
+//   are placeholders until Worker endpoints exist.
 //
-// PRODUCT INTENT (non-negotiable):
-// - "Work: Ready" behaves identically in every tool.
-// - Clicking it temporarily REPLACES the tool UI with a full-page My Works context.
-// - No drawer. No modal. No inline expansion. No tool UI visible underneath.
-// - Exiting returns the user to the tool exactly as it was.
-// - Attaching a Work updates the header pill to "Current: …" for this session only.
-//
-// ENGINEERING INTENT:
-// - Keep this lightweight: placeholder UI only for now.
-// - Do not persist anything here. My Works persistence lives in the Worker + D1 later.
-// - This module only manages: enter/exit mode + in-memory active Work reference.
-//
+// IMPORTANT PRODUCT RULES (LOCKED):
+// - Session-first by default.
+// - Users explicitly choose what is saved.
+// - My Works is the single system of record (tools do not own persistence).
 // ==========================================================
 
 (function(){
   "use strict";
 
-  // Session-only attachment (resets on reload).
-  // Shape mirrors future My Works objects without enforcing schema now.
-  var __pawActiveWork = null; // { bucket:"brand_assets"|"listings"|"transactions", id:string, label:string }
+  // Session-only context (in-memory, resets on reload).
+  var __pawActiveWork = null; // { bucket:"brand"|"listings"|"deals", id:string, label:string }
 
-  // Works mode state
+  // My Works UI refs (shared across all tools)
+  // ----------------------------------------------------------
+  // IMPORTANT PRODUCT INTENT:
+  // - "Work: Ready" is a MODE switch, not a small drawer.
+  // - When open, My Works replaces the tool working surface so the
+  //   user focuses on selecting/attaching work.
+  // - When closed, the tool returns exactly as it was.
+  //
+  // Engineering notes:
+  // - We keep the existing classnames (.paw-drawer__*) for reuse,
+  //   but behavior is inline + page-state swap (not modal).
+  // ----------------------------------------------------------
+  var __drawer = null;
+  var __drawerPanel = null;
+
+  // Elements we temporarily hide while My Works is open (tool mode swap).
+  var __worksHiddenEls = [];
   var __worksModeOn = false;
+  // Scroll position preservation for My Works mode swap.
+  // Product intent: entering My Works should feel like a focused "mode", not a page that drifts.
   var __worksPrevScrollY = 0;
   var __worksPrevScrollRestoration = "";
-  var __worksPrevActiveEl = null;
-  var __worksRoot = null;
-  var __toolRoot = null; // .app (the whole tool surface)
+  var __worksIsRestoringScroll = false;
 
+  var __tabBtns = null; // reserved for Bite 3+
+  var __panels = null;  // reserved for Bite 3+
+  var __brandPanel = null;
+
+  var __apiEndpoint = "";
+  var __brandCache = null; // { exists:boolean, brand:{...}, meta:{...} }
+
+  function $(sel, root){ return (root || document).querySelector(sel); }
+  function $all(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel) || []); }
   function norm(v){ return String(v == null ? "" : v).trim(); }
+  function escapeHtml(str){
+    return String(str||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#39;");
+  }
 
   // ------------------------------------------------------------
-  // Header pill update
+  // Work pill label update (DO NOT overwrite markup)
   // ------------------------------------------------------------
   function workLabelText(){
     if (__pawActiveWork && __pawActiveWork.label){
+      // Brand language: "Work: My Brand" / "Work: 123 Oak St"
       return "Current: " + String(__pawActiveWork.label);
     }
     return "Work: Ready";
   }
 
   function updateWorkPill(){
-    try{
-      var btn = document.getElementById("pawMyStuffBtn");
-      if (!btn) return;
-      var label = btn.querySelector(".works-label");
-      if (label) label.textContent = workLabelText();
-      btn.classList.toggle("is-active", !!__pawActiveWork);
-      btn.setAttribute("aria-label", __pawActiveWork ? ("Work context: " + workLabelText()) : "Work context");
-      // This is now a mode toggle, not an expander.
+  try{
+    var btn = document.getElementById("pawMyStuffBtn");
+    if (!btn) return;
+
+    var labelEl = btn.querySelector(".works-label");
+    var chevEl  = btn.querySelector(".works-chevron");
+
+    if (__worksModeOn){
+      if (labelEl) labelEl.textContent = "Back to Tool";
+      if (chevEl)  chevEl.textContent = "▴";
+      btn.setAttribute("aria-expanded","true");
+      btn.setAttribute("aria-label","Back to tool");
+    } else {
+      if (labelEl) labelEl.textContent = workLabelText();
+      if (chevEl)  chevEl.textContent = "▾";
       btn.setAttribute("aria-expanded","false");
-    }catch(_){}
-  }
-
-  // ------------------------------------------------------------
-  // Placeholder My Works surface
-  // ------------------------------------------------------------
-  function ensureWorksRoot(){
-    if (__worksRoot && document.body.contains(__worksRoot)) return __worksRoot;
-
-    __worksRoot = document.createElement("div");
-    __worksRoot.id = "pawWorksModeRoot";
-    __worksRoot.setAttribute("role","region");
-    __worksRoot.setAttribute("aria-label","My Works");
-
-    // IMPORTANT: This is intentionally placeholder UI.
-    // We will replace this markup later with real My Works rendering + selection.
-    __worksRoot.innerHTML = `
-      <div class="paw-works-mode__top">
-        <div class="paw-works-mode__title">My Works</div>
-        <button class="paw-works-mode__exit" type="button" data-paw-works-exit="1" aria-label="Exit My Works">Exit</button>
-      </div>
-
-      <div class="paw-works-mode__body">
-        <div class="paw-works-mode__note">
-          <div class="paw-works-mode__note-title">Placeholder</div>
-          <div class="paw-works-mode__note-copy">
-            My Works UI is coming next. For now, this screen proves the full-page mode swap works.
-          </div>
-        </div>
-
-        <div class="paw-works-mode__section">
-          <div class="paw-works-mode__section-title">Buckets</div>
-          <ul class="paw-works-mode__buckets">
-            <li>Brand Assets</li>
-            <li>Listings</li>
-            <li>Transactions</li>
-          </ul>
-        </div>
-
-        <div class="paw-works-mode__section">
-          <div class="paw-works-mode__section-title">Attach a Work (demo)</div>
-          <div class="paw-works-mode__actions">
-            <button class="btn primary" type="button" data-paw-works-attach="1">Attach “Placeholder Work”</button>
-            <button class="btn" type="button" data-paw-works-detach="1">Detach</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Click handling lives here so tools don't implement Work behavior.
-    __worksRoot.addEventListener("click", function(e){
-      var t = e.target;
-      if (!t || !t.getAttribute) return;
-
-      if (t.getAttribute("data-paw-works-exit") === "1"){
-        exitWorksMode();
-        return;
-      }
-      if (t.getAttribute("data-paw-works-attach") === "1"){
-        attachWork({ bucket:"brand_assets", id:"placeholder", label:"Placeholder Work" });
-        exitWorksMode();
-        return;
-      }
-      if (t.getAttribute("data-paw-works-detach") === "1"){
-        detachWork();
-        // Stay in Works so user sees immediate state change in the header when they exit.
-        return;
-      }
-    });
-
-    // ESC exits Works mode
-    document.addEventListener("keydown", function(e){
-      if (!__worksModeOn) return;
-      if (e.key !== "Escape") return;
-      exitWorksMode();
-    });
-
-    document.body.appendChild(__worksRoot);
-    return __worksRoot;
-  }
-
-  function findToolRoot(){
-    // All PAW tools mount inside a top-level .app container.
-    var el = document.querySelector("body > .app") || document.querySelector(".app");
-    return el || null;
-  }
-
-  // ------------------------------------------------------------
-  // Mode enter/exit
-  // ------------------------------------------------------------
-  function enterWorksMode(){
-    if (__worksModeOn) return;
-
-    __toolRoot = findToolRoot();
-    if (!__toolRoot){
-      // If we can't safely replace the tool UI, the Work button should not be available.
-      try{
-        var btn = document.getElementById("pawMyStuffBtn");
-        if (btn) btn.style.display = "none";
-      }catch(_){}
-      return;
+      btn.setAttribute("aria-label", __pawActiveWork ? ("Work context: " + workLabelText()) : "Work context");
     }
 
-    __worksModeOn = true;
+    btn.classList.toggle("is-active", !!__pawActiveWork);
+  }catch(_){}
+}
 
-    // Save state to restore exactly.
-    try{ __worksPrevScrollY = (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0); }catch(_){ __worksPrevScrollY = 0; }
-    try{ __worksPrevActiveEl = document.activeElement || null; }catch(_){ __worksPrevActiveEl = null; }
 
-    try{
-      __worksPrevScrollRestoration = (history && history.scrollRestoration) ? history.scrollRestoration : "";
-      if (history && typeof history.scrollRestoration === "string") history.scrollRestoration = "manual";
-    }catch(_){}
+  // ------------------------------------------------------------
+  // Drawer injection (shared across all tools)
+  // ------------------------------------------------------------
+  // ------------------------------------------------------------
+// Works surface (placeholder)
+// ------------------------------------------------------------
+var __worksRoot = null;
+var __toolRoot = null;
 
-    // Apply mode class + swap surfaces.
-    try{ document.documentElement.classList.add("paw-works-mode"); }catch(_){}
-    try{ document.body.classList.add("paw-works-mode"); }catch(_){}
+// We MOVE the existing Work button into the Works header so it stays in the same spot
+// and becomes the "return to tool" toggle. We restore it on exit.
+var __worksBtn = null;
+var __worksBtnPlaceholder = null;
+var __worksBtnHomeParent = null;
 
-    // Hide tool completely (no peeking underneath).
-    try{ __toolRoot.style.display = "none"; }catch(_){}
+function ensureWorksRoot(){
+  if (__worksRoot && document.body.contains(__worksRoot)) return __worksRoot;
 
-    // Ensure Works surface exists + show it.
-    ensureWorksRoot();
-    try{ __worksRoot.style.display = "flex"; }catch(_){}
+  __worksRoot = document.createElement("div");
+  __worksRoot.id = "pawWorksModeRoot";
+  __worksRoot.setAttribute("role","region");
+  __worksRoot.setAttribute("aria-label","My Works");
 
-    // Stabilize scroll: bring Works to top.
-    try{ window.scrollTo(0,0); }catch(_){}
+  // IMPORTANT: Placeholder only. Real My Works rendering comes next.
+  __worksRoot.innerHTML = `
+    <div class="paw-works-mode__top">
+      <div class="paw-works-mode__top-left" data-paw-works-top-left="1"></div>
+      <div class="paw-works-mode__title">My Works</div>
+    </div>
 
-    // One layout ping (some tools embed height logic listens for DOM changes).
-    try{ if (window.pawScheduleLayoutPing) window.pawScheduleLayoutPing(); }catch(_){}
-  }
+    <div class="paw-works-mode__body">
+      <div class="paw-works-mode__note">
+        <div class="paw-works-mode__note-title">Placeholder</div>
+        <div class="paw-works-mode__note-copy">
+          This screen proves the full-page mode swap works. Real My Works UI comes next.
+        </div>
+      </div>
 
-  function exitWorksMode(){
+      <div class="paw-works-mode__section">
+        <div class="paw-works-mode__section-title">Buckets</div>
+        <ul class="paw-works-mode__buckets">
+          <li>Brand Assets</li>
+          <li>Listings</li>
+          <li>Transactions</li>
+        </ul>
+      </div>
+
+      <div class="paw-works-mode__section">
+        <div class="paw-works-mode__section-title">Attach a Work (demo)</div>
+        <div class="paw-works-mode__actions">
+          <button class="btn primary" type="button" data-paw-works-attach="1">Attach “Placeholder Work”</button>
+          <button class="btn" type="button" data-paw-works-detach="1">Detach</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  __worksRoot.addEventListener("click", function(e){
+    var t = e.target;
+    if (!t || !t.getAttribute) return;
+
+    if (t.getAttribute("data-paw-works-attach") === "1"){
+      attachWork({ bucket:"brand_assets", id:"placeholder", label:"Placeholder Work" });
+      return;
+    }
+    if (t.getAttribute("data-paw-works-detach") === "1"){
+      detachWork();
+      return;
+    }
+  });
+
+  // ESC exits Works mode (Work button also exits).
+  document.addEventListener("keydown", function(e){
     if (!__worksModeOn) return;
-    __worksModeOn = false;
+    if (e.key !== "Escape") return;
+    exitWorksMode();
+  });
 
-    // Hide Works
-    try{ if (__worksRoot) __worksRoot.style.display = "none"; }catch(_){}
+  document.body.appendChild(__worksRoot);
+  return __worksRoot;
+}
 
-    // Restore tool
-    try{ if (__toolRoot) __toolRoot.style.display = ""; }catch(_){}
+function findToolRoot(){
+  var el = document.querySelector("body > .app") || document.querySelector(".app");
+  return el || null;
+}
 
-    try{ document.documentElement.classList.remove("paw-works-mode"); }catch(_){}
-    try{ document.body.classList.remove("paw-works-mode"); }catch(_){}
 
-    // Restore scroll restoration preference.
-    try{
-      if (history && typeof history.scrollRestoration === "string"){
-        history.scrollRestoration = __worksPrevScrollRestoration || "auto";
-      }
-    }catch(_){}
+  
+  // ------------------------------------------------------------
+  // Page-state swap: My Works mode replaces the tool working surface
+  // ------------------------------------------------------------
+  function setWorksMode(on){
+    var want = !!on;
+    if (__worksModeOn === want) return;
 
-    // Restore scroll position AFTER DOM is restored.
-    try{ setTimeout(function(){ try{ window.scrollTo(0, __worksPrevScrollY || 0); }catch(_){ } }, 0); }catch(_){}
+    __worksModeOn = want;
 
-    // Restore focus if possible.
-    try{
-      setTimeout(function(){
-        try{
-          if (__worksPrevActiveEl && typeof __worksPrevActiveEl.focus === "function") __worksPrevActiveEl.focus();
-        }catch(_){}
-      }, 0);
-    }catch(_){}
+    // Find the shared panel container (all tools use .panel).
+    var panel = document.querySelector(".panel");
+    if (!panel) panel = document.body;
 
-    // Update pill now that tool is visible again.
-    updateWorkPill();
+    // NOTE (product intent):
+    // - Works is a temporary "mode" (not a drawer).
+    // - In Circle iframes, repeated height/scroll adjustments can cause a
+    //   runaway scroll feel. We stabilize by:
+    //     1) snapping to a known scroll position once,
+    //     2) avoiding viewport-based CSS that can cause iframe resize loops, and
+    //     3) restoring the user's previous scroll position on exit.
+    if (want){
+      // Preserve the user's position so we can return them when Works closes.
+      try{
+        __worksPrevScrollY = (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0);
+      }catch(_){ __worksPrevScrollY = 0; }
 
-    try{ if (window.pawScheduleLayoutPing) window.pawScheduleLayoutPing(); }catch(_){}
+      // Prevent the browser from trying to "helpfully" restore scroll while the DOM swaps.
+      try{
+        __worksPrevScrollRestoration = (history && history.scrollRestoration) ? history.scrollRestoration : "";
+        if (history && typeof history.scrollRestoration === "string") history.scrollRestoration = "manual";
+      }catch(_){}
+
+      // Snap to the top ONCE (no smooth scrolling) before we lock scrolling via CSS.
+      // This ensures the Works surface is always visible.
+      try{
+        window.scrollTo(0,0);
+        try{ document.documentElement.scrollTop = 0; }catch(_){}
+        try{ document.body.scrollTop = 0; }catch(_){}
+      }catch(_){}
+
+      // Capture + hide everything in the panel EXCEPT:
+      // - the topbar (where the Works button lives)
+      // - the My Works expander region itself
+      __worksHiddenEls = [];
+      try{
+        var kids = Array.prototype.slice.call(panel.children || []);
+        var topbar = document.querySelector(".panel-topbar");
+        kids.forEach(function(el){
+          if (!el || el === __drawer || el === topbar) return;
+
+          // Avoid touching unrelated injected nodes (e.g., modals/toasts).
+          var prev = (el.style && typeof el.style.display === "string") ? el.style.display : "";
+          el.setAttribute("data-paw-works-hide","1");
+          el.setAttribute("data-paw-prev-display", prev);
+          el.style.display = "none";
+          __worksHiddenEls.push(el);
+        });
+      }catch(_){}
+
+      // Works mode class is applied to BOTH html + body (CSS uses both).
+      try{ document.documentElement.classList.add("paw-works-mode"); }catch(_){}
+      try{ document.body.classList.add("paw-works-mode"); }catch(_){}
+    } else {
+      // Restore what we hid, exactly as it was.
+      try{
+        (__worksHiddenEls || []).forEach(function(el){
+          if (!el) return;
+          var prev = el.getAttribute("data-paw-prev-display");
+          el.style.display = prev || "";
+          el.removeAttribute("data-paw-works-hide");
+          el.removeAttribute("data-paw-prev-display");
+        });
+      }catch(_){}
+      __worksHiddenEls = [];
+
+      try{ document.documentElement.classList.remove("paw-works-mode"); }catch(_){}
+      try{ document.body.classList.remove("paw-works-mode"); }catch(_){}
+
+      // Restore scroll restoration preference.
+      try{
+        if (history && typeof history.scrollRestoration === "string"){
+          history.scrollRestoration = __worksPrevScrollRestoration || "auto";
+        }
+      }catch(_){}
+
+      // Return the user to where they were before opening Works.
+      // We do this AFTER the DOM is restored and the scroll lock is removed.
+      try{
+        if (!__worksIsRestoringScroll){
+          __worksIsRestoringScroll = true;
+          setTimeout(function(){
+            try{ window.scrollTo(0, __worksPrevScrollY || 0); }catch(_){}
+            __worksIsRestoringScroll = false;
+          }, 0);
+        }
+      }catch(_){ __worksIsRestoringScroll = false; }
+    }
+
+    // Single layout ping after mode switch; avoids repeated pings that can amplify iframe jitter.
+    try{ pawScheduleLayoutPing(); }catch(_ ){}
   }
 
+
+// ------------------------------------------------------------
+// Mode enter/exit (full-page swap)
+// ------------------------------------------------------------
+function enterWorksMode(){
+  if (__worksModeOn) return;
+
+  __toolRoot = findToolRoot();
+  if (!__toolRoot){
+    // If we can't safely replace the tool UI, the Work button should not be available.
+    try{ var btn = document.getElementById("pawMyStuffBtn"); if (btn) btn.style.display = "none"; }catch(_){}
+    return;
+  }
+
+  __worksModeOn = true;
+
+  // Save scroll + focus to restore exactly.
+  try{ __worksPrevScrollY = (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0); }catch(_){ __worksPrevScrollY = 0; }
+  try{ __worksPrevActiveEl = document.activeElement || null; }catch(_){ __worksPrevActiveEl = null; }
+
+  try{
+    __worksPrevScrollRestoration = (history && history.scrollRestoration) ? history.scrollRestoration : "";
+    if (history && typeof history.scrollRestoration === "string") history.scrollRestoration = "manual";
+  }catch(_){}
+
+  // Prepare to move the existing Work button into Works header.
+  try{
+    __worksBtn = document.getElementById("pawMyStuffBtn");
+    if (__worksBtn){
+      __worksBtnHomeParent = __worksBtn.parentNode;
+      __worksBtnPlaceholder = document.createComment("paw-works-btn-home");
+      if (__worksBtnHomeParent) __worksBtnHomeParent.insertBefore(__worksBtnPlaceholder, __worksBtn);
+    }
+  }catch(_){ __worksBtn = null; __worksBtnHomeParent = null; __worksBtnPlaceholder = null; }
+
+  // Apply mode class + swap surfaces.
+  try{ document.documentElement.classList.add("paw-works-mode"); }catch(_){}
+  try{ document.body.classList.add("paw-works-mode"); }catch(_){}
+
+  // Hide tool completely (no peeking underneath).
+  try{ __toolRoot.style.display = "none"; }catch(_){}
+
+  // Ensure Works surface exists + show it.
+  ensureWorksRoot();
+
+  // Mount the Work button into the Works header (same position, no duplicate controls).
+  try{
+    if (__worksBtn && __worksRoot){
+      var topLeft = __worksRoot.querySelector("[data-paw-works-top-left=\"1\"]");
+      if (topLeft) topLeft.appendChild(__worksBtn);
+    }
+  }catch(_){}
+
+  updateWorkPill();
+
+  try{ __worksRoot.style.display = "flex"; }catch(_){}
+
+  // Stabilize scroll: bring Works to top.
+  try{ window.scrollTo(0,0); }catch(_){}
+}
+
+function exitWorksMode(){
+  if (!__worksModeOn) return;
+  __worksModeOn = false;
+
+  // Hide Works surface.
+  try{ if (__worksRoot) __worksRoot.style.display = "none"; }catch(_){}
+
+  // Restore the Work button to its original home before showing the tool.
+  try{
+    if (__worksBtn && __worksBtnHomeParent){
+      if (__worksBtnPlaceholder && __worksBtnPlaceholder.parentNode === __worksBtnHomeParent){
+        __worksBtnHomeParent.insertBefore(__worksBtn, __worksBtnPlaceholder);
+        __worksBtnHomeParent.removeChild(__worksBtnPlaceholder);
+      } else {
+        __worksBtnHomeParent.appendChild(__worksBtn);
+      }
+    }
+  }catch(_){}
+
+  // Restore tool surface.
+  try{ if (__toolRoot) __toolRoot.style.display = ""; }catch(_){}
+
+  try{ document.documentElement.classList.remove("paw-works-mode"); }catch(_){}
+  try{ document.body.classList.remove("paw-works-mode"); }catch(_){}
+
+  try{
+    if (history && typeof history.scrollRestoration === "string"){
+      history.scrollRestoration = __worksPrevScrollRestoration || "auto";
+    }
+  }catch(_){}
+
+  // Restore scroll position AFTER DOM is restored.
+  try{ setTimeout(function(){ try{ window.scrollTo(0, __worksPrevScrollY || 0); }catch(_){ } }, 0); }catch(_){}
+
+  // Restore focus if possible.
+  try{
+    setTimeout(function(){
+      try{
+        if (__worksPrevActiveEl && typeof __worksPrevActiveEl.focus === "function") __worksPrevActiveEl.focus();
+      }catch(_){}
+    }, 0);
+  }catch(_){}
+
+  updateWorkPill();
+}
+
+
+
   // ------------------------------------------------------------
-  // Context actions (session-only)
+  // Context actions
   // ------------------------------------------------------------
+  function renderContextRow(){
+    var v = document.getElementById("pawWorksContextValue");
+    var det = document.getElementById("pawWorksDetach");
+    if (!v) return;
+
+    if (__pawActiveWork && __pawActiveWork.label){
+      v.textContent = String(__pawActiveWork.label);
+      if (det) det.style.display = "";
+    } else {
+      v.textContent = "None";
+      if (det) det.style.display = "none";
+    }
+  }
+
   function attachWork(work){
-    var w = work || null;
-    if (w && !norm(w.label)) w.label = "Work";
-    __pawActiveWork = w;
+    __pawActiveWork = work || null;
     updateWorkPill();
+    renderContextRow();
   }
 
   function detachWork(){
     __pawActiveWork = null;
     updateWorkPill();
+    renderContextRow();
+    // Keep drawer open; this is a safe action.
     try{
       if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Detached from this session.");
     }catch(_){}
   }
 
+  // Exposed for tool-shell to include in payloads later.
   function getActiveWork(){
     return __pawActiveWork ? Object.assign({}, __pawActiveWork) : null;
   }
 
   // ------------------------------------------------------------
-  // Public init (called from PAWToolShell.init)
+  // Brand panel (wired to Worker)
   // ------------------------------------------------------------
-  function init(){
-    // If button exists, wire it once to enter Works mode.
-    var btn = document.getElementById("pawMyStuffBtn");
-    if (!btn) return;
-
-    // Prevent double-run if init() is called more than once.
-    if (btn.getAttribute("data-paw-works") === "1") return;
-    btn.setAttribute("data-paw-works","1");
-
-    updateWorkPill();
-
-    btn.addEventListener("click", function(e){
-      try{ e.preventDefault(); }catch(_){}
-      enterWorksMode();
-    });
+  async function fetchBrand(){
+    if (!__apiEndpoint) return null;
+    var url = String(__apiEndpoint).replace(/\/+$/,"") + "/mystuff/brand";
+    var headers = { "Content-Type":"application/json" };
+    try{
+      var t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (t) headers["Authorization"] = "Bearer " + t;
+    }catch(_){}
+    var res = await fetch(url, { method:"GET", headers: headers });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok) throw new Error((data && (data.error || data.message)) || "Could not load My Brand");
+    return data;
   }
+
+  async function fetchBrandSummary(){
+    if (!__apiEndpoint) return "";
+    var url = String(__apiEndpoint).replace(/\/+$/,"") + "/mystuff/brand/summary";
+    var headers = { "Content-Type":"application/json" };
+    try{
+      var t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (t) headers["Authorization"] = "Bearer " + t;
+    }catch(_){}
+    var res = await fetch(url, { method:"GET", headers: headers });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok) return "";
+    return (data && typeof data.summary === "string") ? data.summary.trim() : "";
+  }
+
+  function brandDisplayName(brand){
+    var b = brand || {};
+    // Prefer display_name, fallback to "My Brand"
+    var dn = norm(b.display_name);
+    return dn ? "My Brand" : "My Brand";
+  }
+
+  async function refreshBrandPanel(){
+    if (!__brandPanel) return;
+
+    // Auth may not be ready on first paint; fail softly.
+    __brandPanel.innerHTML = '<div class="paw-drawer__loading">Loading your Brand<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></div>';
+
+    try{
+      __brandCache = await fetchBrand();
+    }catch(e){
+      // Likely auth not ready or endpoint error. Keep message non-technical.
+      __brandPanel.innerHTML = `
+        <div class="paw-drawer__emptytitle">My Brand isn’t available yet</div>
+        <div class="paw-drawer__emptycopy">If you haven’t created it, open Saved Works and create My Brand first.</div>
+        <div class="paw-drawer__panelactions">
+          <button class="btn primary" type="button" id="pawBrandGoCreate">Open Saved Works</button>
+        </div>
+      `;
+      var go = document.getElementById("pawBrandGoCreate");
+      if (go) go.onclick = function(){ try{ window.location.href = "./myworks.html?embed=1"; }catch(_){} };
+      return;
+    }
+
+    if (!__brandCache || !__brandCache.exists){
+      __brandPanel.innerHTML = `
+        <div class="paw-drawer__emptytitle">No My Brand yet</div>
+        <div class="paw-drawer__emptycopy">Create it once, then PAW can write like you when it adds value.</div>
+        <div class="paw-drawer__panelactions">
+          <button class="btn primary" type="button" id="pawBrandCreateBtn">Create My Brand</button>
+        </div>
+      `;
+      var c = document.getElementById("pawBrandCreateBtn");
+      if (c) c.onclick = function(){ try{ window.location.href = "./myworks.html?embed=1"; }catch(_){} };
+      return;
+    }
+
+    var updated = (__brandCache.meta && __brandCache.meta.updated_at) ? String(__brandCache.meta.updated_at) : "";
+    var updatedNice = "";
+    try{ if (updated) updatedNice = (new Date(updated)).toLocaleString(); }catch(_){}
+
+    // Render saved brand summary (derived)
+    var summary = "";
+    try { summary = await fetchBrandSummary(); } catch(_) {}
+    if (!summary) summary = "Saved — ready to use when it adds value.";
+
+    var attached = (__pawActiveWork && __pawActiveWork.bucket === "brand");
+
+    __brandPanel.innerHTML = `
+      <div class="paw-drawer__item">
+        <div class="paw-drawer__itemhead">
+          <div>
+            <div class="paw-drawer__itemtitle">My Brand</div>
+            <div class="paw-drawer__itemmeta">${updatedNice ? ("Last updated: " + escapeHtml(updatedNice)) : "Saved"}</div>
+          </div>
+          <div class="paw-drawer__itemactions">
+            <button class="btn ${attached ? "" : "primary"}" type="button" id="pawBrandAttachBtn">${attached ? "Attached" : "Attach"}</button>
+          </div>
+        </div>
+
+        <div class="paw-drawer__itemsnap">${escapeHtml(summary)}</div>
+      </div>
+    `;
+
+    var a = document.getElementById("pawBrandAttachBtn");
+    if (a){
+      a.onclick = function(){
+        if (__pawActiveWork && __pawActiveWork.bucket === "brand") {
+          // clicking "Attached" does nothing; user can detach from footer
+          return;
+        }
+        attachWork({ bucket:"brand", id:"brand", label:"My Brand" });
+        try{
+          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Attached: My Brand");
+        }catch(_){}
+        // Re-render to flip button state
+        refreshBrandPanel();
+      };
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Public init (called from tool-shell init)
+  // ------------------------------------------------------------
+  // ------------------------------------------------------------
+// Public init (called from PAWToolShell.init)
+// ------------------------------------------------------------
+function init(apiEndpoint){
+  __apiEndpoint = String(apiEndpoint || "");
+
+  updateWorkPill();
+
+  // Wire the Work button as a single toggle in every tool.
+  var btn = document.getElementById("pawMyStuffBtn");
+  if (!btn) return;
+
+  // Prevent double-run if init() is called more than once.
+  if (btn.getAttribute("data-paw-works") === "1") return;
+  btn.setAttribute("data-paw-works","1");
+
+  btn.addEventListener("click", function(e){
+    try{ e.preventDefault(); }catch(_){}
+    if (__worksModeOn) exitWorksMode();
+    else enterWorksMode();
+  });
+}
+
 
   // Expose minimal API (no persistence, session-only)
   window.__PAWWorks = {
@@ -1876,8 +2193,8 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     getActiveWork: getActiveWork,
     attachWork: attachWork,
     detachWork: detachWork,
-    _open: enterWorksMode,
-    _close: exitWorksMode
+    _open: function(){ enterWorksMode(); },
+    _close: function(){ exitWorksMode(); }
   };
 
 })();
