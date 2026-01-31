@@ -323,12 +323,19 @@
       border: 1px solid rgba(15,23,42,.10);
       border-radius: 16px;
       background: #fff;
-      overflow: auto;
-      max-height: 520px; /* compact default */
-      transition: max-height .18s ease;
+
+      /* IMPORTANT (2026-01):
+         This editor must NOT create an inner scroll container.
+         My Works is designed to auto-expand in Circle.
+         Therefore: do not set max-height + overflow:auto here.
+         Let the document grow; the iframe height reporter will follow. */
+      overflow: visible;
+      max-height: none;
     }
     body.paw-mystuff .mw-editor-wrap.mw-grown{
-      max-height: 760px; /* expands after interaction */
+      /* Retained for backward compatibility with earlier JS that toggles mw-grown.
+         No-op by design: keep auto height + no inner scroll. */
+      max-height: none;
     }
     body.paw-mystuff .mw-editor-top{
       padding: 14px 16px 10px;
@@ -1661,7 +1668,7 @@ document.addEventListener('click', (e) => {
         if (!el.matches('[data-action]')) return;
 
         const a = el.getAttribute('data-action') || '';
-        if (a === 'create-brand-settings') { openBrandDrawer(el); return; }
+        if (a === 'create-brand-settings') { try{ activateTab('tab-settings'); renderBrandEmpty(); }catch(_){} return; }
         if (a === 'create-brand-asset') { pawNavigate('PRESENCE'); return; }
         if (a === 'learn-brand') showComing('Next: examples + a guided setup that makes it easy to capture your voice and bio details.');
         if (a === 'create-listing') { pawNavigate('LISTINGS'); return; }
@@ -1672,7 +1679,7 @@ document.addEventListener('click', (e) => {
       document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         [$tips,$coming,$brandDeleteModal,$notice].forEach(m => closeModal(m));
-        closeBrandDrawer();
+        /* no drawer in My Works (inline editor) */
       });
 
     
