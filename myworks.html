@@ -705,9 +705,9 @@
 <div class="tabs-row">
                           <div class="tabs paw-seg" role="tablist" aria-label="My Works tabs">
                             <button class="tab-btn" id="tab-assets" role="tab" aria-selected="true" aria-controls="panel-assets" type="button">Brand Assets</button>
-                            <button class="tab-btn" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button">Brand Settings</button>
                             <button class="tab-btn" id="tab-listings" role="tab" aria-selected="false" aria-controls="panel-listings" type="button">Listings</button>
                             <button class="tab-btn" id="tab-transactions" role="tab" aria-selected="false" aria-controls="panel-transactions" type="button">Transactions</button>
+                            <button class="tab-btn" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button">Brand Settings</button>
                           </div>
 
                           <!-- Phase 1: placeholder usage meter (non-technical, mocked) -->
@@ -1011,9 +1011,9 @@
       // ------------------------------------------------------------
       const tabs = [
         { btn: document.getElementById('tab-assets'), panel: document.getElementById('panel-assets') },
-        { btn: document.getElementById('tab-settings'), panel: document.getElementById('panel-settings') },
         { btn: document.getElementById('tab-listings'), panel: document.getElementById('panel-listings') },
         { btn: document.getElementById('tab-transactions'), panel: document.getElementById('panel-transactions') },
+        { btn: document.getElementById('tab-settings'), panel: document.getElementById('panel-settings') },
       ];
 
       function activateTab(btnId){
@@ -1377,12 +1377,19 @@
       async function refreshBrandUI(){
         try{
           const data = await apiGetBrand();
+
+          // Landing behavior (approved):
+          // - If Brand Settings do NOT exist yet, land the user on Brand Settings
+          //   so they see the setup prompt immediately.
+          // - If Brand Settings exist, land on Brand Assets (saved-content first).
           if (data && data.exists) {
             renderBrandSaved(data.brand || {}, data.meta || {});
             setLimitsText(1);
+            activateTab('tab-assets');
           } else {
             renderBrandEmpty();
             setLimitsText(0);
+            activateTab('tab-settings');
           }
         }catch(_){
           // If auth isn't ready yet, keep the existing UI.
