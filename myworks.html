@@ -1196,6 +1196,10 @@
                 const brand = readBrandForm();
                 await apiSaveBrand(brand);
                 await refreshBrandUI();
+                // After an explicit save, keep the user in Brand Settings so they
+                // immediately see the saved-state snapshot (prevents confusion
+                // that it "didn't save" when we auto-land on Brand Assets).
+                try{ activateTab('tab-settings'); }catch(_){}
                 toast('Brand Settings saved.');
               }catch(e){
                 toast('Couldn’t save Brand Settings. Please try again.');
