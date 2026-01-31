@@ -1647,7 +1647,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   // Scroll position preservation for My Works mode swap.
   // Product intent: entering My Works should feel like a focused "mode", not a page that drifts.
   var __worksPrevScrollY = 0;
-  var __worksPrevScrollRestoration = \"\";
+  var __worksPrevScrollRestoration = "";
   var __worksIsRestoringScroll = false;
 
   // Previously focused element before entering Works mode (for accessibility/focus restore).
