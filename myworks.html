@@ -1160,6 +1160,14 @@
                 // Grow the editor area once the user engages with sections
                 const wrap = panel.querySelector('#brandEditorWrap');
                 if (wrap) wrap.classList.add('mw-grown');
+
+                // Ask the parent iframe to re-measure after the accordion animation/layout settles
+                try{
+                  if (window.__PAW_REQUEST_HEIGHT__) {
+                    window.__PAW_REQUEST_HEIGHT__(true);
+                    setTimeout(function(){ window.__PAW_REQUEST_HEIGHT__(true); }, 180);
+                  }
+                }catch(_){ }
               }catch(e){}
             });
           });
@@ -1776,6 +1784,10 @@ document.addEventListener('click', (e) => {
     });
   }
 
+  // Expose a safe, idempotent height refresh hook for in-page UI toggles
+  // (e.g., accordion sections expanding/collapsing) so the parent iframe can resize.
+  window.__PAW_REQUEST_HEIGHT__ = schedule;
+
   // Initial + settle passes
   schedule(true);
   setTimeout(function(){ schedule(true); }, 120);
@@ -1784,7 +1796,7 @@ document.addEventListener('click', (e) => {
   // DOM changes (tabs, modals, drawer open/close, async content)
   try {
     var mo = new MutationObserver(function(){ schedule(false); });
-    mo.observe(document.body, { childList:true, subtree:true, characterData:true });
+    mo.observe(document.body, { childList:true, subtree:true, characterData:true, attributes:true });
   } catch (_) {}
 
   // Images loading after insertion
