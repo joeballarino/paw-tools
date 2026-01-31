@@ -1036,7 +1036,9 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   opacity: 1;
   transition:none;
   border-radius: 16px;
-}
+  /* Inline My Works should feel like a page section, not a floating modal. */
+  box-shadow: var(--shadow-soft);
+\}
 
 /* Let the page grow (no internal scrolling container) */
 .paw-workexpander .paw-drawer__body{

@@ -1626,13 +1626,27 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   // Session-only context (in-memory, resets on reload).
   var __pawActiveWork = null; // { bucket:"brand"|"listings"|"deals", id:string, label:string }
 
-  // Drawer DOM refs
+  // My Works UI refs (shared across all tools)
+  // ----------------------------------------------------------
+  // IMPORTANT PRODUCT INTENT:
+  // - "Work: Ready" is a MODE switch, not a small drawer.
+  // - When open, My Works replaces the tool working surface so the
+  //   user focuses on selecting/attaching work.
+  // - When closed, the tool returns exactly as it was.
+  //
+  // Engineering notes:
+  // - We keep the existing classnames (.paw-drawer__*) for reuse,
+  //   but behavior is inline + page-state swap (not modal).
+  // ----------------------------------------------------------
   var __drawer = null;
   var __drawerPanel = null;
-  var __drawerBackdrop = null;
 
-  var __tabBtns = null; // NodeList
-  var __panels = null;  // {brand, listings, deals}
+  // Elements we temporarily hide while My Works is open (tool mode swap).
+  var __worksHiddenEls = [];
+  var __worksModeOn = false;
+
+  var __tabBtns = null; // reserved for Bite 3+
+  var __panels = null;  // reserved for Bite 3+
   var __brandPanel = null;
 
   var __apiEndpoint = "";
@@ -1740,13 +1754,70 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     wireDrawerEvents();
   }
 
-  function setDrawerOpen(on){
+  
+  // ------------------------------------------------------------
+  // Page-state swap: My Works mode replaces the tool working surface
+  // ------------------------------------------------------------
+  function setWorksMode(on){
+    var want = !!on;
+    if (__worksModeOn === want) return;
+
+    __worksModeOn = want;
+
+    // Find the shared panel container (all tools use .panel).
+    var panel = document.querySelector(".panel");
+    if (!panel) panel = document.body;
+
+    if (want){
+      // Capture + hide everything in the panel EXCEPT:
+      // - the topbar (where the Works button lives)
+      // - the My Works expander region itself
+      __worksHiddenEls = [];
+      try{
+        var kids = Array.prototype.slice.call(panel.children || []);
+        var topbar = document.querySelector(".panel-topbar");
+        kids.forEach(function(el){
+          if (!el || el === __drawer || el === topbar) return;
+          // Avoid double-hiding or touching unrelated injected nodes (e.g., modals/toasts)
+          // We only hide direct siblings in the main panel flow.
+          var prev = (el.style && typeof el.style.display === "string") ? el.style.display : "";
+          el.setAttribute("data-paw-works-hide","1");
+          el.setAttribute("data-paw-prev-display", prev);
+          el.style.display = "none";
+          __worksHiddenEls.push(el);
+        });
+      }catch(_){}
+      try{ document.body.classList.add("paw-works-mode"); }catch(_){}
+    } else {
+      // Restore what we hid, exactly as it was.
+      try{
+        (__worksHiddenEls || []).forEach(function(el){
+          if (!el) return;
+          var prev = el.getAttribute("data-paw-prev-display");
+          el.style.display = prev || "";
+          el.removeAttribute("data-paw-works-hide");
+          el.removeAttribute("data-paw-prev-display");
+        });
+      }catch(_){}
+      __worksHiddenEls = [];
+      try{ document.body.classList.remove("paw-works-mode"); }catch(_){}
+    }
+
+    // Ensure the embed reporter sees the layout change (Circle iframe height).
+    try{ pawScheduleLayoutPing(); }catch(_){}
+    try{ setTimeout(function(){ pawScheduleLayoutPing(); }, 60); }catch(_){}
+  }
+
+function setDrawerOpen(on){
     if (!__drawer) return;
     var open = !!on;
 
     // Inline expander state (no modal backdrop, no body scroll lock)
     __drawer.classList.toggle("is-open", open);
     __drawer.setAttribute("aria-hidden", open ? "false" : "true");
+
+    // Page-state swap: My Works replaces the tool surface while open.
+    try{ setWorksMode(open); }catch(_){}
 
     // Sync the Work button chevron + accessibility state
     try{
@@ -1758,19 +1829,18 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     }catch(_){}
 
     if (open) {
-      // Refresh context + brand data each open (cheap, keeps UI honest).
+      // Refresh context each open (keeps UI honest).
       try { renderContextRow(); } catch(_){}
 
-      // Gentle scroll assist: if the expander opens below a sticky header,
-      // nudge it into view without yanking the user away.
-      try{
-        var r = __drawer.getBoundingClientRect();
-        if (r && r.top < 40) __drawer.scrollIntoView({ block: "start", behavior: "smooth" });
-      }catch(_){}
+      // Bring My Works into view (now that the tool surface is hidden, this is gentle).
+      try{ __drawer.scrollIntoView({ block: "start", behavior: "smooth" }); }catch(_){}
     }
-  }
 
-  function wireDrawerEvents(){
+    // Ensure embed height stays correct after transitions/layout settle.
+    try{ pawScheduleLayoutPing(); }catch(_){}
+    try{ setTimeout(function(){ pawScheduleLayoutPing(); }, 120); }catch(_){}
+  }
+function wireDrawerEvents(){
     if (!__drawer) return;
 
     // Close on backdrop/close button clicks
