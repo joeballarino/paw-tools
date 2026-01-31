@@ -19,6 +19,25 @@
       }
     })();
   </script>
+  <script>
+    // PAW Embed Mode Guard
+    // -------------------
+    // Circle provides the outer card. The embedded tool must render "flat".
+    // We rely on paw-ui.css rules that activate when html[data-embed="1"] is present.
+    // tool-shell.js will set this when initialized, but this UI scaffold does not
+    // depend on shell init yet, so we set it here as well.
+    (function(){
+      try{
+        var params = new URLSearchParams(window.location.search);
+        var isEmbedParam = params.get('embed') === '1';
+        var isInIframe = (function(){ try{ return window.self !== window.top; } catch(e){ return true; } })();
+        if(isEmbedParam || isInIframe){
+          document.documentElement.setAttribute('data-embed','1');
+        }
+      }catch(e){}
+    })();
+  </script>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Listing Description Writer</title>
@@ -1023,12 +1042,12 @@ const shell = window.PAWToolShell.init({
 </script>
 
   <!-- ==========================================================
-       PAW Iframe Height Reporter (v1.1 - loop-safe)
+       PAW Iframe Height Reporter (v1.1 - loop-safe, STANDARD)
        ----------------------------------------------------------
        PURPOSE:
-       - Reports the tool's *content* height to the Circle parent page.
+       - Reports the tool's visible panel height to the Circle parent page.
        - Enables "grow-to-fit" embeds with no internal scrollbars.
-       - Avoids runaway resize loops caused by viewport-based CSS (e.g., 100vh).
+       - STANDARDIZED across all tools so Work: Ready behaves identically everywhere.
        CONTRACT:
        - Sends: { type: "paw_iframe_height_request_v1", height: <number> }
        ========================================================== -->
@@ -1092,7 +1111,7 @@ const shell = window.PAWToolShell.init({
         rafPending = true;
         requestAnimationFrame(function () {
           rafPending = false;
-          postHeight(force);
+          postHeight(!!force);
         });
       }
 
@@ -1101,7 +1120,7 @@ const shell = window.PAWToolShell.init({
       setTimeout(function(){ schedule(true); }, 120);
       setTimeout(function(){ schedule(true); }, 400);
 
-      // DOM changes (chat streaming, drawer/modal open/close, etc.)
+      // DOM changes (chat streaming, Work mode swap, modal open/close, etc.)
       try {
         var mo = new MutationObserver(function(){ schedule(false); });
         mo.observe(document.body, { childList:true, subtree:true, characterData:true });

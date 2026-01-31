@@ -241,155 +241,14 @@
   </div>
 
   <script src="https://paw-tools.pages.dev/tool-shell.js"></script>
-  
-  
-  <script>
-    /**
-     * PAW Connect (Circle-embedded tool page)
-     * ------------------------------------------------------------
-     * Frontend stays intentionally thin:
-     *  - collects UI preferences (first_contact/continue, email/text, once/template)
-     *  - sends user input to the Cloudflare Worker via tool-shell.js
-     *  - shows the result in the standard PAW deliverable modal (Copy / Revise)
-     *
-     * IMPORTANT:
-     * - All "secret sauce" prompting lives in the Worker.
-     * - Keep IDs consistent with tool-shell.js expectations: #messages, #prompt, #send, #reset, #tips
-     */
-    (function () {
-      // Keep API endpoint consistent across tools (same as ask/listing).
-      // If you ever change Worker URL, update it everywhere in your tool pages.
-      const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
-
-      // Toggle defaults (matches prior Connect behavior):
-      // Continue + Email + Send once
-      const state = {
-        type: "continue", // first_contact | continue
-        channel: "email", // email | text
-        use: "once",      // once | template
-      };
-
-      const $ = (sel) => document.querySelector(sel);
-      const pills = Array.from(document.querySelectorAll(".connect-seg-btn"));
-
-      // Visual selection: this UI previously used the "primary" class (not "is-active").
-      // We keep that convention so the selected pill is obvious.
-      function setActive(group, value) {
-        pills.forEach((btn) => {
-          if (btn.dataset.group !== group) return;
-          const isOn = btn.dataset.value === value;
-          btn.classList.toggle("primary", isOn);
-          btn.setAttribute("aria-pressed", isOn ? "true" : "false");
-        });
-      }
-
-      function syncUIFromState() {
-        setActive("type", state.type);
-        setActive("channel", state.channel);
-        setActive("use", state.use);
-      }
-
-      pills.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const group = btn.dataset.group;
-          const value = btn.dataset.value;
-          if (!group || !value) return;
-
-          if (group === "type") state.type = value;
-          if (group === "channel") state.channel = value;
-          if (group === "use") state.use = value;
-
-          syncUIFromState();
-        });
-      });
-
-      // Reset should restore the toggle defaults AND let tool-shell clear thread/input.
-      const resetBtn = $("#reset");
-      if (resetBtn) {
-        resetBtn.addEventListener(
-          "click",
-          () => {
-            state.type = "continue";
-            state.channel = "email";
-            state.use = "once";
-            syncUIFromState();
-          },
-          true // capture: run before tool-shell reset, but do NOT prevent it
-        );
-      }
-
-      // Dynamic deliverable title (Suggestion #1)
-      function getDeliverableTitle() {
-        const isTemplate = state.use === "template";
-        const isText = state.channel === "text";
-        const isFirst = state.type === "first_contact";
-
-        if (isTemplate && isText) return "Reusable Text Template";
-        if (isTemplate && !isText) return "Reusable Email Template";
-
-        if (!isTemplate && isText && isFirst) return "Your First Text Message";
-        if (!isTemplate && isText && !isFirst) return "Your Follow-Up Text";
-        if (!isTemplate && !isText && isFirst) return "Your Intro Email";
-        return "Your Reply Email";
-      }
-
-      // Tips modal content (light, action-oriented)
-      const tipsText =
-`What to paste here
-• The last message they sent (if you’re replying)
-• A quick note on who they are + what you want
-• Any relevant detail (address, timeline, question)
-
-Best results when you include
-• The relationship (lead, past client, friend, vendor)
-• The goal (book a showing, set a call, re-engage, confirm next step)
-• Any tone preference (shorter, warmer, more direct)
-
-Examples
-• “Reply to this text and propose two showing times: …”
-• “Write a short follow-up email that feels calm, not salesy: …”`;
-
-      if (!window.PAWToolShell || typeof window.PAWToolShell.init !== "function") {
-        console.error("PAWToolShell not found. Ensure tool-shell.js is loaded.");
-        return;
-      }
-
-      window.PAWToolShell.init({
-        apiEndpoint: API_ENDPOINT,
-        toolId: "connect",
-
-        // Listing-style modal deliverable (Copy / Revise)
-        deliverableMode: true,
-
-        // tool-shell supports a function here (requires tool-shell.updated.js)
-        deliverableTitle: getDeliverableTitle,
-
-        tipsText,
-
-        // Prefs are sent to the Worker and drive the Connect “secret sauce”.
-        getPrefs: function () {
-          return {
-            connect_type: state.type,
-            connect_channel: state.channel,
-            connect_use: state.use,
-          };
-        },
-      });
-
-      // Set initial UI selection
-      syncUIFromState();
-    })();
-  </script>
-
-
 
   <!-- ==========================================================
-       PAW Iframe Height Reporter (v1.1 - loop-safe)
+       PAW Iframe Height Reporter (v1.1 - loop-safe, STANDARD)
        ----------------------------------------------------------
        PURPOSE:
-       - Reports the tool's *content* height to the Circle parent page.
+       - Reports the tool's visible panel height to the Circle parent page.
        - Enables "grow-to-fit" embeds with no internal scrollbars.
-       - Avoids runaway resize loops caused by viewport-based CSS (e.g., 100vh).
+       - STANDARDIZED across all tools so Work: Ready behaves identically everywhere.
        CONTRACT:
        - Sends: { type: "paw_iframe_height_request_v1", height: <number> }
        ========================================================== -->
@@ -453,7 +312,7 @@ Examples
         rafPending = true;
         requestAnimationFrame(function () {
           rafPending = false;
-          postHeight(force);
+          postHeight(!!force);
         });
       }
 
@@ -462,7 +321,7 @@ Examples
       setTimeout(function(){ schedule(true); }, 120);
       setTimeout(function(){ schedule(true); }, 400);
 
-      // DOM changes (chat streaming, drawer/modal open/close, etc.)
+      // DOM changes (chat streaming, Work mode swap, modal open/close, etc.)
       try {
         var mo = new MutationObserver(function(){ schedule(false); });
         mo.observe(document.body, { childList:true, subtree:true, characterData:true });

@@ -704,32 +704,13 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
    PAW — My Works mode (page-state swap)
    ----------------------------------------------------------
    Purpose:
-   - When My Works is open, the tool surface is hidden.
-   - Prevent scroll "runaway" inside Circle iframes by:
-       1) disabling scroll anchoring, and
-       2) locking outer document scrolling while the mode is active.
-   - Any needed scrolling should happen inside the My Works surface.
+   - Works is a temporary "mode" that replaces the tool surface.
+   - IMPORTANT: Avoid viewport-based constraints (100vh) and outer scroll locks
+     in Circle iframes to prevent resize/scroll feedback loops.
    ========================================================== */
 html.paw-works-mode,
 body.paw-works-mode{
   overflow-anchor: none;
-  /* Lock outer scroll so the iframe resizer cannot "fight" the browser scroll position. */
-  overflow: hidden;
-}
-
-/* When in Works mode, allow the My Works body area to scroll if content grows. */
-body.paw-works-mode .paw-workexpander{
-  /* Fill the available viewport height under the topbar area. */
-  max-height: calc(100vh - 90px);
-}
-body.paw-works-mode .paw-workexpander .paw-drawer__panel{
-  /* Ensure the panel participates in the max-height constraint */
-  max-height: calc(100vh - 90px);
-}
-body.paw-works-mode .paw-workexpander .paw-drawer__body{
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  max-height: calc(100vh - 190px);
 }
 
 

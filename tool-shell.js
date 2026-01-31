@@ -1778,7 +1778,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     // - In Circle iframes, repeated height/scroll adjustments can cause a
     //   runaway scroll feel. We stabilize by:
     //     1) snapping to a known scroll position once,
-    //     2) locking outer page scroll while the mode is active, and
+    //     2) avoiding viewport-based CSS that can cause iframe resize loops, and
     //     3) restoring the user's previous scroll position on exit.
     if (want){
       // Preserve the user's position so we can return them when Works closes.
