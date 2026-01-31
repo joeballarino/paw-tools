@@ -1644,6 +1644,10 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   // Elements we temporarily hide while My Works is open (tool mode swap).
   var __worksHiddenEls = [];
   var __worksModeOn = false;
+  // Scroll position preservation for My Works mode swap.
+  // Product intent: entering My Works should feel like a focused "mode", not a page that drifts.
+  var __worksPrevScrollY = 0;
+  var __worksIsRestoringScroll = false;
 
   var __tabBtns = null; // reserved for Bite 3+
   var __panels = null;  // reserved for Bite 3+
@@ -1769,6 +1773,17 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     if (!panel) panel = document.body;
 
     if (want){
+      // Preserve where the user was in the tool, then move to a stable top position.
+      // This prevents "runaway scroll" when the tool surface is hidden and the iframe height changes.
+      try{
+        __worksPrevScrollY = (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0);
+      }catch(_){ __worksPrevScrollY = 0; }
+      try{
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      }catch(_){
+        try{ window.scrollTo(0,0); }catch(__){}
+      }
+
       // Capture + hide everything in the panel EXCEPT:
       // - the topbar (where the Works button lives)
       // - the My Works expander region itself
@@ -1778,6 +1793,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
         var topbar = document.querySelector(".panel-topbar");
         kids.forEach(function(el){
           if (!el || el === __drawer || el === topbar) return;
+
           // Avoid double-hiding or touching unrelated injected nodes (e.g., modals/toasts)
           // We only hide direct siblings in the main panel flow.
           var prev = (el.style && typeof el.style.display === "string") ? el.style.display : "";
@@ -1801,12 +1817,30 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
       }catch(_){}
       __worksHiddenEls = [];
       try{ document.body.classList.remove("paw-works-mode"); }catch(_){}
+
+      // Return the user to where they were before opening My Works.
+      // We do this AFTER the DOM is restored so the browser has the correct scroll range.
+      try{
+        if (!__worksIsRestoringScroll){
+          __worksIsRestoringScroll = true;
+          setTimeout(function(){
+            try{
+              window.scrollTo({ top: __worksPrevScrollY || 0, left: 0, behavior: "auto" });
+            }catch(_){
+              try{ window.scrollTo(0, __worksPrevScrollY || 0); }catch(__){}
+            }
+            __worksIsRestoringScroll = false;
+          }, 0);
+        }
+      }catch(_){ __worksIsRestoringScroll = false; }
     }
 
     // Ensure the embed reporter sees the layout change (Circle iframe height).
-    try{ pawScheduleLayoutPing(); }catch(_){}
-    try{ setTimeout(function(){ pawScheduleLayoutPing(); }, 60); }catch(_){}
+    // NOTE: We intentionally avoid repeated/continuous pings here; a couple is enough.
+    try{ pawScheduleLayoutPing(); }catch(_ ){}
+    try{ setTimeout(function(){ pawScheduleLayoutPing(); }, 160); }catch(_ ){}
   }
+
 
 function setDrawerOpen(on){
     if (!__drawer) return;
@@ -1832,13 +1866,13 @@ function setDrawerOpen(on){
       // Refresh context each open (keeps UI honest).
       try { renderContextRow(); } catch(_){}
 
-      // Bring My Works into view (now that the tool surface is hidden, this is gentle).
-      try{ __drawer.scrollIntoView({ block: "start", behavior: "smooth" }); }catch(_){}
+      // My Works is the only visible surface in this mode.
+      // We already snap to a stable scroll position in setWorksMode(true).
     }
 
     // Ensure embed height stays correct after transitions/layout settle.
-    try{ pawScheduleLayoutPing(); }catch(_){}
-    try{ setTimeout(function(){ pawScheduleLayoutPing(); }, 120); }catch(_){}
+    try{ pawScheduleLayoutPing(); }catch(_ ){}
+    try{ setTimeout(function(){ pawScheduleLayoutPing(); }, 160); }catch(_ ){}
   }
 function wireDrawerEvents(){
     if (!__drawer) return;

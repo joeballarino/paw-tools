@@ -699,6 +699,18 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   transition: opacity .18s ease;
 }
 
+
+/* ==========================================================
+   PAW — My Works mode (page-state swap)
+   ----------------------------------------------------------
+   Purpose:
+   - When My Works is open, the tool surface is hidden.
+   - Disable scroll anchoring to prevent "runaway" scroll/jitter while the iframe resizes.
+   ========================================================== */
+body.paw-works-mode{
+  overflow-anchor: none;
+}
+
 /* ===== Tips modal ===== */
 .modal{
   position:fixed;
