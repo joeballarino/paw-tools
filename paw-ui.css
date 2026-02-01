@@ -196,7 +196,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .ctl{
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:10px; /* more separation between Work and status */
 }
 .ctl label{
   font-size:12px;
@@ -994,52 +994,38 @@ body.paw-works-mode{
 
 
 /* ==========================================================
-   Works mode — Mobile header stacking (LOCKED)
+   Mobile contract — Work status stacks below Work (LOCKED)
    ----------------------------------------------------------
-   Goal:
-   - Prevent overlap between Work button, Works status, and disabled utilities.
-   - Mobile contract in Works mode (<=560px):
-       Row 1: Work button (full width)
-       Row 2: Works status (full width, left aligned, truncates safely)
-       Row 3: Disabled utilities (full width)
-   Scoped strictly to Works mode to avoid affecting normal tool headers.
+   WHY:
+   - On mobile, Work status must NEVER share the same row as the Work button.
+   - This keeps structure identical across states:
+       Not clicked:  [Work] then (Ready)
+       Works mode:   [Work] then (Select a work / Work name)
+   - Future-proof for long saved-work names.
+   SCOPE:
+   - Normal tool header only (.tool-head). Works mode has its own rules above.
    ========================================================== */
 @media (max-width: 560px){
-  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__top{
+  /* Work cluster becomes a vertical stack */
+  .tool-head{
+    width:100%;
+    display:flex;
     flex-direction:column;
     align-items:stretch;
     justify-content:flex-start;
-    gap:10px;
+    gap:8px; /* (Rec #1) more breathing room between Work and status */
   }
 
-  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__top-left{
-    flex-direction:column;
-    align-items:stretch;
-    gap:8px;
-    width:100%;
-    min-width:0;
-  }
-
-  /* Work button is already full-width on mobile via .paw-works-btn rules. */
-
-  body.paw-works-mode #pawWorksModeRoot .paw-work-status{
+  /* Status becomes a caption line */
+  .tool-head .paw-work-status{
     margin-left:0;
-    padding-left:2px; /* optical alignment with button label */
+    padding-left:2px;       /* optical alignment with button label */
+    font-size:13px;
+    letter-spacing:.15px;   /* (Rec #2) slightly more caption-like */
+    opacity:.56;            /* (Rec #2) softer than desktop */
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
-  }
-
-  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__top-right{
-    width:100%;
-    justify-content:stretch;
-  }
-  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities{
-    width:100%;
-  }
-  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities .paw-seg,
-  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities .topbar-right.paw-seg{
-    width:100%;
   }
 }
 
@@ -1176,4 +1162,8 @@ body.paw-works-mode{
   opacity:.55;
   pointer-events:none; /* blocks hover + clicks */
   filter:saturate(.6);
+}
+
+@media (max-width: 560px){
+  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities{ opacity:.45; }
 }
