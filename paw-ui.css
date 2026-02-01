@@ -805,7 +805,7 @@ body.paw-works-mode{
 .paw-thinking .paw-dots{
   display:inline-flex;
   gap:4px;
-  margin-left:6px;
+  margin-left:8px;
   vertical-align:middle;
 }
 .paw-thinking .paw-dot{
@@ -961,8 +961,9 @@ body.paw-works-mode{
 
 .paw-works-btn .works-chevron{
   flex:0 0 auto;
-  margin-left:6px;          /* Slightly more breathing room so the icon reads as a control */
-  font-size:16px;           /* Stronger affordance (matches “Work” cap-height optically) */
+  margin-left:8px;          /* Slightly more breathing room so the icon reads as a control */
+  font-size:16px;
+  font-weight:900;           /* Stronger affordance (matches “Work” cap-height optically) */
   line-height:1;            /* Keeps the glyph vertically centered */
   opacity:1;                /* Do not treat this as decorative; it’s the main indicator */
   display:inline-flex;
@@ -971,6 +972,7 @@ body.paw-works-mode{
   transform: translateY(-0.5px); /* Optical centering */
   transform-origin: 50% 50%;
   transition: transform 160ms ease;
+  will-change: transform;
 }
 
 /* Rotate chevron when Work is open (aria-expanded is toggled by tool-shell.js) */
