@@ -1676,11 +1676,22 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   // Work pill label update (DO NOT overwrite markup)
   // ------------------------------------------------------------
   function workLabelText(){
+    // ==========================================================
+    // PAW Work pill: status text (v1)
+    // ----------------------------------------------------------
+    // PURPOSE:
+    // - The Work button should remain a pure ACTION control:
+    //     [icon] Work [chevron]
+    // - Any state/status (e.g., Ready, current listing/brand label)
+    //   should be rendered NEXT TO the button, not inside it.
+    //
+    // This prevents "Work: Ready" from looking like a single button label,
+    // keeps the UI cleaner, and avoids layout shifts on small screens.
+    // ==========================================================
     if (__pawActiveWork && __pawActiveWork.label){
-      // Brand language: "Work: My Brand" / "Work: 123 Oak St"
-      return "Current: " + String(__pawActiveWork.label);
+      return String(__pawActiveWork.label);
     }
-    return "Work: Ready";
+    return "Ready";
   }
 
   function updateWorkPill(){
@@ -1691,22 +1702,51 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     var labelEl = btn.querySelector(".works-label");
     var chevEl  = btn.querySelector(".works-chevron");
 
+    // Ensure an adjacent (non-clickable) status element exists.
+    // This keeps status like "Ready" OUT of the button text.
+    var head = btn.parentElement; // .tool-head
+    var statusEl = head ? head.querySelector(".paw-work-status") : null;
+    if (!statusEl && head){
+      statusEl = document.createElement("span");
+      statusEl.className = "paw-work-status";
+      statusEl.setAttribute("aria-live","polite");
+      head.appendChild(statusEl);
+    }
+
+    // Scoped CSS (injected once). We do this here to avoid touching paw-ui.css.
+    if (!document.getElementById("pawWorkStatusStyle")){
+      var st = document.createElement("style");
+      st.id = "pawWorkStatusStyle";
+      st.textContent =
+        ".tool-head{ display:flex; align-items:center; gap:10px; }\n" +
+        ".paw-work-status{ display:inline-flex; align-items:center; font-weight:800; font-size:13px; " +
+        "color:rgba(15,23,42,.68); white-space:nowrap; }\n" +
+        "html[data-embed='1'] .paw-work-status{ color:rgba(15,23,42,.62); }";
+      (document.head || document.documentElement).appendChild(st);
+    }
+
     if (__worksModeOn){
+      // Drawer open: button becomes a "Back" action. Hide status to reduce noise.
       if (labelEl) labelEl.textContent = "Back to Tool";
       if (chevEl)  chevEl.textContent = "▴";
+      if (statusEl) statusEl.style.display = "none";
       btn.setAttribute("aria-expanded","true");
       btn.setAttribute("aria-label","Back to tool");
     } else {
-      if (labelEl) labelEl.textContent = workLabelText();
+      // Drawer closed: button stays as "Work" (action), status sits next to it.
+      if (labelEl) labelEl.textContent = "Work";
       if (chevEl)  chevEl.textContent = "▾";
+      if (statusEl){
+        statusEl.style.display = "inline-flex";
+        statusEl.textContent = workLabelText();
+      }
       btn.setAttribute("aria-expanded","false");
-      btn.setAttribute("aria-label", __pawActiveWork ? ("Work context: " + workLabelText()) : "Work context");
+      btn.setAttribute("aria-label", "Work context: " + workLabelText());
     }
 
     btn.classList.toggle("is-active", !!__pawActiveWork);
   }catch(_){}
 }
-
 
   // ------------------------------------------------------------
   // Drawer injection (shared across all tools)
