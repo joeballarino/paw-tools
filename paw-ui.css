@@ -962,8 +962,9 @@ body.paw-works-mode{
 .paw-works-btn .works-chevron{
   flex:0 0 auto;
   margin-left:4px;
-  font-size:12px;
-  opacity:.90;
+  font-size:14px; /* Increased to visually match the cap-height of “Work” */
+  line-height:1;  /* Keeps chevron optically centered */
+  opacity:.95;    /* Stronger affordance */
 }
 
 /* One-time intro animation (subtle, unmissable) */
