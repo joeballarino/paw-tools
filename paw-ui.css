@@ -1167,3 +1167,44 @@ body.paw-works-mode{
 @media (max-width: 560px){
   body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities{ opacity:.45; }
 }
+
+/* Mobile fix: Works-mode header must wrap like the normal header
+   -------------------------------------------------------------
+   Problem observed:
+   - On narrow screens, the "Work" open/clicked state lives inside the Works-mode header
+     (.paw-works-mode__top) which previously stayed as a single horizontal flex row.
+   - That caused the Work control + status + utilities (Reset / Tips) to overlap.
+   Goal:
+   - Match the *non-clicked* mobile wrapping behavior: Work button full width, status below,
+     utilities stack cleanly without overlap.
+   Scope:
+   - Strictly limited to Works mode via #pawWorksModeRoot so other tools/layouts are unaffected.
+*/
+@media (max-width: 560px){
+  #pawWorksModeRoot .paw-works-mode__top{
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:8px;
+  }
+
+  #pawWorksModeRoot .paw-works-mode__top-left{
+    width:100%;
+    flex-wrap:wrap;
+  }
+
+  #pawWorksModeRoot .paw-work-status{
+    margin-left:0;
+    padding-left:2px; /* optical alignment with button label */
+    white-space:normal; /* allow the label/caption to wrap instead of colliding */
+  }
+
+  #pawWorksModeRoot .paw-works-mode__top-right{
+    width:100%;
+    justify-content:flex-start;
+  }
+
+  #pawWorksModeRoot .paw-works-mode__utilities{
+    width:100%;
+  }
+}
