@@ -1726,12 +1726,12 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     }
 
     if (__worksModeOn){
-      // Drawer open: keep the button label stable ("Work"). Hide status to reduce noise.
-      if (labelEl) labelEl.textContent = "Work";
-      if (chevEl)  chevEl.textContent = "▴";
+      // Drawer open: button becomes a "Back" action. Hide status to reduce noise.
+      if (labelEl) labelEl.textContent = "Back to Tool";
+      if (chevEl)  chevEl.textContent = "▾"; // Chevron rotation handled by CSS via aria-expanded
       if (statusEl) statusEl.style.display = "none";
       btn.setAttribute("aria-expanded","true");
-      btn.setAttribute("aria-label","Work");
+      btn.setAttribute("aria-label","Back to tool");
     } else {
       // Drawer closed: button stays as "Work" (action), status sits next to it.
       if (labelEl) labelEl.textContent = "Work";
