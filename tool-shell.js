@@ -1787,6 +1787,14 @@ var __worksBtn = null;
 var __worksBtnPlaceholder = null;
 var __worksBtnHomeParent = null;
 
+// Work status element ("Ready" / "Select a work") is a sibling of the Work button.
+// We move it WITH the button into Works mode so it never gets orphaned behind the overlay,
+// and so its DOM order remains deterministic across repeated toggles.
+var __worksStatusEl = null;
+var __worksStatusPlaceholder = null;
+var __worksStatusHomeParent = null;
+
+
 function ensureWorksRoot(){
   if (__worksRoot && document.body.contains(__worksRoot)) return __worksRoot;
 
@@ -1988,6 +1996,19 @@ function enterWorksMode(){
       __worksBtnHomeParent = __worksBtn.parentNode;
       __worksBtnPlaceholder = document.createComment("paw-works-btn-home");
       if (__worksBtnHomeParent) __worksBtnHomeParent.insertBefore(__worksBtnPlaceholder, __worksBtn);
+
+      // Capture the adjacent status element (if it exists) so we can move it into Works mode too.
+      // This prevents a stale status node from being left behind under the overlay, which can
+      // invert DOM order on subsequent toggles (status appearing to the LEFT of the button).
+      try{
+        __worksStatusHomeParent = __worksBtnHomeParent;
+        __worksStatusEl = __worksBtnHomeParent ? __worksBtnHomeParent.querySelector(".paw-work-status") : null;
+        if (__worksStatusEl){
+          __worksStatusPlaceholder = document.createComment("paw-works-status-home");
+          __worksStatusHomeParent.insertBefore(__worksStatusPlaceholder, __worksStatusEl);
+        }
+      }catch(_){ __worksStatusEl = null; __worksStatusPlaceholder = null; __worksStatusHomeParent = null; }
+
     }
   }catch(_){ __worksBtn = null; __worksBtnHomeParent = null; __worksBtnPlaceholder = null; }
 
@@ -2005,7 +2026,20 @@ function enterWorksMode(){
   try{
     if (__worksBtn && __worksRoot){
       var topLeft = __worksRoot.querySelector("[data-paw-works-top-left=\"1\"]");
-      if (topLeft) topLeft.appendChild(__worksBtn);
+      if (topLeft){
+        // Defensive cleanup: remove any orphan status nodes that may have been left from a prior session.
+        try{
+          var stale = topLeft.querySelectorAll(".paw-work-status");
+          for (var i=0;i<stale.length;i++){
+            if (__worksStatusEl && stale[i] === __worksStatusEl) continue;
+            stale[i].parentNode && stale[i].parentNode.removeChild(stale[i]);
+          }
+        }catch(_){}
+
+        // Mount in deterministic order: button first, then status.
+        topLeft.appendChild(__worksBtn);
+        if (__worksStatusEl) topLeft.appendChild(__worksStatusEl);
+      }
     }
   }catch(_){}
 
@@ -2036,8 +2070,50 @@ function exitWorksMode(){
     }
   }catch(_){}
 
+  // Restore the status element to its original home (immediately after the Work button).
+  try{
+    if (__worksStatusEl && __worksStatusHomeParent){
+      if (__worksStatusPlaceholder && __worksStatusPlaceholder.parentNode === __worksStatusHomeParent){
+        __worksStatusHomeParent.insertBefore(__worksStatusEl, __worksStatusPlaceholder);
+        __worksStatusHomeParent.removeChild(__worksStatusPlaceholder);
+      } else {
+        __worksStatusHomeParent.appendChild(__worksStatusEl);
+      }
+    }
+  }catch(_){}
+
+  // Defensive cleanup: remove any leftover status nodes from the Works header.
+  try{
+    if (__worksRoot){
+      var tl = __worksRoot.querySelector("[data-paw-works-top-left=\"1\"]");
+      if (tl){
+        var stale2 = tl.querySelectorAll(".paw-work-status");
+        for (var j=0;j<stale2.length;j++){
+          if (__worksStatusEl && stale2[j] === __worksStatusEl) continue;
+          stale2[j].parentNode && stale2[j].parentNode.removeChild(stale2[j]);
+        }
+      }
+    }
+  }catch(_){}
+
   // Restore tool surface.
   try{ if (__toolRoot) __toolRoot.style.display = ""; }catch(_){}
+
+  // Ensure deterministic order in the normal tool header as well: button first, then status.
+  // (Prevents edge cases where DOM insertion order could drift if the host page mutates the header.)
+  try{
+    if (__worksBtn && __worksBtn.parentNode){
+      var h = __worksBtn.parentNode;
+      var s = h.querySelector(".paw-work-status");
+      if (s){
+        // Ensure button is before status
+        if (s.previousSibling !== __worksBtn){
+          if (__worksBtn.nextSibling) h.insertBefore(s, __worksBtn.nextSibling);
+          else h.appendChild(s);
+        }
+      }
+    }
+  }catch(_){}
 
   try{ document.documentElement.classList.remove("paw-works-mode"); }catch(_){}
   try{ document.body.classList.remove("paw-works-mode"); }catch(_){}
