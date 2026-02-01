@@ -26,6 +26,36 @@
   enforceCircleOnly();
 
   // ─────────────────────────────────────────────
+  // Mobile/compact detection (UI only)
+  // ─────────────────────────────────────────────
+  // WHY:
+  // - Some embed contexts (e.g., certain Circle iframe layouts) can report a
+  //   viewport width that prevents our CSS max-width media queries from firing,
+  //   even though the user is on a phone.
+  // - The Work status line ("Ready" / "Select a work") must be centered on
+  //   mobile. We therefore add a lightweight "paw-compact" class that CSS can
+  //   rely on in addition to media queries.
+  //
+  // SAFETY:
+  // - This is presentation-only. No data is stored. No behavior changes.
+  function applyCompactClass() {
+    try {
+      const ua = navigator.userAgent || "";
+      const uaMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+      const mqMobile = window.matchMedia && window.matchMedia("(max-width: 560px)").matches;
+      const compact = !!(uaMobile || mqMobile);
+      document.documentElement.classList.toggle("paw-compact", compact);
+    } catch (_) {}
+  }
+
+  applyCompactClass();
+  try {
+    window.addEventListener("resize", applyCompactClass, { passive: true });
+    window.addEventListener("orientationchange", applyCompactClass, { passive: true });
+  } catch (_) {}
+
+
+  // ─────────────────────────────────────────────
   // Phase 3 — Circle Identity + PAW Session Token
   // ─────────────────────────────────────────────
   // Product intent:
@@ -1763,7 +1793,8 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
       // Keep a single chevron glyph (down). Visual state is communicated via CSS rotation on aria-expanded.
       if (chevEl)  chevEl.textContent = "▾";
       if (statusEl){
-        statusEl.style.display = "inline-flex";
+        // display controlled by CSS (mobile vs desktop)
+        statusEl.style.display = "";
         statusEl.textContent = workModeStatusText();
       }
       btn.setAttribute("aria-expanded","true");
@@ -1774,7 +1805,8 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
       // Keep a single chevron glyph (down). Visual state is communicated via CSS rotation on aria-expanded.
       if (chevEl)  chevEl.textContent = "▾";
             if (statusEl){
-        statusEl.style.display = "inline-flex";
+        // display controlled by CSS (mobile vs desktop)
+        statusEl.style.display = "";
         statusEl.textContent = workLabelText();
       }
       btn.setAttribute("aria-expanded","false");

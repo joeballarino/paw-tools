@@ -1169,7 +1169,34 @@ body.paw-works-mode{
 }
 
 /* ==========================================================
-   PAW — Mobile Work Status + Works Mode Header (LOCKED)
+   
+/* ==========================================================
+   PAW — Compact device centering helper (LOCKED)
+   ----------------------------------------------------------
+   WHY:
+   - In some embed contexts the iframe reports a viewport width that can
+     prevent max-width media queries from firing on phones.
+   - tool-shell.js sets html.paw-compact when it detects a phone/compact UI.
+   - This keeps Work status ("Ready" / "Select a work") centered reliably.
+   SCOPE:
+   - Only applies when html has the paw-compact class.
+   - Desktop remains unchanged.
+   ========================================================== */
+html.paw-compact .paw-work-status{
+  display:block;
+  width:100%;
+  text-align:center;
+
+  /* Neutralize legacy offsets */
+  margin-left:0 !important;
+  padding-left:0 !important;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+PAW — Mobile Work Status + Works Mode Header (LOCKED)
    ----------------------------------------------------------
    END RESULT (mobile <=560px):
    - Normal state: Work button full-width, "Ready" centered below it.
