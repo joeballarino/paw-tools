@@ -1045,11 +1045,7 @@ body.paw-works-mode{
   transform: translateY(-50%);
 }
 
-.paw-works-mode__title{
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
+
 
 .paw-works-mode__body{
   padding: 16px;
@@ -1096,4 +1092,13 @@ body.paw-works-mode{
   display:flex;
   flex-wrap:wrap;
   gap: 10px;
+}
+
+
+/* Work mode status indicator (matches normal Ready position) */
+.paw-work-status {
+  margin-left: 8px;
+  font-size: 13px;
+  opacity: 0.65;
+  white-space: nowrap;
 }
