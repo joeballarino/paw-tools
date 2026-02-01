@@ -1672,36 +1672,61 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
       .replaceAll("'","&#39;");
   }
 
+  
   // ------------------------------------------------------------
-  // Work pill label update (DO NOT overwrite markup)
+  // Works button + status text (LOCKED UI CONTRACT)
   // ------------------------------------------------------------
-  function workLabelText(){
-    if (__pawActiveWork && __pawActiveWork.label){
-      // Brand language: "Work: My Brand" / "Work: 123 Oak St"
-      return "Current: " + String(__pawActiveWork.label);
-    }
-    return "Work: Ready";
+  // Contract:
+  // - Button label ALWAYS "Works" (never changes on click or mode swap)
+  // - Only the chevron direction changes on open/close
+  // - Status is separate text (NOT in the button):
+  //     Ready | Attach Work to this Session | {Work Name}
+  // - Tool shell may update status text, but tools never silently save.
+  function workStatusText(){
+    if (__worksModeOn) return "Attach Work to this Session";
+    if (__pawActiveWork && __pawActiveWork.label) return String(__pawActiveWork.label);
+    return "Ready";
   }
 
   function updateWorkPill(){
-  try{
-    var btn = document.getElementById("pawMyStuffBtn");
-    if (!btn) return;
+    try{
+      var btn = document.getElementById("pawMyStuffBtn");
+      if (!btn) return;
 
-    var labelEl = btn.querySelector(".works-label");
-    var chevEl  = btn.querySelector(".works-chevron");
+      var labelEl = btn.querySelector(".works-label");
+      var chevEl  = btn.querySelector(".works-chevron");
 
-    if (__worksModeOn){
-      if (labelEl) labelEl.textContent = "Back to Tool";
-      if (chevEl)  chevEl.textContent = "▴";
-      btn.setAttribute("aria-expanded","true");
-      btn.setAttribute("aria-label","Back to tool");
-    } else {
-      if (labelEl) labelEl.textContent = workLabelText();
-      if (chevEl)  chevEl.textContent = "▾";
-      btn.setAttribute("aria-expanded","false");
-      btn.setAttribute("aria-label", __pawActiveWork ? ("Work context: " + workLabelText()) : "Work context");
-    }
+      // Status text lives OUTSIDE the button (sibling element in .paw-works-head)
+      // We support both patterns:
+      // - .paw-works-head > button + .works-status
+      // - fallback: closest container with .works-status
+      var statusEl = null;
+      try{
+        var head = btn.closest(".paw-works-head");
+        if (head) statusEl = head.querySelector(".works-status");
+        if (!statusEl) statusEl = document.querySelector(".works-status");
+      }catch(_){}
+
+      // Label ALWAYS "Works"
+      if (labelEl) labelEl.textContent = "Works";
+
+      // Chevron direction only
+      if (__worksModeOn){
+        if (chevEl) chevEl.textContent = "▴";
+        btn.setAttribute("aria-expanded","true");
+      } else {
+        if (chevEl) chevEl.textContent = "▾";
+        btn.setAttribute("aria-expanded","false");
+      }
+
+      // Status text swap (single slot)
+      if (statusEl) statusEl.textContent = workStatusText();
+
+      // Keep active styling for attached work (visual hook only)
+      btn.classList.toggle("is-active", !!(__pawActiveWork && __pawActiveWork.label));
+    }catch(_){}
+  }
+
 
     btn.classList.toggle("is-active", !!__pawActiveWork);
   }catch(_){}

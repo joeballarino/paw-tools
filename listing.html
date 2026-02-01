@@ -58,11 +58,11 @@
 
           <div class="topbar-row0">
             <div class="tool-head">
-              <button id="pawMyStuffBtn" class="paw-mystuff-btn paw-works-btn" type="button" aria-label="Work context">
+              <div class="paw-works-head"><button id="pawMyStuffBtn" class="paw-mystuff-btn paw-works-btn" type="button" aria-label="Work context">
                 <img class="works-paw" src="https://paw-tools.pages.dev/paw.png" alt="" aria-hidden="true">
-                <span class="works-label">Works</span><span class="works-status">Ready</span>
+                <span class="works-label">Works</span>
                 <span class="works-chevron" aria-hidden="true">▾</span>
-              </button>
+              </button><span class="works-status" aria-live="polite">Ready</span></div>
             </div>
 
             
@@ -1047,7 +1047,7 @@ const shell = window.PAWToolShell.init({
        PURPOSE:
        - Reports the tool's visible panel height to the Circle parent page.
        - Enables "grow-to-fit" embeds with no internal scrollbars.
-       - STANDARDIZED across all tools so Work: Ready behaves identically everywhere.
+       - STANDARDIZED across all tools so Works behaves identically everywhere.
        CONTRACT:
        - Sends: { type: "paw_iframe_height_request_v1", height: <number> }
        ========================================================== -->
