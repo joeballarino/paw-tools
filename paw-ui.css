@@ -1168,45 +1168,35 @@ body.paw-works-mode{
   body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities{ opacity:.45; }
 }
 
-
-/* === PAW Mobile Alignment Fix (v2): Center Work Status (Ready / Select a work) ===
+/* === PAW Mobile Alignment Fix: Center Work Status (Ready / Select a work) ===
    END RESULT (mobile):
-   - "Ready" (normal tool header) is centered under the Work button.
-   - "Select a work" (Works mode) is centered under the Work button.
-   WHY v2:
-   - Some tool markup may render the status line as a flex container or inline element.
-   - We therefore center by BOTH text alignment and flex centering.
-   - In Works mode we also force the status to take a full row (100%) so it cannot
-     behave like a left-anchored caption.
+   - "Ready" is centered under the Work button (normal tool header).
+   - "Select a work" is centered under the Work button (Works mode).
+   IMPORTANT:
+   - This block is intentionally additive and does NOT replace the Works-mode wrapping fix above.
+   - We force the status line to behave like a full-width block so it cannot anchor left or collide.
    SCOPE:
    - Mobile only (<= 560px)
-   - Normal tool header + Works mode only
+   - Status line only (no other header/layout changes)
 */
 @media (max-width: 560px){
-  /* Normal tool header ("Ready") */
+  /* Normal tool header status ("Ready") */
   .tool-head .paw-work-status{
+    display:block;
     width:100%;
     margin-left:0;
     padding-left:0;
     text-align:center;
-
-    /* Defensive centering in case the status becomes a flex container elsewhere */
-    display:flex;
-    justify-content:center;
-    align-items:center;
   }
 
-  /* Works mode ("Select a work") */
+  /* Works mode status ("Select a work") */
   #pawWorksModeRoot .paw-work-status{
+    display:block;
     width:100%;
-    flex:0 0 100%;          /* force its own row under the Work button */
+    flex:0 0 100%; /* ensure it drops to its own line under the Work button */
     margin-left:0;
     padding-left:0;
     text-align:center;
-
-    /* Defensive centering */
-    display:flex;
-    justify-content:center;
-    align-items:center;
   }
 }
+
