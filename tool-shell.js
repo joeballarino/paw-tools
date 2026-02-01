@@ -1736,10 +1736,23 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
       var st = document.createElement("style");
       st.id = "pawWorkStatusStyle";
       st.textContent =
-        ".tool-head{ display:flex; align-items:center; gap:10px; }\n" +
-        ".paw-work-status{ display:inline-flex; align-items:center; font-weight:800; font-size:13px; " +
-        "color:rgba(15,23,42,.68); white-space:nowrap; }\n" +
-        "html[data-embed='1'] .paw-work-status{ color:rgba(15,23,42,.62); }";
+        /* ==========================================================
+           PAW Work Status (injected helper styles)
+           ----------------------------------------------------------
+           IMPORTANT:
+           - We *only* define a safe baseline here.
+           - Mobile layout (stacking + centered status) is handled via a
+             media query to avoid overriding paw-ui.css behavior.
+           - This fixes the prior bug where display:inline-flex prevented
+             text centering and forced left-justified "Ready / Select a work".
+           ========================================================== */
+        ".tool-head{ display:flex; align-items:center; gap:10px; }\\n" +
+        ".paw-work-status{ font-weight:800; font-size:13px; color:rgba(15,23,42,.68); white-space:nowrap; }\\n" +
+        "html[data-embed=\'1\'] .paw-work-status{ color:rgba(15,23,42,.62); }\\n" +
+        "@media (max-width: 560px){\\n" +
+        "  .tool-head{ width:100%; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:8px; }\\n" +
+        "  .paw-work-status{ display:block; width:100%; text-align:center; margin-left:0 !important; padding-left:0 !important; overflow:hidden; text-overflow:ellipsis; }\\n" +
+        "}";
       (document.head || document.documentElement).appendChild(st);
     }
 
