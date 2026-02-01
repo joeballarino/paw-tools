@@ -1032,22 +1032,24 @@ body.paw-works-mode{
   position: relative;
   display:flex;
   align-items:center;
-  justify-content:center;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(15,23,42,.10);
+  justify-content:space-between;
+  gap:12px;
+  /* Match .topbar-row0 so the Work control never feels like it "jumps" */
+  padding:12px 14px 8px;
+  border-bottom:none; /* remove the extra divider line */
 }
+
 
 /* Where the real Work button is mounted while in Works mode */
 .paw-works-mode__top-left{
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  /* Inline cluster: Work button + status sit on the same row */
+  position: static;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
 }
+
 
 
 
@@ -1105,4 +1107,21 @@ body.paw-works-mode{
   font-size: 13px;
   opacity: 0.65;
   white-space: nowrap;
+}
+
+
+.paw-works-mode__top-right{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex:0 0 auto;
+  flex-shrink:0;
+}
+
+
+/* Works mode: utilities are visible for continuity but intentionally disabled */
+.paw-works-mode__utilities{
+  opacity:.55;
+  pointer-events:none; /* blocks hover + clicks */
+  filter:saturate(.6);
 }

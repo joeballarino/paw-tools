@@ -1799,33 +1799,20 @@ function ensureWorksRoot(){
   __worksRoot.innerHTML = `
     <div class="paw-works-mode__top">
       <div class="paw-works-mode__top-left" data-paw-works-top-left="1"></div>
-    </div>
 
-    <div class="paw-works-mode__body">
-      <div class="paw-works-mode__note">
-        <div class="paw-works-mode__note-title">Placeholder</div>
-        <div class="paw-works-mode__note-copy">
-          This screen proves the full-page mode swap works. Real My Works UI comes next.
-        </div>
-      </div>
-
-      <div class="paw-works-mode__section">
-        <div class="paw-works-mode__section-title">Buckets</div>
-        <ul class="paw-works-mode__buckets">
-          <li>Brand Assets</li>
-          <li>Listings</li>
-          <li>Transactions</li>
-        </ul>
-      </div>
-
-      <div class="paw-works-mode__section">
-        <div class="paw-works-mode__section-title">Attach a Work (demo)</div>
-        <div class="paw-works-mode__actions">
-          <button class="btn primary" type="button" data-paw-works-attach="1">Attach “Placeholder Work”</button>
-          <button class="btn" type="button" data-paw-works-detach="1">Detach</button>
+      <!-- Disabled utilities (Reset / Tips) kept for visual continuity only.
+           They do not apply in Works mode. -->
+      <div class="paw-works-mode__top-right" data-paw-works-top-right="1">
+        <div class="utility-pair paw-seg paw-works-mode__utilities" aria-label="Utilities (disabled)">
+          <button class="util-btn" type="button" disabled aria-disabled="true" tabindex="-1">Reset</button>
+          <button class="util-btn" type="button" disabled aria-disabled="true" tabindex="-1">Tips &amp; How To</button>
         </div>
       </div>
     </div>
+
+    <!-- Works mode body intentionally left blank for now.
+         This avoids "destination page" cues while we build real My Works UI. -->
+    <div class="paw-works-mode__body" data-paw-works-body="1"></div>
   `;
 
   __worksRoot.addEventListener("click", function(e){
