@@ -1777,7 +1777,6 @@ function ensureWorksRoot(){
   __worksRoot.innerHTML = `
     <div class="paw-works-mode__top">
       <div class="paw-works-mode__top-left" data-paw-works-top-left="1"></div>
-      <div class="paw-works-mode__title">My Works</div>
     </div>
 
     <div class="paw-works-mode__body">
