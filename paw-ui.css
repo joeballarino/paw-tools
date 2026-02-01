@@ -1208,3 +1208,21 @@ body.paw-works-mode{
     width:100%;
   }
 }
+
+
+
+/* === PAW Mobile Alignment Fix: Center Work Status (Ready / Select a work) ===
+   Scope:
+   - Mobile only
+   - Normal tool header AND Works mode
+   - Keeps visual language consistent across states
+*/
+@media (max-width: 560px){
+  .tool-head .paw-work-status,
+  #pawWorksModeRoot .paw-work-status{
+    text-align:center;
+    width:100%;
+    padding-left:0;
+    margin-left:0;
+  }
+}
