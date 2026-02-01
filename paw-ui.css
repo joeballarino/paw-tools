@@ -962,7 +962,7 @@ body.paw-works-mode{
 .paw-works-btn .works-chevron{
   flex:0 0 auto;
   margin-left:4px;
-  font-size:12px;
+  font-size:14px; /* slightly larger chevron */
   opacity:.90;
 }
 
