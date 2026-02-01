@@ -991,6 +991,58 @@ body.paw-works-mode{
   100%{ transform: translateY(0) scale(1); opacity: 1; }
 }
 
+
+
+/* ==========================================================
+   Works mode — Mobile header stacking (LOCKED)
+   ----------------------------------------------------------
+   Goal:
+   - Prevent overlap between Work button, Works status, and disabled utilities.
+   - Mobile contract in Works mode (<=560px):
+       Row 1: Work button (full width)
+       Row 2: Works status (full width, left aligned, truncates safely)
+       Row 3: Disabled utilities (full width)
+   Scoped strictly to Works mode to avoid affecting normal tool headers.
+   ========================================================== */
+@media (max-width: 560px){
+  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__top{
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:10px;
+  }
+
+  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__top-left{
+    flex-direction:column;
+    align-items:stretch;
+    gap:8px;
+    width:100%;
+    min-width:0;
+  }
+
+  /* Work button is already full-width on mobile via .paw-works-btn rules. */
+
+  body.paw-works-mode #pawWorksModeRoot .paw-work-status{
+    margin-left:0;
+    padding-left:2px; /* optical alignment with button label */
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__top-right{
+    width:100%;
+    justify-content:stretch;
+  }
+  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities{
+    width:100%;
+  }
+  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities .paw-seg,
+  body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities .topbar-right.paw-seg{
+    width:100%;
+  }
+}
+
 /* Mobile: Works becomes a full-width primary selector */
 @media (max-width: 560px){
   .tool-head{ width:100%; }
