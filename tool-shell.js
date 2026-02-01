@@ -1694,6 +1694,24 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     return "Ready";
   }
 
+  function workModeStatusText(){
+    // ==========================================================
+    // PAW Work mode status text (clicked state)
+    // ----------------------------------------------------------
+    // PURPOSE:
+    // - In Works mode, the status next to the Work button should become
+    //   a helpful context indicator (later: selected saved work name).
+    // - For now:
+    //     * If a work is attached: show its label
+    //     * Otherwise: show a neutral prompt
+    // ==========================================================
+    if (__pawActiveWork && __pawActiveWork.label){
+      return String(__pawActiveWork.label);
+    }
+    return "Select a work";
+  }
+
+
   function updateWorkPill(){
   try{
     var btn = document.getElementById("pawMyStuffBtn");
@@ -1726,13 +1744,17 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     }
 
     if (__worksModeOn){
-      // Drawer open: keep the button label stable ("Work"). Hide status to reduce noise.
+      // Works mode (clicked): keep button label stable ("Work"),
+      // but SHOW a helpful status next to it (future: selected saved work name).
       if (labelEl) labelEl.textContent = "Work";
       // Keep a single chevron glyph (down). Visual state is communicated via CSS rotation on aria-expanded.
       if (chevEl)  chevEl.textContent = "▾";
-            if (statusEl) statusEl.style.display = "none";
+      if (statusEl){
+        statusEl.style.display = "inline-flex";
+        statusEl.textContent = workModeStatusText();
+      }
       btn.setAttribute("aria-expanded","true");
-      btn.setAttribute("aria-label","Work");
+      btn.setAttribute("aria-label","Work mode: " + workModeStatusText());
     } else {
       // Drawer closed: button stays as "Work" (action), status sits next to it.
       if (labelEl) labelEl.textContent = "Work";

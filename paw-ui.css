@@ -1043,6 +1043,10 @@ body.paw-works-mode{
   left: 16px;
   top: 50%;
   transform: translateY(-50%);
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 
