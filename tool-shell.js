@@ -1738,7 +1738,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
     if (__pawActiveWork && __pawActiveWork.label){
       return String(__pawActiveWork.label);
     }
-    return "Select a work";
+    return "Select a Work";
   }
 
 
@@ -1872,12 +1872,62 @@ function ensureWorksRoot(){
     var t = e.target;
     if (!t || !t.getAttribute) return;
 
+    // Attach an existing recent work (session-only list for now).
     if (t.getAttribute("data-paw-works-attach") === "1"){
-      attachWork({ bucket:"brand_assets", id:"placeholder", label:"Placeholder Work" });
+      var b = t.getAttribute("data-bucket") || "";
+      var id = t.getAttribute("data-id") || "";
+      var chosen = null;
+
+      // Find in recents (preferred), otherwise attach a minimal object.
+      try{
+        for (var i=0;i<(__worksRecent||[]).length;i++){
+          var w = __worksRecent[i];
+          if (w && String(w.bucket||"") === String(b) && String(w.id||"") === String(id)){
+            chosen = w;
+            break;
+          }
+        }
+      }catch(_){}
+
+      attachWork(chosen || { bucket:b, id:id, label:"Untitled" });
       return;
     }
+
+    // Detach from this session
     if (t.getAttribute("data-paw-works-detach") === "1"){
       detachWork();
+      return;
+    }
+
+    // Save current output (tools can listen for this event; UI is ready).
+    if (t.getAttribute("data-paw-works-save") === "1"){
+      try{
+        var ev = new CustomEvent("paw:works:save_current_output", { detail: { active_work: getActiveWork() } });
+        window.dispatchEvent(ev);
+      }catch(_){}
+
+      // If nothing handles it yet, show a gentle placeholder toast.
+      try{
+        if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Save flow is coming next.");
+      }catch(_){}
+      return;
+    }
+
+    // Create new work placeholder (session-only) and attach immediately.
+    if (t.getAttribute("data-paw-works-create") === "1"){
+      // Minimal, safe chooser: create a new empty container and attach.
+      // NOTE: Content editing remains intentional (saving actions). This is just a container.
+      var now = new Date();
+      var id2 = "w_" + now.getTime();
+      var label2 = "New work";
+      var bucket2 = "listings"; // default; can be expanded later
+      attachWork({ bucket: bucket2, id: id2, label: label2 });
+      _touchRecent({ bucket: bucket2, id: id2, label: label2, subtitle: "" });
+      renderWorksBody();
+
+      try{
+        if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Created a new work for this session.");
+      }catch(_){}
       return;
     }
   });
@@ -1890,6 +1940,184 @@ function ensureWorksRoot(){
   });
 
   document.body.appendChild(__worksRoot);
+  // ------------------------------------------------------------
+  // Works Mode UI (content inside the already-working container)
+  // ------------------------------------------------------------
+  // SAFETY PRINCIPLE:
+  // - Do NOT change the Works container mechanics (enter/exit, mounting, layout).
+  // - Only render content inside .paw-works-mode__body.
+  //
+  // This is session-only UI: no persistence is assumed here.
+
+  var __worksRecent = [];   // Most recently used works (session-only)
+  var __worksSearchQ = "";
+
+  function _workTypeLabel(bucket){
+    if (bucket === "brand_assets") return "Brand";
+    if (bucket === "listings") return "Listing";
+    if (bucket === "transactions") return "Transaction";
+    return "Work";
+  }
+
+  function _formatRelative(ts){
+    // Minimal, non-localized helper: keep it simple and safe.
+    try{
+      if (!ts) return "";
+      var d = (ts instanceof Date) ? ts : new Date(ts);
+      if (isNaN(d.getTime())) return "";
+      var diff = Date.now() - d.getTime();
+      var mins = Math.floor(diff/60000);
+      if (mins < 1) return "Just now";
+      if (mins < 60) return mins + " min ago";
+      var hrs = Math.floor(mins/60);
+      if (hrs < 24) return hrs + " hr" + (hrs===1?"":"s") + " ago";
+      var days = Math.floor(hrs/24);
+      if (days === 1) return "Yesterday";
+      return days + " days ago";
+    }catch(_){ return ""; }
+  }
+
+  function _dedupeRecent(arr){
+    var seen = {};
+    var out = [];
+    for (var i=0;i<arr.length;i++){
+      var w = arr[i];
+      if (!w) continue;
+      var key = String(w.bucket||"") + "::" + String(w.id||"");
+      if (seen[key]) continue;
+      seen[key] = 1;
+      out.push(w);
+    }
+    return out;
+  }
+
+  function _touchRecent(work){
+    try{
+      if (!work || !work.bucket || !work.id) return;
+      var w = Object.assign({}, work);
+      w._last_used = new Date().toISOString();
+      // Put at top
+      __worksRecent = [w].concat(__worksRecent || []);
+      __worksRecent = _dedupeRecent(__worksRecent).slice(0, 50);
+    }catch(_){}
+  }
+
+  function renderWorksBody(){
+    try{
+      if (!__worksRoot) return;
+      var body = __worksRoot.querySelector("[data-paw-works-body=\"1\"]");
+      if (!body) return;
+
+      var hasAttached = !!(__pawActiveWork && __pawActiveWork.label);
+      var attachedName = hasAttached ? String(__pawActiveWork.label) : "";
+      var attachedType = hasAttached ? _workTypeLabel(__pawActiveWork.bucket) : "";
+
+      // Filter recent list by search query
+      var q = (__worksSearchQ || "").trim().toLowerCase();
+      var list = (__worksRecent || []).slice(0);
+      if (q){
+        list = list.filter(function(w){
+          var hay = (String(w.label||"") + " " + String(w.subtitle||"") + " " + String(_workTypeLabel(w.bucket)||"")).toLowerCase();
+          return hay.indexOf(q) !== -1;
+        });
+      }
+
+      var html = "";
+
+      // Attached confirmation row (NOT in the top bar)
+      if (hasAttached){
+        html += `
+          <div class="paw-works-mode__note paw-works-attached">
+            <div class="paw-works-mode__note-title">Currently using</div>
+            <div class="paw-works-attached__row">
+              <div class="paw-works-attached__meta">
+                <div class="paw-works-attached__name">${escapeHtml(attachedName)}</div>
+                <div class="paw-works-attached__sub">${escapeHtml(attachedType)}</div>
+              </div>
+              <div class="paw-works-attached__actions">
+                <button class="btn" type="button" data-paw-works-detach="1">Detach</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="paw-works-mode__note">
+            <div class="paw-works-mode__note-title">No work attached</div>
+            <div class="paw-works-mode__note-copy">Attach a saved work to give PAW context, or save what you're working on.</div>
+          </div>
+        `;
+      }
+
+      // Primary actions
+      html += `
+        <div class="paw-works-actions">
+          <button class="btn primary" type="button" data-paw-works-save="1">Save current output</button>
+          <button class="btn" type="button" data-paw-works-create="1">Create new work</button>
+        </div>
+      `;
+
+      // Search + list header
+      html += `
+        <div class="paw-works-recents">
+          <div class="paw-works-recents__head">
+            <div class="paw-works-recents__title">Recent works</div>
+            <input class="paw-works-search" type="search" placeholder="Search your works" value="${escapeHtml(__worksSearchQ||"")}" aria-label="Search works" data-paw-works-search="1"/>
+          </div>
+          <div class="paw-works-list" data-paw-works-list="1">
+      `;
+
+      if (!list.length){
+        html += `
+            <div class="paw-works-empty">
+              <div class="paw-works-empty__title">${q ? "No matches" : "You haven't saved anything yet."}</div>
+              <div class="paw-works-empty__body">${q ? "Try a different search." : "Create your first work or save what you're working on."}</div>
+            </div>
+        `;
+      } else {
+        for (var i=0;i<list.length;i++){
+          var w = list[i];
+          var type = _workTypeLabel(w.bucket);
+          var sub = w.subtitle ? String(w.subtitle) : "";
+          var when = _formatRelative(w._last_used);
+          html += `
+            <div class="paw-works-item">
+              <div class="paw-works-item__main">
+                <div class="paw-works-item__name">${escapeHtml(String(w.label||"Untitled"))}</div>
+                <div class="paw-works-item__meta">
+                  <span class="paw-works-badge">${escapeHtml(type)}</span>
+                  ${sub ? `<span class="paw-works-item__sub">${escapeHtml(sub)}</span>` : ""}
+                  ${when ? `<span class="paw-works-item__when">${escapeHtml(when)}</span>` : ""}
+                </div>
+              </div>
+              <div class="paw-works-item__actions">
+                <button class="btn" type="button" data-paw-works-attach="1" data-bucket="${escapeHtml(String(w.bucket||""))}" data-id="${escapeHtml(String(w.id||""))}">Attach</button>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      html += `
+          </div>
+        </div>
+      `;
+
+      body.innerHTML = html;
+
+      // Wire search input (scoped)
+      try{
+        var inp = body.querySelector("[data-paw-works-search=\"1\"]");
+        if (inp){
+          inp.oninput = function(){
+            __worksSearchQ = String(inp.value || "");
+            renderWorksBody();
+          };
+        }
+      }catch(_){}
+    }catch(_){}
+  }
+
   return __worksRoot;
 }
 
@@ -2066,6 +2294,7 @@ function enterWorksMode(){
 
   // Ensure Works surface exists + show it.
   ensureWorksRoot();
+  try{ renderWorksBody(); }catch(_){ }
 
   // Mount the Work button into the Works header (same position, no duplicate controls).
   try{
@@ -2205,15 +2434,30 @@ function exitWorksMode(){
 
   function attachWork(work){
     __pawActiveWork = work || null;
+
+    // Session-only MRU list (no persistence). Keeps Work mode useful without becoming a file manager.
+    try{
+      if (__pawActiveWork && __pawActiveWork.bucket && __pawActiveWork.id){
+        _touchRecent({
+          bucket: __pawActiveWork.bucket,
+          id: __pawActiveWork.id,
+          label: __pawActiveWork.label || "Untitled",
+          subtitle: __pawActiveWork.subtitle || ""
+        });
+      }
+    }catch(_){}
+
     updateWorkPill();
     renderContextRow();
+    try{ renderWorksBody(); }catch(_){}
   }
 
   function detachWork(){
     __pawActiveWork = null;
     updateWorkPill();
     renderContextRow();
-    // Keep drawer open; this is a safe action.
+    try{ renderWorksBody(); }catch(_){}
+    // Keep Works mode open; this is a safe action.
     try{
       if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Detached from this session.");
     }catch(_){}
