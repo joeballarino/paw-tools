@@ -1840,6 +1840,12 @@ var __worksStatusPlaceholder = null;
 var __worksStatusHomeParent = null;
 
 
+// Exposed helpers for Works mode.
+// NOTE: These are intentionally assigned inside ensureWorksRoot() so enterWorksMode()
+// can render Works content immediately without changing the fragile container mechanics.
+var renderWorksBody = function(){ };
+var _touchRecent = function(){ };
+
 function ensureWorksRoot(){
   if (__worksRoot && document.body.contains(__worksRoot)) return __worksRoot;
 
@@ -1996,7 +2002,7 @@ function ensureWorksRoot(){
     return out;
   }
 
-  function _touchRecent(work){
+  _touchRecent = function _touchRecent(work){
     try{
       if (!work || !work.bucket || !work.id) return;
       var w = Object.assign({}, work);
@@ -2005,9 +2011,9 @@ function ensureWorksRoot(){
       __worksRecent = [w].concat(__worksRecent || []);
       __worksRecent = _dedupeRecent(__worksRecent).slice(0, 50);
     }catch(_){}
-  }
+  };
 
-  function renderWorksBody(){
+  renderWorksBody = function renderWorksBody(){
     try{
       if (!__worksRoot) return;
       var body = __worksRoot.querySelector("[data-paw-works-body=\"1\"]");
@@ -2131,7 +2137,7 @@ function ensureWorksRoot(){
         }
       }catch(__){}
     }
-  }
+  };
 
   return __worksRoot;
 }
