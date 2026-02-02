@@ -1865,7 +1865,12 @@ function ensureWorksRoot(){
 
     <!-- Works mode body intentionally left blank for now.
          This avoids "destination page" cues while we build real My Works UI. -->
-    <div class="paw-works-mode__body" data-paw-works-body="1"></div>
+    <div class="paw-works-mode__body" data-paw-works-body="1">
+      <div class="paw-works-mode__note" data-paw-works-fallback="1">
+        <div class="paw-works-mode__note-title">Loading</div>
+        <div class="paw-works-mode__note-copy">Preparing your works…</div>
+      </div>
+    </div>
   `;
 
   __worksRoot.addEventListener("click", function(e){
@@ -2115,7 +2120,17 @@ function ensureWorksRoot(){
           };
         }
       }catch(_){}
-    }catch(_){}
+    }catch(_){
+      // Defensive fallback: if rendering fails for any reason, never show a blank surface.
+      try{
+        if (__worksRoot){
+          var body2 = __worksRoot.querySelector('[data-paw-works-body="1"]');
+          if (body2){
+            body2.innerHTML = '<div class="paw-works-mode__note"><div class="paw-works-mode__note-title">Work mode</div><div class="paw-works-mode__note-copy">We couldn\'t load your works. Please refresh the page.</div></div>';
+          }
+        }
+      }catch(__){}
+    }
   }
 
   return __worksRoot;
