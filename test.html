@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PAW Test Environment (Internal)</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 24px;
+        color: #111;
+      }
+      h1 {
+        margin: 0 0 16px;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      input[type="text"] {
+        width: min(600px, 100%);
+        padding: 8px;
+        font-size: 14px;
+      }
+      button {
+        padding: 8px 12px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      iframe {
+        width: 100%;
+        height: 80vh;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PAW Test Environment (Internal)</h1>
+
+    <div>
+      <label for="baseUrl">Preview Base URL</label>
+      <input
+        id="baseUrl"
+        type="text"
+        placeholder="https://example-preview.pages.dev"
+      />
+    </div>
+
+    <div class="controls" role="group" aria-label="Preview pages">
+      <button type="button" data-page="guide.html">guide.html</button>
+      <button type="button" data-page="connect.html">connect.html</button>
+      <button type="button" data-page="presence.html">presence.html</button>
+      <button type="button" data-page="listing.html">listing.html</button>
+      <button type="button" data-page="transactions.html">transactions.html</button>
+      <button type="button" data-page="myworks.html">myworks.html</button>
+    </div>
+
+    <iframe id="previewFrame" title="PAW preview"></iframe>
+
+    <script>
+      const baseUrlInput = document.getElementById("baseUrl");
+      const previewFrame = document.getElementById("previewFrame");
+
+      function loadPage(page) {
+        const baseUrl = baseUrlInput.value.trim().replace(/\/$/, "");
+        if (!baseUrl) {
+          return;
+        }
+        previewFrame.src = `${baseUrl}/${page}`;
+      }
+
+      document.querySelectorAll("button[data-page]").forEach((button) => {
+        button.addEventListener("click", () => {
+          loadPage(button.dataset.page);
+        });
+      });
+    </script>
+  </body>
+</html>
