@@ -922,8 +922,8 @@ body.paw-works-mode{
   padding-right:12px;
 
   /* Distinct visual language from other header pills */
-  background: rgba(5,195,249,.88);
-  border-color: rgba(5,195,249,.40);
+  background: var(--accent);
+  border-color: rgba(var(--accent-rgb), .35);
   color:#fff;
 
   /* Allow internal label to truncate cleanly */
@@ -931,12 +931,15 @@ body.paw-works-mode{
   max-width:100%;
 }
 .paw-works-btn:hover{
-  background: rgba(5,195,249,.94);
+  background: var(--accent-secondary);
+}
+.paw-works-btn:active{
+  background: var(--accent-secondary);
 }
 .paw-works-btn.is-active{
   /* Slightly stronger when a Brand / Listing / Deal is attached */
-  background: rgba(5,195,249,1);
-  border-color: rgba(5,195,249,.55);
+  background: var(--accent-secondary);
+  border-color: rgba(var(--accent-rgb), .45);
 }
 
 .paw-works-btn .works-paw{
@@ -946,7 +949,7 @@ body.paw-works-mode{
   object-fit:contain;
   flex:0 0 auto;
   /* White paw on blue */
-  filter:none;
+  filter: brightness(0) invert(1);
   opacity:1;
   transform-origin: 50% 60%;
 }
