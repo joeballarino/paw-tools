@@ -14,8 +14,10 @@
   --muted:#6b7280;
 
   /* Brand */
-  --accent:#05C3F9;
-  --accent-soft:rgba(5,195,249,.10);
+  --accent:#4F8BEB;
+  --accent-secondary:#506FB2;
+  --accent-rgb:79,139,235;
+  --accent-soft:rgba(var(--accent-rgb),.10);
 
   /* Borders / shadow */
   --border:rgba(15,23,42,.10);
@@ -71,7 +73,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   position: relative;
   overflow: visible;
   background:
-    radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.08), rgba(255,255,255,0) 55%),
+    radial-gradient(920px 220px at 12% 0%, rgba(var(--accent-rgb),.045), rgba(255,255,255,0) 58%),
     #fff;
 }
 
@@ -249,8 +251,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 
 .select-wrap select:focus,
 .input-wrap input:focus{
-  border-color:rgba(5,195,249,.70);
-  box-shadow:0 0 0 4px rgba(5,195,249,.14);
+  border-color:rgba(var(--accent-rgb),.70);
+  box-shadow:0 0 0 4px rgba(var(--accent-rgb),.14);
   background:#fff;
 }
 .select-wrap:after{
@@ -423,13 +425,13 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .btn:hover{ background:#fff; border-color: rgba(15,23,42,.18); }
 .btn:active{ transform: translateY(1px); }
 .btn.primary{
-  border-color: rgba(5,195,249,.55);
-  background: rgba(5,195,249,.16);
+  border-color: rgba(var(--accent-rgb),.55);
+  background: rgba(var(--accent-rgb),.16);
   color: rgba(15,23,42,.92);
 }
 .btn.primary:hover{
-  background: rgba(5,195,249,.20);
-  border-color: rgba(5,195,249,.70);
+  background: rgba(var(--accent-rgb),.20);
+  border-color: rgba(var(--accent-rgb),.70);
 }
 .local-list{
   list-style:none;
@@ -471,7 +473,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   justify-content:space-between;
   gap:12px;
   padding:12px 12px;
-  background: linear-gradient(180deg, rgba(5,195,249,.10), rgba(255,255,255,0));
+  background: linear-gradient(180deg, rgba(var(--accent-rgb),.10), rgba(255,255,255,0));
 }
 .deliverable-title{
   font-size:14px;
@@ -509,8 +511,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   padding:10px 12px;
 }
 .msg.user .bubble{
-  border-color: rgba(5,195,249,.32);
-  background: rgba(5,195,249,.10);
+  border-color: rgba(var(--accent-rgb),.32);
+  background: rgba(var(--accent-rgb),.10);
 }
 .msg .bubble p{ margin:0; white-space:pre-wrap; }
 
@@ -617,23 +619,25 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   /* Controlled depth (avoid oversized shadow that clips on hover) */
   box-shadow:
     0 8px 18px rgba(15,23,42,.12),
-    0 4px 10px rgba(5,195,249,.16);
+    0 4px 10px rgba(var(--accent-rgb),.16);
 
   transition: transform .14s ease, box-shadow .14s ease;
 }
 .send:hover{
   /* Subtle lift only (no aggressive scale) */
   transform: translateY(-1px);
+  background: var(--accent-secondary);
   box-shadow:
     0 12px 26px rgba(15,23,42,.14),
-    0 8px 18px rgba(5,195,249,.18);
+    0 8px 18px rgba(var(--accent-rgb),.18);
 }
 .send:active{
   /* Tactile press */
   transform: translateY(1px) scale(.98);
+  background: var(--accent-secondary);
   box-shadow:
     0 6px 14px rgba(15,23,42,.12),
-    0 4px 10px rgba(5,195,249,.16);
+    0 4px 10px rgba(var(--accent-rgb),.16);
 }
 
 /* Brand-forward focus ring (accessibility-safe)
@@ -643,10 +647,10 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .send:focus-visible{
   outline:none;
   box-shadow:
-    0 0 0 5px rgba(5,195,249,.28),
-    0 0 0 10px rgba(5,195,249,.14),
+    0 0 0 5px rgba(var(--accent-rgb),.28),
+    0 0 0 10px rgba(var(--accent-rgb),.14),
     0 16px 34px rgba(15,23,42,.18),
-    0 14px 30px rgba(5,195,249,.22);
+    0 14px 30px rgba(var(--accent-rgb),.22);
 }
 
 /* ===== Send button icon (PAW paw) =====
@@ -691,8 +695,8 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   /* Soft brand-tinted + neutral mix */
   border:2px solid rgba(255,255,255,.22);
   box-shadow:
-    0 0 0 5px rgba(5,195,249,.14),
-    0 0 0 10px rgba(5,195,249,.06);
+    0 0 0 5px rgba(var(--accent-rgb),.14),
+    0 0 0 10px rgba(var(--accent-rgb),.06);
 
   opacity:.85;
   pointer-events:none;
@@ -922,8 +926,8 @@ body.paw-works-mode{
   padding-right:12px;
 
   /* Distinct visual language from other header pills */
-  background: rgba(5,195,249,.88);
-  border-color: rgba(5,195,249,.40);
+  background: rgba(var(--accent-rgb),.88);
+  border-color: rgba(var(--accent-rgb),.40);
   color:#fff;
 
   /* Allow internal label to truncate cleanly */
@@ -931,12 +935,12 @@ body.paw-works-mode{
   max-width:100%;
 }
 .paw-works-btn:hover{
-  background: rgba(5,195,249,.94);
+  background: rgba(var(--accent-rgb),.94);
 }
 .paw-works-btn.is-active{
   /* Slightly stronger when a Brand / Listing / Deal is attached */
-  background: rgba(5,195,249,1);
-  border-color: rgba(5,195,249,.55);
+  background: rgba(var(--accent-rgb),1);
+  border-color: rgba(var(--accent-rgb),.55);
 }
 
 .paw-works-btn .works-paw{
@@ -1063,7 +1067,7 @@ body.paw-works-mode{
   flex-direction: column;
   /* Match .panel-topbar so Works mode does not feel like leaving the tool */
   background:
-    radial-gradient(900px 240px at 10% 0%, rgba(5,195,249,.08), rgba(255,255,255,0) 55%),
+    radial-gradient(920px 220px at 12% 0%, rgba(var(--accent-rgb),.045), rgba(255,255,255,0) 58%),
     #fff;
   z-index: 9996;            /* Above tool UI */
 }
@@ -1103,7 +1107,7 @@ body.paw-works-mode{
   border: 1px solid rgba(15,23,42,.10);
   border-radius: 16px;
   padding: 14px 14px;
-  background: rgba(5,195,249,.05);
+  background: rgba(var(--accent-rgb),.05);
   margin-bottom: 14px;
 }
 
@@ -1258,4 +1262,3 @@ html.paw-compact .paw-work-status{
     justify-content:flex-start;
   }
 }
-
