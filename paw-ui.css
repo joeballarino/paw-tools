@@ -621,20 +621,21 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
     0 8px 18px rgba(15,23,42,.12),
     0 4px 10px rgba(var(--accent-rgb),.16);
 
-  transition: transform .14s ease, box-shadow .14s ease;
+  transition: transform .14s ease, box-shadow .14s ease, background-color .14s ease, filter .12s ease;
 }
 .send:hover{
   /* Subtle lift only (no aggressive scale) */
   transform: translateY(-1px);
   background: var(--accent-secondary);
   box-shadow:
-    0 12px 26px rgba(15,23,42,.14),
-    0 8px 18px rgba(var(--accent-rgb),.18);
+    0 10px 20px rgba(15,23,42,.12),
+    0 6px 14px rgba(var(--accent-rgb),.16);
 }
 .send:active{
   /* Tactile press */
   transform: translateY(1px) scale(.98);
   background: var(--accent-secondary);
+  filter: brightness(.95);
   box-shadow:
     0 6px 14px rgba(15,23,42,.12),
     0 4px 10px rgba(var(--accent-rgb),.16);
@@ -647,10 +648,9 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .send:focus-visible{
   outline:none;
   box-shadow:
-    0 0 0 5px rgba(var(--accent-rgb),.28),
-    0 0 0 10px rgba(var(--accent-rgb),.14),
-    0 16px 34px rgba(15,23,42,.18),
-    0 14px 30px rgba(var(--accent-rgb),.22);
+    0 0 0 3px rgba(var(--accent-rgb),.35),
+    0 8px 18px rgba(15,23,42,.12),
+    0 6px 14px rgba(var(--accent-rgb),.16);
 }
 
 /* ===== Send button icon (PAW paw) =====
@@ -661,6 +661,7 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   height:28px;
   display:block;
   object-fit:contain;
+  filter: brightness(0) invert(1);
 }
 /* ===== Send button icon (PAW paw) =====
    This is the base sizing for the paw icon inside the primary action button.
