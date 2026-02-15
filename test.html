@@ -48,12 +48,13 @@
     </div>
 
     <div class="controls" role="group" aria-label="Preview pages">
-      <a href="#" data-page="guide.html">guide.html</a>
-      <a href="#" data-page="connect.html">connect.html</a>
-      <a href="#" data-page="presence.html">presence.html</a>
-      <a href="#" data-page="listing.html">listing.html</a>
-      <a href="#" data-page="transactions.html">transactions.html</a>
-      <a href="#" data-page="myworks.html">myworks.html</a>
+      <a href="#" data-page="guide.html">Guide</a>
+      <a href="#" data-page="connect.html">Connect</a>
+      <a href="#" data-page="presence.html">Presence</a>
+      <a href="#" data-page="listing.html">Listing</a>
+      <a href="#" data-page="transactions.html">Transactions</a>
+      <a href="#" data-page="myworks.html">MyWorks</a>
+      <a href="#" data-page="signature.html">Signature</a>
     </div>
 
     <iframe id="previewFrame" title="PAW preview"></iframe>
@@ -76,6 +77,11 @@
           loadPage(link.dataset.page);
         });
       });
+
+      const params = new URLSearchParams(window.location.search);
+      baseUrlInput.value = params.get("base") || "https://paw-tools.pages.dev";
+
+      loadPage("guide.html");
     </script>
   </body>
 </html>
