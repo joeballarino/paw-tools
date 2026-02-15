@@ -179,6 +179,19 @@
       margin-top: 10px;
     }
 
+    .copy-status {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 18px;
+    }
+
+    .manual-copy-target {
+      outline: 2px solid var(--danger);
+      outline-offset: 2px;
+      transition: outline-color 0.3s ease;
+    }
+
     button {
       border: 1px solid var(--line);
       background: var(--panel-2);
@@ -257,12 +270,14 @@
       min-height: 70px;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 980px) {
       .top-controls,
       .grid,
       .field-row {
         grid-template-columns: 1fr;
       }
+
+      .preview-panel { margin-top: 2px; }
     }
   </style>
 </head>
@@ -296,35 +311,61 @@
 
     <div class="grid">
       <section>
-        <h2>Build</h2>
+        <details id="contactSection" open>
+          <summary>Contact details</summary>
+          <div class="field"><label for="fullName">Full name</label><input id="fullName" /></div>
+          <div class="field-row">
+            <div class="field"><label for="title">Title</label><input id="title" /></div>
+            <div class="field"><label for="brokerage">Brokerage / Team</label><input id="brokerage" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="phone">Phone</label><input id="phone" /></div>
+            <div class="field"><label for="email">Email</label><input id="email" type="email" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="website">Website</label><input id="website" placeholder="https://" /></div>
+            <div class="field"><label for="officeLocation">Office/location line (City, State) (optional)</label><input id="officeLocation" /></div>
+          </div>
+          <div class="field"><label for="license">License # (optional)</label><input id="license" /></div>
+        </details>
+      </section>
 
-        <div class="field"><label for="fullName">Full name</label><input id="fullName" /></div>
-        <div class="field-row">
-          <div class="field"><label for="title">Title</label><input id="title" /></div>
-          <div class="field"><label for="brokerage">Brokerage / Team</label><input id="brokerage" /></div>
+      <section class="preview-panel">
+        <h2>Preview + Copy</h2>
+        <div class="preview-card" id="preview" tabindex="-1"></div>
+        <div class="actions">
+          <button class="primary" id="copyPaste" type="button">Copy for paste (recommended)</button>
+          <button id="copyGmail" type="button">Copy for Gmail</button>
+          <button id="copyHtml" type="button">Copy HTML (advanced)</button>
         </div>
-        <div class="field-row">
-          <div class="field"><label for="phone">Phone</label><input id="phone" /></div>
-          <div class="field"><label for="email">Email</label><input id="email" type="email" /></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label for="website">Website</label><input id="website" placeholder="https://" /></div>
-          <div class="field"><label for="officeLocation">Office/location line (City, State) (optional)</label><input id="officeLocation" /></div>
-        </div>
-        <div class="field"><label for="license">License # (optional)</label><input id="license" /></div>
+        <div class="copy-status" id="copyStatus" aria-live="polite"></div>
 
-        <h2>Social URLs</h2>
-        <div class="field-row">
-          <div class="field"><label for="linkedin">LinkedIn URL (optional)</label><input id="linkedin" placeholder="https://" /></div>
-          <div class="field"><label for="instagram">Instagram URL (optional)</label><input id="instagram" placeholder="https://" /></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label for="facebook">Facebook URL (optional)</label><input id="facebook" placeholder="https://" /></div>
-          <div class="field"><label for="youtube">YouTube URL (optional)</label><input id="youtube" placeholder="https://" /></div>
-        </div>
+        <details id="copyHelp">
+          <summary>Which one do I need?</summary>
+          <ul class="subtle">
+            <li><strong>Copy for paste:</strong> most signature editors where you paste formatted content.</li>
+            <li><strong>Copy for Gmail:</strong> for Gmail signature settings.</li>
+            <li><strong>Copy HTML:</strong> systems that ask for HTML source/import.</li>
+            <li>If formatting is stripped: try Copy HTML import; otherwise your email client likely only supports plain text signatures.</li>
+          </ul>
+        </details>
+      </section>
+
+      <section>
+        <details id="socialSection">
+          <summary>Social icons</summary>
+          <div class="field-row">
+            <div class="field"><label for="linkedin">LinkedIn URL (optional)</label><input id="linkedin" placeholder="https://" /></div>
+            <div class="field"><label for="instagram">Instagram URL (optional)</label><input id="instagram" placeholder="https://" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="facebook">Facebook URL (optional)</label><input id="facebook" placeholder="https://" /></div>
+            <div class="field"><label for="youtube">YouTube URL (optional)</label><input id="youtube" placeholder="https://" /></div>
+          </div>
+        </details>
 
         <details id="imageSection">
-          <summary>Image (optional)</summary>
+          <summary>Image / logo</summary>
           <div class="toggle">
             <input id="includeImage" type="checkbox" />
             <label for="includeImage">Include image</label>
@@ -349,7 +390,7 @@
         </details>
 
         <details id="aiSection">
-          <summary>AI assist (optional)</summary>
+          <summary>Tagline + mini bio (optional)</summary>
           <div class="field-row">
             <div class="field"><label for="audience">Audience</label><input id="audience" /></div>
             <div class="field">
@@ -373,26 +414,6 @@
 
           <div class="field"><label for="tagline">Tagline (short)</label><input id="tagline" /></div>
           <div class="field"><label for="bio">Micro bio (1 sentence)</label><textarea id="bio"></textarea></div>
-        </details>
-      </section>
-
-      <section>
-        <h2>Preview + Copy</h2>
-        <div class="preview-card" id="preview"></div>
-        <div class="actions">
-          <button class="primary" id="copyPaste" type="button">Copy for paste (recommended)</button>
-          <button id="copyGmail" type="button">Copy for Gmail</button>
-          <button id="copyHtml" type="button">Copy HTML (advanced)</button>
-        </div>
-
-        <details id="copyHelp">
-          <summary>Which one do I need?</summary>
-          <ul class="subtle">
-            <li><strong>Copy for paste:</strong> most signature editors where you paste formatted content.</li>
-            <li><strong>Copy for Gmail:</strong> for Gmail signature settings.</li>
-            <li><strong>Copy HTML:</strong> systems that ask for HTML source/import.</li>
-            <li>If formatting is stripped: try Copy HTML import; otherwise your email client likely only supports plain text signatures.</li>
-          </ul>
         </details>
       </section>
     </div>
@@ -453,6 +474,7 @@
     const preview = document.getElementById("preview");
     const toast = document.getElementById("toast");
     const aiStatus = document.getElementById("aiStatus");
+    const copyStatus = document.getElementById("copyStatus");
 
     function showToast(message, isError = false) {
       toast.textContent = message;
@@ -561,43 +583,73 @@
       scheduleResize(20);
     }
 
-    function copyHtmlRich(html, label) {
+    function copyHtmlRich(html) {
       if (navigator.clipboard && window.ClipboardItem) {
         const item = new ClipboardItem({
           "text/html": new Blob([html], { type: "text/html" }),
           "text/plain": new Blob([html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()], { type: "text/plain" })
         });
-        return navigator.clipboard.write([item]).then(() => showToast(`${label} copied.`));
+        return navigator.clipboard.write([item]);
       }
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        return navigator.clipboard.writeText(html).then(() => showToast(`${label} copied as HTML text.`));
+        return navigator.clipboard.writeText(html);
       }
       const ta = document.createElement("textarea");
       ta.value = html;
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand("copy");
+      const copied = document.execCommand("copy");
       ta.remove();
-      showToast(`${label} copied as HTML text.`);
+      if (!copied) throw new Error("copy-failed");
       return Promise.resolve();
     }
 
-    async function copyHtmlTextOnly(html, label) {
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(html);
-        } else {
-          const ta = document.createElement("textarea");
-          ta.value = html;
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand("copy");
-          ta.remove();
-        }
-        showToast(`${label} copied.`);
-      } catch {
-        showToast("Copy failed. Try again.", true);
+    async function copyHtmlTextOnly(html) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(html);
+        return;
       }
+      const ta = document.createElement("textarea");
+      ta.value = html;
+      document.body.appendChild(ta);
+      ta.select();
+      const copied = document.execCommand("copy");
+      ta.remove();
+      if (!copied) throw new Error("copy-failed");
+    }
+
+    function setCopyStatus(message, isError = false) {
+      copyStatus.textContent = message;
+      copyStatus.style.color = isError ? "var(--danger)" : "var(--muted)";
+      scheduleResize(10);
+    }
+
+    function markManualCopyFallback() {
+      preview.classList.add("manual-copy-target");
+      preview.focus();
+      scheduleResize(10);
+      setTimeout(() => {
+        preview.classList.remove("manual-copy-target");
+        scheduleResize(10);
+      }, 1200);
+    }
+
+    async function handleCopyAction(buttonId, action) {
+      const button = document.getElementById(buttonId);
+      const originalText = button.textContent;
+      try {
+        await action();
+        button.textContent = "Copied ✓";
+        setCopyStatus("Copied. Paste into your email signature editor.");
+      } catch {
+        setCopyStatus("Copy failed — try Select + Copy.", true);
+        markManualCopyFallback();
+      }
+      scheduleResize(10);
+      setTimeout(() => {
+        button.textContent = originalText;
+        scheduleResize(10);
+      }, 1500);
     }
 
     function applyPawPreset() {
@@ -758,16 +810,28 @@
     document.getElementById("regenerateBtn").addEventListener("click", runAiGeneration);
 
     document.getElementById("copyPaste").addEventListener("click", () => {
-      copyHtmlRich(buildSignatureHtml(false), "Signature for paste").catch(() => showToast("Copy failed. Try again.", true));
+      handleCopyAction("copyPaste", () => copyHtmlRich(buildSignatureHtml(false)));
     });
     document.getElementById("copyGmail").addEventListener("click", () => {
-      copyHtmlRich(buildSignatureHtml(true), "Gmail signature").catch(() => showToast("Copy failed. Try again.", true));
+      handleCopyAction("copyGmail", () => copyHtmlRich(buildSignatureHtml(true)));
     });
     document.getElementById("copyHtml").addEventListener("click", () => {
-      copyHtmlTextOnly(buildSignatureHtml(false), "HTML");
+      handleCopyAction("copyHtml", () => copyHtmlTextOnly(buildSignatureHtml(false)));
     });
 
-    ["imageSection", "aiSection", "copyHelp"].forEach((id) => {
+    const accordionIds = ["contactSection", "socialSection", "imageSection", "aiSection"];
+    accordionIds.forEach((id) => {
+      document.getElementById(id).addEventListener("toggle", (evt) => {
+        if (evt.target.open) {
+          accordionIds.forEach((otherId) => {
+            if (otherId !== id) document.getElementById(otherId).open = false;
+          });
+        }
+        scheduleResize(30);
+      });
+    });
+
+    ["copyHelp"].forEach((id) => {
       document.getElementById(id).addEventListener("toggle", () => scheduleResize(30));
     });
 
