@@ -394,7 +394,17 @@
             </div>
             <div class="field">
               <label for="imageShape">Shape</label>
-              <select id="imageShape"><option>Rounded square</option><option>Circle</option></select>
+              <select id="imageShape"><option>Square</option><option selected>Rounded square</option><option>Circle</option></select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="imageFit">Fit</label>
+              <select id="imageFit"><option selected>Contain</option><option>Cover</option></select>
+            </div>
+            <div class="field">
+              <label for="imageLayout">Layout</label>
+              <select id="imageLayout"><option selected>Side-by-side (image left)</option><option>Side-by-side (image right)</option><option>Stacked (image above)</option></select>
             </div>
           </div>
           <div class="field-row">
@@ -506,7 +516,7 @@
 
     const ids = [
       "style", "accentCustom", "fullName", "title", "brokerage", "phone", "email", "website", "officeLocation", "license",
-      "linkedin", "instagram", "facebook", "youtube", "includeImage", "imageType", "imageUrl", "imageShape", "imageSize",
+      "linkedin", "instagram", "facebook", "youtube", "includeImage", "imageType", "imageUrl", "imageShape", "imageFit", "imageLayout", "imageSize",
       "audience", "tone", "focus", "location", "office", "tagline", "bio"
     ];
 
@@ -588,7 +598,8 @@
     function buildSignatureHtml(gmailVariant = false) {
       const data = Object.fromEntries(Object.entries(el).map(([k, node]) => [k, node.type === "checkbox" ? node.checked : node.value.trim()]));
       const imageSize = data.imageSize === "Medium" ? 72 : 56;
-      const imageRadius = data.imageShape === "Circle" ? "50%" : "10px";
+      const imageRadius = data.imageShape === "Circle" ? "50%" : (data.imageShape === "Square" ? "0" : "10px");
+      const imageFit = data.imageFit === "Contain" ? "contain" : "cover";
       const contactRows = [];
 
       if (data.phone) contactRows.push(`<span style="color:${state.accent};">P</span> <a href="tel:${safe(data.phone)}" style="color:${state.accent};text-decoration:none;">${safe(data.phone)}</a>`);
@@ -612,24 +623,43 @@
       const spacer = gmailVariant ? "8" : "10";
       const fontBody = data.style === "compact" ? 12 : 13;
       const nameSize = data.style === "compact" ? 18 : 20;
+      const framePadding = gmailVariant ? "4" : "5";
+      const frameSize = imageSize + (Number(framePadding) * 2);
+      const hasImage = data.includeImage && data.imageUrl;
+      const imageLayout = data.imageLayout || "Side-by-side (image left)";
 
-      const imageCell = data.includeImage && data.imageUrl
-        ? `<td style="vertical-align:top;padding-right:${spacer}px;"><img src="${safe(data.imageUrl)}" alt="${safe(data.imageType || "Image")}" width="${imageSize}" height="${imageSize}" style="display:block;border:0;outline:none;text-decoration:none;width:${imageSize}px;height:${imageSize}px;border-radius:${imageRadius};object-fit:cover;" /></td>`
+      const imageFrame = hasImage
+        ? `<div style="display:block;width:${frameSize}px;height:${frameSize}px;padding:${framePadding}px;border:1px solid #d1d5db;border-radius:8px;background:#ffffff;"><img src="${safe(data.imageUrl)}" alt="${safe(data.imageType || "Image")}" width="${imageSize}" height="${imageSize}" style="display:block;border:0;outline:none;text-decoration:none;width:${imageSize}px;height:${imageSize}px;border-radius:${imageRadius};object-fit:${imageFit};object-position:center center;background:#ffffff;" /></div>`
         : "";
 
-      return `
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:560px;line-height:1.35;">
-  <tr>
-    ${imageCell}
-    <td style="vertical-align:top;${imageCell ? "padding-left:2px;" : ""}">
+      const imageCellLeft = hasImage
+        ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>`
+        : "";
+
+      const imageCellRight = hasImage
+        ? `<td style="vertical-align:top;padding-left:${spacer}px;">${imageFrame}</td>`
+        : "";
+
+      const imageCellStacked = hasImage
+        ? `<td style="vertical-align:top;padding-bottom:${spacer}px;">${imageFrame}</td>`
+        : "";
+
+      const textCell = `<td style="vertical-align:top;${hasImage && imageLayout === "Side-by-side (image left)" ? "padding-left:2px;" : ""}">
       <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 2px;">${safe(data.fullName || "Your Name")}</div>
       <div style="font-size:${fontBody}px;color:#333;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:0 0 4px;">${tagline}</div>` : ""}
       ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
       <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
       ${social ? `<div style="margin-top:8px;">${social}</div>` : ""}
-    </td>
-  </tr>
+    </td>`;
+
+      const contentRows = imageLayout === "Stacked (image above)" && hasImage
+        ? `<tr>${imageCellStacked}</tr><tr>${textCell}</tr>`
+        : `<tr>${imageLayout === "Side-by-side (image right)" ? `${textCell}${imageCellRight}` : `${imageCellLeft}${textCell}`}</tr>`;
+
+      return `
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:560px;line-height:1.35;">
+  ${contentRows}
 </table>`.trim();
     }
 
@@ -713,8 +743,21 @@
       el.imageType.value = "Logo";
       el.imageUrl.value = "https://paw-tools.pages.dev/siglogoreal.png";
       el.imageShape.value = "Rounded square";
+      el.imageFit.value = "Contain";
+      el.imageLayout.value = "Side-by-side (image left)";
       setAccent("#2f6fed");
     }
+
+    el.imageType.addEventListener("change", () => {
+      el.imageFit.value = el.imageType.value === "Logo" ? "Contain" : "Cover";
+      renderPreview();
+      scheduleResize(30);
+    });
+
+    el.imageLayout.addEventListener("change", () => {
+      renderPreview();
+      scheduleResize(30);
+    });
 
     function setAccent(color) {
       state.accent = color;
