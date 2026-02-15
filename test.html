@@ -78,6 +78,22 @@
         });
       });
 
+      window.addEventListener("message", (e) => {
+        if (!e.data || e.data.type !== "paw:resize") {
+          return;
+        }
+
+        if (e.source !== previewFrame.contentWindow) {
+          return;
+        }
+
+        if (typeof e.data.height === "number" && e.data.height > 600) {
+          previewFrame.style.height = `${e.data.height}px`;
+        }
+
+        window.parent.postMessage(e.data, "*");
+      });
+
       const params = new URLSearchParams(window.location.search);
       baseUrlInput.value = params.get("base") || "https://paw-tools.pages.dev";
       loadPage("guide.html");
