@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProAgent Works Signature Creator</title>
+  <style>
+    :root {
+      --bg: #0f1420;
+      --panel: #161d2b;
+      --panel-2: #1b2436;
+      --text: #e8ecf3;
+      --muted: #aeb8cb;
+      --line: #283249;
+      --accent: #2f6fed;
+      --danger: #f87171;
+      --ok: #34d399;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .top-controls, .grid > section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .top-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .privacy-line {
+      grid-column: 1 / -1;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .privacy-line button {
+      background: transparent;
+      color: var(--text);
+      border: 0;
+      text-decoration: underline;
+      padding: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    label { font-size: 13px; color: var(--muted); }
+
+    input, select, textarea, button {
+      font: inherit;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      outline: none;
+    }
+
+    input[type="color"] {
+      height: 36px;
+      padding: 4px;
+    }
+
+    textarea { min-height: 64px; resize: vertical; }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 22px;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 17px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .swatch.active { border-color: #fff; }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin: 10px 0;
+      background: #131b2a;
+    }
+
+    details > summary {
+      cursor: pointer;
+      list-style: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    details > summary::-webkit-details-marker { display: none; }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+    }
+
+    .preview-card {
+      background: #fff;
+      color: #111;
+      border-radius: 10px;
+      overflow: auto;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      min-height: 220px;
+    }
+
+    .actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 9px 12px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: color-mix(in srgb, var(--accent), #000 20%);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .status {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 18px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      background: #111827;
+      color: #fff;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: 0.2s ease;
+      pointer-events: none;
+      max-width: 290px;
+      z-index: 60;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 12px;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      width: min(620px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .modal h3 { margin: 0 0 10px; }
+    .modal ul { margin: 0 0 12px 18px; color: var(--muted); }
+    .modal .row { display: flex; gap: 8px; justify-content: flex-end; }
+
+    #turnstile-wrap {
+      margin: 8px 0;
+      display: none;
+      min-height: 70px;
+    }
+
+    @media (max-width: 900px) {
+      .top-controls,
+      .grid,
+      .field-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Email Signature Creator</h1>
+
+    <div class="top-controls">
+      <div class="field">
+        <label for="style">Style</label>
+        <select id="style">
+          <option value="clean" selected>Clean</option>
+          <option value="compact">Compact</option>
+          <option value="paw">ProAgent Works</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Accent color</label>
+        <div class="swatches" id="swatches"></div>
+        <div class="field">
+          <input type="color" id="accentCustom" value="#2f6fed" aria-label="Custom accent color" />
+        </div>
+      </div>
+
+      <div class="privacy-line">
+        <strong>Privacy-first: we don’t store or email your contact info.</strong>
+        <button id="learnWhy" type="button">Learn why</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section>
+        <h2>Build</h2>
+
+        <div class="field"><label for="fullName">Full name</label><input id="fullName" /></div>
+        <div class="field-row">
+          <div class="field"><label for="title">Title</label><input id="title" /></div>
+          <div class="field"><label for="brokerage">Brokerage / Team</label><input id="brokerage" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="phone">Phone</label><input id="phone" /></div>
+          <div class="field"><label for="email">Email</label><input id="email" type="email" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="website">Website</label><input id="website" placeholder="https://" /></div>
+          <div class="field"><label for="officeLocation">Office/location line (City, State) (optional)</label><input id="officeLocation" /></div>
+        </div>
+        <div class="field"><label for="license">License # (optional)</label><input id="license" /></div>
+
+        <h2>Social URLs</h2>
+        <div class="field-row">
+          <div class="field"><label for="linkedin">LinkedIn URL (optional)</label><input id="linkedin" placeholder="https://" /></div>
+          <div class="field"><label for="instagram">Instagram URL (optional)</label><input id="instagram" placeholder="https://" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="facebook">Facebook URL (optional)</label><input id="facebook" placeholder="https://" /></div>
+          <div class="field"><label for="youtube">YouTube URL (optional)</label><input id="youtube" placeholder="https://" /></div>
+        </div>
+
+        <details id="imageSection">
+          <summary>Image (optional)</summary>
+          <div class="toggle">
+            <input id="includeImage" type="checkbox" />
+            <label for="includeImage">Include image</label>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="imageType">Image type</label>
+              <select id="imageType"><option>Logo</option><option>Headshot</option></select>
+            </div>
+            <div class="field">
+              <label for="imageShape">Shape</label>
+              <select id="imageShape"><option>Rounded square</option><option>Circle</option></select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="imageSize">Size</label>
+              <select id="imageSize"><option>Small</option><option>Medium</option></select>
+            </div>
+            <div class="field"><label for="imageUrl">Image URL</label><input id="imageUrl" placeholder="https://" /></div>
+          </div>
+        </details>
+
+        <details id="aiSection">
+          <summary>AI assist (optional)</summary>
+          <div class="field-row">
+            <div class="field"><label for="audience">Audience</label><input id="audience" /></div>
+            <div class="field">
+              <label for="tone">Tone</label>
+              <select id="tone"><option value="">Select tone</option><option>Professional</option><option>Warm</option><option>Confident</option><option>Friendly</option></select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="focus">Focus</label><input id="focus" /></div>
+            <div class="field"><label for="location">Location</label><input id="location" /></div>
+          </div>
+          <div class="field"><label for="office">Office</label><input id="office" /></div>
+
+          <div id="turnstile-wrap"><div id="turnstile"></div></div>
+
+          <div class="field-row">
+            <button id="generateBtn" type="button" class="primary">Generate</button>
+            <button id="regenerateBtn" type="button">Regenerate</button>
+          </div>
+          <div class="status" id="aiStatus"></div>
+
+          <div class="field"><label for="tagline">Tagline (short)</label><input id="tagline" /></div>
+          <div class="field"><label for="bio">Micro bio (1 sentence)</label><textarea id="bio"></textarea></div>
+        </details>
+      </section>
+
+      <section>
+        <h2>Preview + Copy</h2>
+        <div class="preview-card" id="preview"></div>
+        <div class="actions">
+          <button class="primary" id="copyPaste" type="button">Copy for paste (recommended)</button>
+          <button id="copyGmail" type="button">Copy for Gmail</button>
+          <button id="copyHtml" type="button">Copy HTML (advanced)</button>
+        </div>
+
+        <details id="copyHelp">
+          <summary>Which one do I need?</summary>
+          <ul class="subtle">
+            <li><strong>Copy for paste:</strong> most signature editors where you paste formatted content.</li>
+            <li><strong>Copy for Gmail:</strong> for Gmail signature settings.</li>
+            <li><strong>Copy HTML:</strong> systems that ask for HTML source/import.</li>
+            <li>If formatting is stripped: try Copy HTML import; otherwise your email client likely only supports plain text signatures.</li>
+          </ul>
+        </details>
+      </section>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="privacyModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+      <h3 id="privacyTitle">Privacy & trust</h3>
+      <ul>
+        <li><strong>Your info stays in your browser.</strong> This tool doesn’t require an account and doesn’t store your form inputs on our servers.</li>
+        <li><strong>No surprise outreach.</strong> Using this tool won’t add you to a list and won’t trigger marketing emails.</li>
+        <li><strong>We’re earning trust on purpose.</strong> ProAgent Works is built to do what it says—so you can feel confident using the full suite when you’re ready.</li>
+        <li><strong>AI is optional and minimized.</strong> If you use AI, we only send a few optional “about your work” fields plus an anti-abuse verification token. Your contact fields (phone/email) aren’t required for AI generation.</li>
+      </ul>
+      <div class="row">
+        <a href="https://www.proagentworks.com/join" target="_blank" rel="noopener noreferrer" style="color: var(--muted);">Learn about ProAgent Works</a>
+        <button id="closeModal" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+  <script>
+    const TURNSTILE_SITE_KEY = "REPLACE_WITH_TURNSTILE_SITE_KEY";
+    const PAW_API_BASE = "REPLACE_WITH_PAW_API_BASE";
+
+    (function enforceEmbedOnly() {
+      try {
+        if (window.top === window.self) {
+          window.location.replace("https://www.proagentworks.com/signature");
+        }
+      } catch (_) {
+        window.location.replace("https://www.proagentworks.com/signature");
+      }
+    })();
+
+    const state = {
+      accent: "#2f6fed",
+      turnstileWidgetId: null,
+      turnstileToken: "",
+      turnstileVisible: false,
+      aiInFlight: false,
+      cooldownUntil: 0,
+      cooldownTimer: null
+    };
+
+    const swatches = ["#2f6fed", "#1f9d72", "#9b59b6", "#ef4444", "#f59e0b", "#06b6d4", "#64748b", "#111827"];
+
+    const ids = [
+      "style", "accentCustom", "fullName", "title", "brokerage", "phone", "email", "website", "officeLocation", "license",
+      "linkedin", "instagram", "facebook", "youtube", "includeImage", "imageType", "imageUrl", "imageShape", "imageSize",
+      "audience", "tone", "focus", "location", "office", "tagline", "bio"
+    ];
+
+    const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
+    const preview = document.getElementById("preview");
+    const toast = document.getElementById("toast");
+    const aiStatus = document.getElementById("aiStatus");
+
+    function showToast(message, isError = false) {
+      toast.textContent = message;
+      toast.style.borderColor = isError ? "#7f1d1d" : "#374151";
+      toast.classList.add("show");
+      scheduleResize();
+      setTimeout(() => {
+        toast.classList.remove("show");
+        scheduleResize();
+      }, 2200);
+    }
+
+    let resizeFrame = null;
+    function postHeight() {
+      const height = Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight,
+        document.body.offsetHeight,
+        document.documentElement.offsetHeight
+      );
+      window.parent.postMessage({ type: "paw:resize", height }, "*");
+    }
+
+    function scheduleResize(delay = 0) {
+      if (resizeFrame) {
+        clearTimeout(resizeFrame);
+      }
+      resizeFrame = setTimeout(() => {
+        requestAnimationFrame(postHeight);
+      }, delay);
+    }
+
+    new ResizeObserver(() => scheduleResize()).observe(document.body);
+    new MutationObserver(() => scheduleResize(30)).observe(document.body, { subtree: true, childList: true, attributes: true });
+    window.addEventListener("resize", () => scheduleResize(30));
+
+    function safe(v) {
+      return String(v || "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+    }
+
+    function normUrl(url) {
+      const v = (url || "").trim();
+      if (!v) return "";
+      return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+    }
+
+    function icon(name, color) {
+      const common = `width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
+      if (name === "linkedin") return `<svg ${common}><path d="M6 9v9"/><path d="M6 6h.01"/><path d="M10 9v9"/><path d="M10 13c0-2 1.2-4 3.2-4S17 11 17 13v5"/></svg>`;
+      if (name === "instagram") return `<svg ${common}><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6"/></svg>`;
+      if (name === "facebook") return `<svg ${common}><path d="M13 21v-8h3l.5-3H13V8.8c0-.9.4-1.8 1.8-1.8H17V4.2S15.9 4 14.8 4C12.2 4 11 5.6 11 8.4V10H8v3h3v8"/></svg>`;
+      return `<svg ${common}><path d="M22 12s0-5-1-7c-.3-.9-1-1.6-1.9-1.9C17.2 2 12 2 12 2S6.8 2 4.9 3.1C4 3.4 3.3 4.1 3 5c-1 2-1 7-1 7s0 5 1 7c.3.9 1 1.6 1.9 1.9C6.8 22 12 22 12 22s5.2 0 7.1-1.1c.9-.3 1.6-1 1.9-1.9 1-2 1-7 1-7Z"/><path d="m10 15 5-3-5-3z"/></svg>`;
+    }
+
+    function buildSignatureHtml(gmailVariant = false) {
+      const data = Object.fromEntries(Object.entries(el).map(([k, node]) => [k, node.type === "checkbox" ? node.checked : node.value.trim()]));
+      const imageSize = data.imageSize === "Medium" ? 72 : 56;
+      const imageRadius = data.imageShape === "Circle" ? "50%" : "10px";
+      const contactRows = [];
+
+      if (data.phone) contactRows.push(`<span style="color:${state.accent};">P</span> <a href="tel:${safe(data.phone)}" style="color:${state.accent};text-decoration:none;">${safe(data.phone)}</a>`);
+      if (data.email) contactRows.push(`<span style="color:${state.accent};">E</span> <a href="mailto:${safe(data.email)}" style="color:${state.accent};text-decoration:none;">${safe(data.email)}</a>`);
+      if (data.website) contactRows.push(`<span style="color:${state.accent};">W</span> <a href="${safe(normUrl(data.website))}" style="color:${state.accent};text-decoration:none;">${safe(data.website)}</a>`);
+      if (data.officeLocation) contactRows.push(`<span>${safe(data.officeLocation)}</span>`);
+      if (data.license) contactRows.push(`<span>License # ${safe(data.license)}</span>`);
+
+      const social = [
+        ["linkedin", data.linkedin, "LinkedIn"],
+        ["instagram", data.instagram, "Instagram"],
+        ["facebook", data.facebook, "Facebook"],
+        ["youtube", data.youtube, "YouTube"]
+      ].filter(([, url]) => url).map(([key, url, label]) => (
+        `<a href="${safe(normUrl(url))}" title="${label}" aria-label="${label}" style="display:inline-block;margin-right:8px;text-decoration:none;">${icon(key, state.accent)}</a>`
+      )).join("");
+
+      const tagline = safe((data.tagline || "").slice(0, 120));
+      const bio = safe((data.bio || "").slice(0, 220));
+
+      const spacer = gmailVariant ? "8" : "10";
+      const fontBody = data.style === "compact" ? 12 : 13;
+      const nameSize = data.style === "compact" ? 18 : 20;
+
+      const imageCell = data.includeImage && data.imageUrl
+        ? `<td style="vertical-align:top;padding-right:${spacer}px;"><img src="${safe(data.imageUrl)}" alt="${safe(data.imageType || "Image")}" width="${imageSize}" height="${imageSize}" style="display:block;border:0;outline:none;text-decoration:none;width:${imageSize}px;height:${imageSize}px;border-radius:${imageRadius};object-fit:cover;" /></td>`
+        : "";
+
+      return `
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:560px;line-height:1.35;">
+  <tr>
+    ${imageCell}
+    <td style="vertical-align:top;${imageCell ? "padding-left:2px;" : ""}">
+      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 2px;">${safe(data.fullName || "Your Name")}</div>
+      <div style="font-size:${fontBody}px;color:#333;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
+      ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:0 0 4px;">${tagline}</div>` : ""}
+      ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
+      <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
+      ${social ? `<div style="margin-top:8px;">${social}</div>` : ""}
+    </td>
+  </tr>
+</table>`.trim();
+    }
+
+    function renderPreview() {
+      const html = buildSignatureHtml(false);
+      preview.innerHTML = html;
+      scheduleResize(20);
+    }
+
+    function copyHtmlRich(html, label) {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const item = new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()], { type: "text/plain" })
+        });
+        return navigator.clipboard.write([item]).then(() => showToast(`${label} copied.`));
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(html).then(() => showToast(`${label} copied as HTML text.`));
+      }
+      const ta = document.createElement("textarea");
+      ta.value = html;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      showToast(`${label} copied as HTML text.`);
+      return Promise.resolve();
+    }
+
+    async function copyHtmlTextOnly(html, label) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(html);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = html;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+        showToast(`${label} copied.`);
+      } catch {
+        showToast("Copy failed. Try again.", true);
+      }
+    }
+
+    function applyPawPreset() {
+      el.includeImage.checked = true;
+      el.imageType.value = "Logo";
+      el.imageUrl.value = "https://paw-tools.pages.dev/siglogoreal.png";
+      el.imageShape.value = "Rounded square";
+      setAccent("#2f6fed");
+    }
+
+    function setAccent(color) {
+      state.accent = color;
+      document.documentElement.style.setProperty("--accent", color);
+      el.accentCustom.value = color;
+      document.querySelectorAll(".swatch").forEach((node) => {
+        node.classList.toggle("active", node.dataset.color.toLowerCase() === color.toLowerCase());
+      });
+      renderPreview();
+    }
+
+    function initSwatches() {
+      const container = document.getElementById("swatches");
+      swatches.forEach((c) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "swatch";
+        b.dataset.color = c;
+        b.style.background = c;
+        b.title = `Accent ${c}`;
+        b.addEventListener("click", () => setAccent(c));
+        container.appendChild(b);
+      });
+      setAccent(state.accent);
+    }
+
+    function openPrivacyModal(open) {
+      const modal = document.getElementById("privacyModal");
+      modal.classList.toggle("open", open);
+      modal.setAttribute("aria-hidden", open ? "false" : "true");
+      scheduleResize();
+    }
+
+    function updateCooldownUi() {
+      const remaining = Math.max(0, Math.ceil((state.cooldownUntil - Date.now()) / 1000));
+      const disabled = state.aiInFlight || remaining > 0;
+      document.getElementById("generateBtn").disabled = disabled;
+      document.getElementById("regenerateBtn").disabled = disabled;
+      if (state.aiInFlight) {
+        aiStatus.textContent = "Generating…";
+      } else if (remaining > 0) {
+        aiStatus.textContent = `Please wait ${remaining}s before generating again.`;
+      } else {
+        aiStatus.textContent = "";
+      }
+      scheduleResize();
+    }
+
+    function startCooldown(seconds = 15) {
+      state.cooldownUntil = Date.now() + seconds * 1000;
+      clearInterval(state.cooldownTimer);
+      state.cooldownTimer = setInterval(() => {
+        updateCooldownUi();
+        if (Date.now() >= state.cooldownUntil) clearInterval(state.cooldownTimer);
+      }, 250);
+      updateCooldownUi();
+    }
+
+    function ensureTurnstileVisible() {
+      const wrap = document.getElementById("turnstile-wrap");
+      if (state.turnstileVisible) return;
+      wrap.style.display = "block";
+      state.turnstileVisible = true;
+      scheduleResize();
+      if (!window.turnstile || state.turnstileWidgetId !== null) return;
+      state.turnstileWidgetId = window.turnstile.render("#turnstile", {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token) => {
+          state.turnstileToken = token;
+          aiStatus.textContent = "Verification complete. You can generate now.";
+          scheduleResize();
+        },
+        "expired-callback": () => { state.turnstileToken = ""; },
+        "error-callback": () => {
+          state.turnstileToken = "";
+          showToast("Verification error. Please retry.", true);
+        }
+      });
+    }
+
+    async function runAiGeneration() {
+      if (state.aiInFlight) return;
+      ensureTurnstileVisible();
+      if (!state.turnstileToken) {
+        showToast("Complete verification to use AI assist.", true);
+        return;
+      }
+      if (Date.now() < state.cooldownUntil) {
+        updateCooldownUi();
+        return;
+      }
+
+      state.aiInFlight = true;
+      updateCooldownUi();
+
+      const payload = {
+        title: el.title.value.trim(),
+        office: el.office.value.trim(),
+        location: el.location.value.trim(),
+        audience: el.audience.value.trim(),
+        tone: el.tone.value.trim(),
+        focus: el.focus.value.trim(),
+        turnstileToken: state.turnstileToken
+      };
+
+      try {
+        const res = await fetch(`${PAW_API_BASE}/signature/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error("non-200");
+        }
+
+        const data = await res.json();
+        el.tagline.value = String(data.tagline || "").slice(0, 120);
+        el.bio.value = String(data.bio || "").slice(0, 220);
+        renderPreview();
+        showToast("AI content generated.");
+        startCooldown(15);
+        if (window.turnstile && state.turnstileWidgetId !== null) {
+          window.turnstile.reset(state.turnstileWidgetId);
+          state.turnstileToken = "";
+        }
+      } catch {
+        showToast("Could not generate right now. Please try again.", true);
+      } finally {
+        state.aiInFlight = false;
+        updateCooldownUi();
+      }
+    }
+
+    el.style.addEventListener("change", () => {
+      if (el.style.value === "paw") applyPawPreset();
+      renderPreview();
+    });
+
+    el.accentCustom.addEventListener("input", () => setAccent(el.accentCustom.value));
+
+    document.getElementById("learnWhy").addEventListener("click", () => openPrivacyModal(true));
+    document.getElementById("closeModal").addEventListener("click", () => openPrivacyModal(false));
+    document.getElementById("privacyModal").addEventListener("click", (evt) => {
+      if (evt.target.id === "privacyModal") openPrivacyModal(false);
+    });
+
+    document.getElementById("generateBtn").addEventListener("click", runAiGeneration);
+    document.getElementById("regenerateBtn").addEventListener("click", runAiGeneration);
+
+    document.getElementById("copyPaste").addEventListener("click", () => {
+      copyHtmlRich(buildSignatureHtml(false), "Signature for paste").catch(() => showToast("Copy failed. Try again.", true));
+    });
+    document.getElementById("copyGmail").addEventListener("click", () => {
+      copyHtmlRich(buildSignatureHtml(true), "Gmail signature").catch(() => showToast("Copy failed. Try again.", true));
+    });
+    document.getElementById("copyHtml").addEventListener("click", () => {
+      copyHtmlTextOnly(buildSignatureHtml(false), "HTML");
+    });
+
+    ["imageSection", "aiSection", "copyHelp"].forEach((id) => {
+      document.getElementById(id).addEventListener("toggle", () => scheduleResize(30));
+    });
+
+    document.querySelectorAll("input, select, textarea").forEach((node) => {
+      const handler = () => {
+        renderPreview();
+        scheduleResize(50);
+      };
+      node.addEventListener("input", handler);
+      node.addEventListener("change", handler);
+    });
+
+    initSwatches();
+    renderPreview();
+    scheduleResize();
+    setTimeout(() => scheduleResize(), 200);
+    setTimeout(() => scheduleResize(), 800);
+  </script>
+</body>
+</html>
