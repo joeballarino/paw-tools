@@ -329,7 +329,7 @@
         <select id="style">
           <option value="clean" selected>Clean</option>
           <option value="compact">Compact</option>
-          <option value="paw">ProAgent Works</option>
+          <option value="paw">ProAgent Member</option>
         </select>
       </div>
 
@@ -404,7 +404,7 @@
             </div>
             <div class="field">
               <label for="imageLayout">Layout</label>
-              <select id="imageLayout"><option selected>Side-by-side (image left)</option><option>Side-by-side (image right)</option><option>Stacked (image above)</option></select>
+              <select id="imageLayout"><option selected>Side-by-side (image left)</option><option>Stacked</option></select>
             </div>
           </div>
           <div class="field-row">
@@ -597,7 +597,8 @@
 
     function buildSignatureHtml(gmailVariant = false) {
       const data = Object.fromEntries(Object.entries(el).map(([k, node]) => [k, node.type === "checkbox" ? node.checked : node.value.trim()]));
-      const imageSize = data.imageSize === "Medium" ? 72 : 56;
+      const isLogo = data.imageType === "Logo";
+      const imageSize = isLogo ? (data.imageSize === "Medium" ? 80 : 64) : (data.imageSize === "Medium" ? 72 : 56);
       const imageRadius = data.imageShape === "Circle" ? "50%" : (data.imageShape === "Square" ? "0" : "10px");
       const imageFit = data.imageFit === "Contain" ? "contain" : "cover";
       const contactRows = [];
@@ -623,28 +624,19 @@
       const spacer = gmailVariant ? "8" : "10";
       const fontBody = data.style === "compact" ? 12 : 13;
       const nameSize = data.style === "compact" ? 18 : 20;
-      const framePadding = gmailVariant ? "4" : "5";
-      const frameSize = imageSize + (Number(framePadding) * 2);
       const hasImage = data.includeImage && data.imageUrl;
-      const imageLayout = data.imageLayout || "Side-by-side (image left)";
+      const isStacked = data.imageLayout === "Stacked";
+      const showDivider = hasImage && !isStacked;
+
+      const imageContainerStyle = isLogo
+        ? "display:block;background:#ffffff;"
+        : "display:block;padding:4px;border:1px solid #d1d5db;border-radius:8px;background:#ffffff;";
 
       const imageFrame = hasImage
-        ? `<div style="display:block;width:${frameSize}px;height:${frameSize}px;padding:${framePadding}px;border:1px solid #d1d5db;border-radius:8px;background:#ffffff;"><img src="${safe(data.imageUrl)}" alt="${safe(data.imageType || "Image")}" width="${imageSize}" height="${imageSize}" style="display:block;border:0;outline:none;text-decoration:none;width:${imageSize}px;height:${imageSize}px;border-radius:${imageRadius};object-fit:${imageFit};object-position:center center;background:#ffffff;" /></div>`
+        ? `<div style="${imageContainerStyle}"><img src="${safe(data.imageUrl)}" alt="${safe(data.imageType || "Image")}" width="${imageSize}" height="${imageSize}" style="display:block;border:0;outline:none;text-decoration:none;width:${imageSize}px;height:${imageSize}px;border-radius:${imageRadius};object-fit:${imageFit};object-position:center center;background:#ffffff;" /></div>`
         : "";
 
-      const imageCellLeft = hasImage
-        ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>`
-        : "";
-
-      const imageCellRight = hasImage
-        ? `<td style="vertical-align:top;padding-left:${spacer}px;">${imageFrame}</td>`
-        : "";
-
-      const imageCellStacked = hasImage
-        ? `<td style="vertical-align:top;padding-bottom:${spacer}px;">${imageFrame}</td>`
-        : "";
-
-      const textCell = `<td style="vertical-align:top;${hasImage && imageLayout === "Side-by-side (image left)" ? "padding-left:2px;" : ""}">
+      const sideBySideTextCell = `<td style="vertical-align:top;${hasImage ? "padding-left:10px;" : ""}${showDivider ? "border-left:1px solid #d1d5db;" : ""}">
       <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 2px;">${safe(data.fullName || "Your Name")}</div>
       <div style="font-size:${fontBody}px;color:#333;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:0 0 4px;">${tagline}</div>` : ""}
@@ -653,9 +645,19 @@
       ${social ? `<div style="margin-top:8px;">${social}</div>` : ""}
     </td>`;
 
-      const contentRows = imageLayout === "Stacked (image above)" && hasImage
-        ? `<tr>${imageCellStacked}</tr><tr>${textCell}</tr>`
-        : `<tr>${imageLayout === "Side-by-side (image right)" ? `${textCell}${imageCellRight}` : `${imageCellLeft}${textCell}`}</tr>`;
+      const stackedCell = `<td style="vertical-align:top;">
+      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 2px;">${safe(data.fullName || "Your Name")}</div>
+      <div style="font-size:${fontBody}px;color:#333;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
+      <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
+      ${hasImage ? `<div style="margin-top:8px;margin-bottom:${social ? "8" : "0"}px;">${imageFrame}</div>` : ""}
+      ${social ? `<div style="margin-top:${hasImage ? "0" : "8"}px;">${social}</div>` : ""}
+      ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:${social || hasImage ? "8" : "6"}px 0 4px;">${tagline}</div>` : ""}
+      ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
+    </td>`;
+
+      const contentRows = isStacked && hasImage
+        ? `<tr>${stackedCell}</tr>`
+        : `<tr>${hasImage ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>` : ""}${sideBySideTextCell}</tr>`;
 
       return `
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:560px;line-height:1.35;">
