@@ -406,7 +406,7 @@
           <div class="field-row">
             <div class="field">
               <label for="imageSize">Size</label>
-              <select id="imageSize"><option>Small</option><option>Medium</option></select>
+              <select id="imageSize"><option>Small</option><option>Medium</option><option>Large</option></select>
             </div>
             <div class="field"><label for="imageUrl">Image URL</label><input id="imageUrl" placeholder="https://" /><div class="subtle">Clear the URL to remove the image.</div></div>
           </div>
@@ -608,7 +608,7 @@
     function buildSignatureHtml(gmailVariant = false) {
       const data = Object.fromEntries(Object.entries(el).map(([k, node]) => [k, node.type === "checkbox" ? node.checked : node.value.trim()]));
       const isLogo = data.imageType === "Logo";
-      const imageSize = isLogo ? (data.imageSize === "Medium" ? 92 : 72) : (data.imageSize === "Medium" ? 72 : 56);
+      const imageSize = isLogo ? (data.imageSize === "Large" ? 112 : (data.imageSize === "Medium" ? 92 : 72)) : (data.imageSize === "Large" ? 86 : (data.imageSize === "Medium" ? 72 : 56));
       const imageRadius = data.imageShape === "Circle" ? "50%" : (data.imageShape === "Square" ? "0" : "10px");
       const imageFit = isLogo ? "contain" : (data.imageFit === "cover" ? "cover" : "contain");
       const contactRows = [];
@@ -648,8 +648,8 @@
         : "";
 
       const sideBySideTextCell = `<td style="vertical-align:top;${hasImage ? "padding-left:10px;" : ""}${showDivider ? "border-left:1px solid #d1d5db;" : ""}">
-      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 2px;">${safe(data.fullName || "Your Name")}</div>
-      <div style="font-size:${fontBody}px;color:#1f2937;font-weight:600;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
+      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 1px;">${safe(data.fullName || "Your Name")}</div>
+      <div style="font-size:${fontBody}px;color:#111827;font-weight:600;margin:0 0 4px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:0 0 4px;">${tagline}</div>` : ""}
       ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
       <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
@@ -657,11 +657,11 @@
     </td>`;
 
       const stackedCell = `<td style="vertical-align:top;">
-      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 2px;">${safe(data.fullName || "Your Name")}</div>
-      <div style="font-size:${fontBody}px;color:#1f2937;font-weight:600;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
+      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 1px;">${safe(data.fullName || "Your Name")}</div>
+      <div style="font-size:${fontBody}px;color:#111827;font-weight:600;margin:0 0 4px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
-      ${hasImage ? `<div style="margin-top:2px;margin-bottom:${social ? "2" : "0"}px;">${imageFrame}</div>` : ""}
-      ${social ? `<div style="margin-top:${hasImage ? "0" : "4"}px;">${social}</div>` : ""}
+      ${hasImage ? `<div style="margin-top:1px;margin-bottom:${social ? "1" : "0"}px;">${imageFrame}</div>` : ""}
+      ${social ? `<div style="margin-top:${hasImage ? "0" : "2"}px;">${social}</div>` : ""}
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:${social || hasImage ? "8" : "6"}px 0 4px;">${tagline}</div>` : ""}
       ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
     </td>`;
