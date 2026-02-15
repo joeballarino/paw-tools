@@ -660,8 +660,8 @@
       <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 1px;">${safe(data.fullName || "Your Name")}</div>
       <div style="font-size:${fontBody}px;color:#111827;font-weight:600;margin:0 0 4px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
-      ${hasImage ? `<div style="margin-top:1px;margin-bottom:${social ? "1" : "0"}px;">${imageFrame}</div>` : ""}
-      ${social ? `<div style="margin-top:${hasImage ? "0" : "2"}px;">${social}</div>` : ""}
+      ${hasImage ? `<div style="margin-top:0;margin-bottom:0;">${imageFrame}</div>` : ""}
+      ${social ? `<div style="margin-top:${hasImage ? "0" : "1"}px;">${social}</div>` : ""}
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:${social || hasImage ? "8" : "6"}px 0 4px;">${tagline}</div>` : ""}
       ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
     </td>`;
