@@ -396,7 +396,7 @@
           <div class="field-row">
             <div class="field">
               <label for="imageFit">Image display</label>
-              <select id="imageFit"><option value="contain" selected>Show full image (recommended)</option><option value="cover">Fill area (crop)</option></select>
+              <select id="imageFit"><option value="contain" selected>Show full image (recommended)</option></select>
             </div>
             <div class="field">
               <label for="imageLayout">Layout</label>
@@ -608,14 +608,14 @@
     function buildSignatureHtml(gmailVariant = false) {
       const data = Object.fromEntries(Object.entries(el).map(([k, node]) => [k, node.type === "checkbox" ? node.checked : node.value.trim()]));
       const isLogo = data.imageType === "Logo";
-      const imageSize = isLogo ? (data.imageSize === "Medium" ? 80 : 64) : (data.imageSize === "Medium" ? 72 : 56);
+      const imageSize = isLogo ? (data.imageSize === "Medium" ? 92 : 72) : (data.imageSize === "Medium" ? 72 : 56);
       const imageRadius = data.imageShape === "Circle" ? "50%" : (data.imageShape === "Square" ? "0" : "10px");
-      const imageFit = data.imageFit === "cover" ? "cover" : "contain";
+      const imageFit = isLogo ? "contain" : (data.imageFit === "cover" ? "cover" : "contain");
       const contactRows = [];
 
-      if (data.phone) contactRows.push(`<span style="color:${state.accent};">P</span> <a href="tel:${safe(data.phone)}" style="color:${state.accent};text-decoration:none;">${safe(data.phone)}</a>`);
-      if (data.email) contactRows.push(`<span style="color:${state.accent};">E</span> <a href="mailto:${safe(data.email)}" style="color:${state.accent};text-decoration:none;">${safe(data.email)}</a>`);
-      if (data.website) contactRows.push(`<span style="color:${state.accent};">W</span> <a href="${safe(normUrl(data.website))}" style="color:${state.accent};text-decoration:none;">${safe(data.website)}</a>`);
+      if (data.phone) contactRows.push(`<span style="color:#4b5563;font-weight:600;">Phone:</span> <a href="tel:${safe(data.phone)}" style="color:${state.accent};text-decoration:none;">${safe(data.phone)}</a>`);
+      if (data.email) contactRows.push(`<span style="color:#4b5563;font-weight:600;">Email:</span> <a href="mailto:${safe(data.email)}" style="color:${state.accent};text-decoration:none;">${safe(data.email)}</a>`);
+      if (data.website) contactRows.push(`<span style="color:#4b5563;font-weight:600;">Web:</span> <a href="${safe(normUrl(data.website))}" style="color:${state.accent};text-decoration:none;">${safe(data.website)}</a>`);
       if (data.officeLocation) contactRows.push(`<span>${safe(data.officeLocation)}</span>`);
       if (data.license) contactRows.push(`<span>License # ${safe(data.license)}</span>`);
 
@@ -649,7 +649,7 @@
 
       const sideBySideTextCell = `<td style="vertical-align:top;${hasImage ? "padding-left:10px;" : ""}${showDivider ? "border-left:1px solid #d1d5db;" : ""}">
       <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 2px;">${safe(data.fullName || "Your Name")}</div>
-      <div style="font-size:${fontBody}px;color:#333;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
+      <div style="font-size:${fontBody}px;color:#1f2937;font-weight:600;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:0 0 4px;">${tagline}</div>` : ""}
       ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
       <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
@@ -658,10 +658,10 @@
 
       const stackedCell = `<td style="vertical-align:top;">
       <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 2px;">${safe(data.fullName || "Your Name")}</div>
-      <div style="font-size:${fontBody}px;color:#333;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
+      <div style="font-size:${fontBody}px;color:#1f2937;font-weight:600;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
-      ${hasImage ? `<div style="margin-top:4px;margin-bottom:${social ? "4" : "0"}px;">${imageFrame}</div>` : ""}
-      ${social ? `<div style="margin-top:${hasImage ? "0" : "6"}px;">${social}</div>` : ""}
+      ${hasImage ? `<div style="margin-top:2px;margin-bottom:${social ? "2" : "0"}px;">${imageFrame}</div>` : ""}
+      ${social ? `<div style="margin-top:${hasImage ? "0" : "4"}px;">${social}</div>` : ""}
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:${social || hasImage ? "8" : "6"}px 0 4px;">${tagline}</div>` : ""}
       ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
     </td>`;
@@ -751,17 +751,34 @@
       }, 1500);
     }
 
+    function syncImageDisplayOptions() {
+      const isLogoType = el.imageType.value === "Logo";
+      if (isLogoType) {
+        el.imageFit.innerHTML = '<option value="contain" selected>Show full image (recommended)</option>';
+        el.imageFit.value = "contain";
+      } else {
+        el.imageFit.innerHTML = '<option value="contain">Show full image (recommended)</option><option value="cover">Fill area (crop)</option>';
+        if (!["contain", "cover"].includes(el.imageFit.value)) {
+          el.imageFit.value = "cover";
+        }
+      }
+    }
+
     function applyPawPreset() {
       el.imageType.value = "Logo";
       el.imageUrl.value = PAW_DEFAULT_IMAGE_URL;
       el.imageShape.value = "Rounded square";
+      syncImageDisplayOptions();
       el.imageFit.value = "contain";
       el.imageLayout.value = "Side-by-side (image left)";
       setAccent("#2f6fed");
     }
 
     el.imageType.addEventListener("change", () => {
-      el.imageFit.value = el.imageType.value === "Logo" ? "contain" : "cover";
+      syncImageDisplayOptions();
+      if (el.imageType.value === "Headshot") {
+        el.imageFit.value = "cover";
+      }
       renderPreview();
       scheduleResize(30);
     });
@@ -967,6 +984,7 @@
 
     placePreviewPanel();
     initSwatches();
+    syncImageDisplayOptions();
     renderPreview();
     scheduleResize();
     setTimeout(() => scheduleResize(), 200);
