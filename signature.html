@@ -392,13 +392,13 @@
               <label for="imageLayout">Layout</label>
               <select id="imageLayout"><option selected>Side-by-side (image left)</option></select>
             </div>
-          </div>
-          <div class="field-row">
             <div class="field">
               <label for="imageSize">Size</label>
               <select id="imageSize"><option>Small</option><option>Medium</option><option>Large</option></select>
             </div>
-            <div class="field"><label for="imageUrl">Image URL</label><input id="imageUrl" placeholder="https://" /><div class="subtle">Clear the URL to remove the image.</div></div>
+          </div>
+          <div class="field-row">
+            <div class="field" style="grid-column: 1 / -1;"><label for="imageUrl">Image URL</label><input id="imageUrl" placeholder="https://" /><div class="subtle">Clear the URL to remove the image.</div></div>
           </div>
         </details>
 
@@ -555,11 +555,11 @@
     }
 
     function icon(name, color) {
-      const common = `width="20" height="20" viewBox="0 0 24 24" fill="${color}" stroke="none" aria-hidden="true"`;
-      if (name === "linkedin") return `<svg ${common}><path d="M5 9h3v10H5z"/><circle cx="6.5" cy="6.5" r="1.5"/><path d="M10 9h3v1.5c.8-1.1 1.9-1.8 3.6-1.8 2.7 0 4.4 1.8 4.4 5.1V19h-3v-4.6c0-1.5-.5-2.5-1.9-2.5-1 0-1.6.7-1.9 1.4-.1.2-.1.6-.1.9V19h-3z"/></svg>`;
-      if (name === "instagram") return `<svg ${common}><path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9a5.5 5.5 0 0 1-5.5 5.5h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm4.5 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm6-1.2a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4ZM12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/></svg>`;
-      if (name === "facebook") return `<svg ${common}><path d="M13.5 22v-8h2.8l.4-3h-3.2V9.1c0-.9.3-1.6 1.6-1.6H17V4.9c-.7-.1-1.5-.2-2.2-.2-2.6 0-4.3 1.6-4.3 4.5V11H8v3h2.5v8z"/></svg>`;
-      return `<svg ${common}><path d="M21.6 7.2c-.2-1-1-1.8-2-2C17.8 4.7 12 4.7 12 4.7s-5.8 0-7.6.5c-1 .2-1.8 1-2 2C2 9 2 12 2 12s0 3 .4 4.8c.2 1 1 1.8 2 2 1.8.5 7.6.5 7.6.5s5.8 0 7.6-.5c1-.2 1.8-1 2-2 .4-1.8.4-4.8.4-4.8s0-3-.4-4.8ZM10 15.5v-7l6 3.5-6 3.5Z"/></svg>`;
+      const common = `width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"`;
+      if (name === "linkedin") return `<svg ${common}><path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854zM4.943 13.5V6.169H2.542V13.5zM3.743 5.13c.837 0 1.358-.554 1.358-1.248-.015-.709-.521-1.248-1.342-1.248S2.4 3.173 2.4 3.882c0 .694.52 1.248 1.327 1.248zm9.757 8.37h-2.4V9.859c0-.915-.327-1.54-1.145-1.54-.625 0-.996.42-1.16.826-.06.146-.075.35-.075.554V13.5h-2.4s.03-6.168 0-6.807h2.4v.965c.319-.492.889-1.193 2.165-1.193 1.58 0 2.765 1.03 2.765 3.244z"/></svg>`;
+      if (name === "instagram") return `<svg ${common}><path d="M8 0C5.829 0 5.555.01 4.703.048 3.85.088 3.269.222 2.76.42a5.4 5.4 0 0 0-1.95 1.27A5.4 5.4 0 0 0 .42 2.76c-.198.509-.332 1.09-.372 1.943C.01 5.555 0 5.829 0 8s.01 2.445.048 3.297c.04.853.174 1.434.372 1.943q.297.764.81 1.374a5.4 5.4 0 0 0 1.53 1.23c.509.198 1.09.332 1.943.372C5.555 15.99 5.829 16 8 16s2.445-.01 3.297-.048c.853-.04 1.434-.174 1.943-.372a5.4 5.4 0 0 0 1.374-.81 5.4 5.4 0 0 0 1.23-1.53c.198-.509.332-1.09.372-1.943C15.99 10.445 16 10.171 16 8s-.01-2.445-.048-3.297c-.04-.853-.174-1.434-.372-1.943a5.4 5.4 0 0 0-.81-1.374 5.4 5.4 0 0 0-1.53-1.23c-.509-.198-1.09-.332-1.943-.372C10.445.01 10.171 0 8 0m0 1.441c2.134 0 2.387.008 3.232.046.78.036 1.203.166 1.485.275.374.145.64.317.92.597s.452.546.597.92c.109.282.239.705.275 1.485.038.845.046 1.098.046 3.232s-.008 2.387-.046 3.232c-.036.78-.166 1.203-.275 1.485a3.95 3.95 0 0 1-.597.92 3.95 3.95 0 0 1-.92.597c-.282.109-.705.239-1.485.275-.845.038-1.098.046-3.232.046s-2.387-.008-3.232-.046c-.78-.036-1.203-.166-1.485-.275a3.95 3.95 0 0 1-.92-.597 3.95 3.95 0 0 1-.597-.92c-.109-.282-.239-.705-.275-1.485C1.449 10.387 1.441 10.134 1.441 8s.008-2.387.046-3.232c.036-.78.166-1.203.275-1.485.145-.374.317-.64.597-.92s.546-.452.92-.597c.282-.109.705-.239 1.485-.275C5.613 1.449 5.866 1.441 8 1.441m0 2.456A4.103 4.103 0 1 0 12.103 8 4.103 4.103 0 0 0 8 3.897m0 6.765A2.662 2.662 0 1 1 10.662 8 2.662 2.662 0 0 1 8 10.662m5.224-7.89a.96.96 0 1 1-.96.96.96.96 0 0 1 .96-.96"/></svg>`;
+      if (name === "facebook") return `<svg ${common}><path d="M16 8.049C16 3.603 12.418 0 8 0S0 3.603 0 8.049C0 12.067 2.925 15.397 6.75 16v-5.625H4.719V8.049H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.875 0 1.79.157 1.79.157v1.98h-1.01c-.994 0-1.303.621-1.303 1.258v1.51h2.219l-.355 2.326H9.25V16C13.075 15.397 16 12.067 16 8.049"/></svg>`;
+      return `<svg ${common}><path d="M8.051 1.999h-.103c-1.077.005-4.407.056-5.93.47-.46.124-.821.485-.945.945-.414 1.523-.465 4.853-.47 5.93v.103c.005 1.077.056 4.407.47 5.93.124.46.486.821.945.945 1.523.414 4.853.465 5.93.47h.103c1.077-.005 4.407-.056 5.93-.47.46-.124.821-.486.945-.945.414-1.523.465-4.853.47-5.93v-.103c-.005-1.077-.056-4.407-.47-5.93a1.34 1.34 0 0 0-.945-.945c-1.523-.414-4.853-.465-5.93-.47M6.545 11.4V6.6L10.727 9z"/></svg>`;
     }
 
     function buildSignatureHtml(gmailVariant = false) {
@@ -582,7 +582,7 @@
         ["facebook", data.facebook, "Facebook"],
         ["youtube", data.youtube, "YouTube"]
       ].filter(([, url]) => url).map(([key, url, label]) => (
-        `<a href="${safe(normUrl(url))}" title="${label}" aria-label="${label}" style="display:inline-block;margin-right:10px;text-decoration:none;">${icon(key, state.accent)}</a>`
+        `<a href="${safe(normUrl(url))}" title="${label}" aria-label="${label}" style="display:inline-block;margin-right:10px;text-decoration:none;color:${state.accent};">${icon(key, state.accent)}</a>`
       )).join("");
 
       const tagline = safe((data.tagline || "").slice(0, 120));
@@ -613,7 +613,7 @@
 
       const contentRows = `<tr>${hasImage ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>` : ""}${sideBySideTextCell}</tr>`;
       const footerRow = bio
-        ? `<tr><td${hasImage ? " colspan=\"2\"" : ""} style="font-size:${fontBody}px;color:#444;line-height:1.35;padding-top:8px;">${bio}</td></tr>`
+        ? `<tr><td${hasImage ? " colspan=\"2\"" : ""} style="font-size:${fontBody}px;color:#444;line-height:1.35;padding-top:8px;white-space:normal;word-break:break-word;overflow-wrap:anywhere;max-width:560px;">${bio}</td></tr>`
         : "";
 
       return `
