@@ -302,12 +302,6 @@
     .modal ul { margin: 0 0 12px 18px; color: var(--muted); }
     .modal .row { display: flex; gap: 8px; justify-content: flex-end; }
 
-    #turnstile-wrap {
-      margin: 8px 0;
-      display: none;
-      min-height: 70px;
-    }
-
     @media (max-width: 980px) {
       .top-controls,
       .grid,
@@ -400,7 +394,7 @@
             </div>
             <div class="field">
               <label for="imageLayout">Layout</label>
-              <select id="imageLayout"><option selected>Side-by-side (image left)</option><option>Stacked</option></select>
+              <select id="imageLayout"><option selected>Side-by-side (image left)</option></select>
             </div>
           </div>
           <div class="field-row">
@@ -412,31 +406,10 @@
           </div>
         </details>
 
-        <details id="aiSection">
+        <details id="taglineSection">
           <summary class="accordion-summary">Tagline + mini bio (optional) <svg class="accordion-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10l4-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-          <div class="field-row">
-            <div class="field"><label for="audience">Audience</label><input id="audience" /></div>
-            <div class="field">
-              <label for="tone">Tone</label>
-              <select id="tone"><option value="">Select tone</option><option>Professional</option><option>Warm</option><option>Confident</option><option>Friendly</option></select>
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label for="focus">Focus</label><input id="focus" /></div>
-            <div class="field"><label for="location">Location</label><input id="location" /></div>
-          </div>
-          <div class="field"><label for="office">Office</label><input id="office" /></div>
-
-          <div id="turnstile-wrap"><div id="turnstile"></div></div>
-
-          <div class="field-row">
-            <button id="generateBtn" type="button" class="primary">Generate</button>
-            <button id="regenerateBtn" type="button">Regenerate</button>
-          </div>
-          <div class="status" id="aiStatus"></div>
-
           <div class="field"><label for="tagline">Tagline (short)</label><input id="tagline" /></div>
-          <div class="field"><label for="bio">Micro bio (1 sentence)</label><textarea id="bio"></textarea></div>
+          <div class="field"><label for="bio">Bio / disclosure (footer)</label><textarea id="bio"></textarea><div class="subtle">Appears across the bottom of the signature.</div></div>
         </details>
       </section>
 
@@ -472,7 +445,6 @@
         <li><strong>Your info stays in your browser.</strong> This tool doesn’t require an account and doesn’t store your form inputs on our servers.</li>
         <li><strong>No surprise outreach.</strong> Using this tool won’t add you to a list and won’t trigger marketing emails.</li>
         <li><strong>We’re earning trust on purpose.</strong> ProAgent Works is built to do what it says—so you can feel confident using the full suite when you’re ready.</li>
-        <li><strong>AI is optional and minimized.</strong> If you use AI, we only send a few optional “about your work” fields plus an anti-abuse verification token. Your contact fields (phone/email) aren’t required for AI generation.</li>
       </ul>
       <div class="row">
         <a href="https://www.proagentworks.com/join" target="_blank" rel="noopener noreferrer" style="color: var(--muted);">Learn about ProAgent Works</a>
@@ -483,11 +455,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <script>
-    const TURNSTILE_SITE_KEY = "REPLACE_WITH_TURNSTILE_SITE_KEY";
-    const PAW_API_BASE = "REPLACE_WITH_PAW_API_BASE";
-
     (function enforceEmbedOnly() {
       try {
         if (window.top === window.self) {
@@ -499,13 +467,7 @@
     })();
 
     const state = {
-      accent: "#2f6fed",
-      turnstileWidgetId: null,
-      turnstileToken: "",
-      turnstileVisible: false,
-      aiInFlight: false,
-      cooldownUntil: 0,
-      cooldownTimer: null
+      accent: "#2f6fed"
     };
 
     const swatches = ["#2f6fed", "#1f9d72", "#9b59b6", "#ef4444", "#f59e0b", "#06b6d4", "#64748b", "#111827"];
@@ -513,13 +475,12 @@
     const ids = [
       "style", "accentCustom", "fullName", "title", "brokerage", "phone", "email", "website", "officeLocation", "license",
       "linkedin", "instagram", "facebook", "youtube", "imageType", "imageUrl", "imageShape", "imageFit", "imageLayout", "imageSize",
-      "audience", "tone", "focus", "location", "office", "tagline", "bio"
+      "tagline", "bio"
     ];
 
     const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
     const preview = document.getElementById("preview");
     const toast = document.getElementById("toast");
-    const aiStatus = document.getElementById("aiStatus");
     const copyStatus = document.getElementById("copyStatus");
     const previewPanel = document.getElementById("previewPanel");
     const accordionPanel = document.getElementById("accordionPanel");
@@ -636,8 +597,7 @@
       const nameSize = data.style === "compact" ? 18 : 20;
       const normalizedImageUrl = normUrl(data.imageUrl);
       const hasImage = hasValidImageUrl(data.imageUrl);
-      const isStacked = data.imageLayout === "Stacked";
-      const showDivider = hasImage && !isStacked;
+      const showDivider = hasImage;
 
       const imageContainerStyle = isLogo
         ? "display:block;background:#ffffff;"
@@ -651,28 +611,19 @@
       <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 1px;">${safe(data.fullName || "Your Name")}</div>
       <div style="font-size:${fontBody}px;color:#111827;font-weight:600;margin:0 0 4px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:0 0 4px;">${tagline}</div>` : ""}
-      ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
       <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
       ${social ? `<div style="margin-top:8px;">${social}</div>` : ""}
     </td>`;
 
-      const stackedCell = `<td style="vertical-align:top;">
-      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 1px;">${safe(data.fullName || "Your Name")}</div>
-      <div style="font-size:${fontBody}px;color:#111827;font-weight:600;margin:0 0 4px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
-      <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
-      ${hasImage ? `<div style="margin-top:0;margin-bottom:0;">${imageFrame}</div>` : ""}
-      ${social ? `<div style="margin-top:${hasImage ? "0" : "1"}px;">${social}</div>` : ""}
-      ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:${social || hasImage ? "8" : "6"}px 0 4px;">${tagline}</div>` : ""}
-      ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
-    </td>`;
-
-      const contentRows = isStacked && hasImage
-        ? `<tr>${stackedCell}</tr>`
-        : `<tr>${hasImage ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>` : ""}${sideBySideTextCell}</tr>`;
+      const contentRows = `<tr>${hasImage ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>` : ""}${sideBySideTextCell}</tr>`;
+      const footerRow = bio
+        ? `<tr><td${hasImage ? " colspan=\"2\"" : ""} style="font-size:${fontBody}px;color:#444;line-height:1.35;padding-top:8px;">${bio}</td></tr>`
+        : "";
 
       return `
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:560px;line-height:1.35;">
   ${contentRows}
+  ${footerRow}
 </table>`.trim();
     }
 
@@ -783,11 +734,6 @@
       scheduleResize(30);
     });
 
-    el.imageLayout.addEventListener("change", () => {
-      renderPreview();
-      scheduleResize(30);
-    });
-
     function setAccent(color) {
       state.accent = color;
       document.documentElement.style.setProperty("--accent", color);
@@ -820,107 +766,6 @@
       scheduleResize();
     }
 
-    function updateCooldownUi() {
-      const remaining = Math.max(0, Math.ceil((state.cooldownUntil - Date.now()) / 1000));
-      const disabled = state.aiInFlight || remaining > 0;
-      document.getElementById("generateBtn").disabled = disabled;
-      document.getElementById("regenerateBtn").disabled = disabled;
-      if (state.aiInFlight) {
-        aiStatus.textContent = "Generating…";
-      } else if (remaining > 0) {
-        aiStatus.textContent = `Please wait ${remaining}s before generating again.`;
-      } else {
-        aiStatus.textContent = "";
-      }
-      scheduleResize();
-    }
-
-    function startCooldown(seconds = 15) {
-      state.cooldownUntil = Date.now() + seconds * 1000;
-      clearInterval(state.cooldownTimer);
-      state.cooldownTimer = setInterval(() => {
-        updateCooldownUi();
-        if (Date.now() >= state.cooldownUntil) clearInterval(state.cooldownTimer);
-      }, 250);
-      updateCooldownUi();
-    }
-
-    function ensureTurnstileVisible() {
-      const wrap = document.getElementById("turnstile-wrap");
-      if (state.turnstileVisible) return;
-      wrap.style.display = "block";
-      state.turnstileVisible = true;
-      scheduleResize();
-      if (!window.turnstile || state.turnstileWidgetId !== null) return;
-      state.turnstileWidgetId = window.turnstile.render("#turnstile", {
-        sitekey: TURNSTILE_SITE_KEY,
-        callback: (token) => {
-          state.turnstileToken = token;
-          aiStatus.textContent = "Verification complete. You can generate now.";
-          scheduleResize();
-        },
-        "expired-callback": () => { state.turnstileToken = ""; },
-        "error-callback": () => {
-          state.turnstileToken = "";
-          showToast("Verification error. Please retry.", true);
-        }
-      });
-    }
-
-    async function runAiGeneration() {
-      if (state.aiInFlight) return;
-      ensureTurnstileVisible();
-      if (!state.turnstileToken) {
-        showToast("Complete verification to use AI assist.", true);
-        return;
-      }
-      if (Date.now() < state.cooldownUntil) {
-        updateCooldownUi();
-        return;
-      }
-
-      state.aiInFlight = true;
-      updateCooldownUi();
-
-      const payload = {
-        title: el.title.value.trim(),
-        office: el.office.value.trim(),
-        location: el.location.value.trim(),
-        audience: el.audience.value.trim(),
-        tone: el.tone.value.trim(),
-        focus: el.focus.value.trim(),
-        turnstileToken: state.turnstileToken
-      };
-
-      try {
-        const res = await fetch(`${PAW_API_BASE}/signature/generate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          throw new Error("non-200");
-        }
-
-        const data = await res.json();
-        el.tagline.value = String(data.tagline || "").slice(0, 120);
-        el.bio.value = String(data.bio || "").slice(0, 220);
-        renderPreview();
-        showToast("AI content generated.");
-        startCooldown(15);
-        if (window.turnstile && state.turnstileWidgetId !== null) {
-          window.turnstile.reset(state.turnstileWidgetId);
-          state.turnstileToken = "";
-        }
-      } catch {
-        showToast("Could not generate right now. Please try again.", true);
-      } finally {
-        state.aiInFlight = false;
-        updateCooldownUi();
-      }
-    }
-
     el.style.addEventListener("change", () => {
       if (el.style.value === "paw") {
         applyPawPreset();
@@ -938,9 +783,6 @@
       if (evt.target.id === "privacyModal") openPrivacyModal(false);
     });
 
-    document.getElementById("generateBtn").addEventListener("click", runAiGeneration);
-    document.getElementById("regenerateBtn").addEventListener("click", runAiGeneration);
-
     document.getElementById("copyPaste").addEventListener("click", () => {
       handleCopyAction("copyPaste", () => copyHtmlRich(buildSignatureHtml(false)));
     });
@@ -951,7 +793,7 @@
       handleCopyAction("copyHtml", () => copyHtmlTextOnly(buildSignatureHtml(false)));
     });
 
-    const accordionIds = ["contactSection", "socialSection", "imageSection", "aiSection"];
+    const accordionIds = ["contactSection", "socialSection", "imageSection", "taglineSection"];
     accordionIds.forEach((id) => {
       document.getElementById(id).addEventListener("toggle", (evt) => {
         if (evt.target.open) {
