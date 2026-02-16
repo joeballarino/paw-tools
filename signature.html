@@ -53,7 +53,12 @@
       align-items: start;
     }
 
-    .style-control { grid-area: style; margin-bottom: 0; }
+    .style-control {
+      grid-area: style;
+      margin-bottom: 0;
+      max-width: 520px;
+      width: 100%;
+    }
     .accent-control { grid-area: accent; }
 
     .privacy-line {
@@ -160,15 +165,19 @@
     }
 
     .swatch.custom {
-      border: 1px dashed #9ca3af;
-      background: #ffffff;
-      color: #4b5563;
+      border: 1px solid #9ca3af;
+      background: #f8fafc;
+      color: #6b7280;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
-      line-height: 1;
-      font-weight: 500;
+      padding: 0;
+    }
+
+    .swatch.custom svg {
+      width: 14px;
+      height: 14px;
+      display: block;
     }
 
     .subtle {
@@ -347,6 +356,10 @@
       .field-row {
         grid-template-columns: 1fr;
       }
+
+      .top-controls { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .field-row { grid-template-columns: 1fr; }
 
       .top-controls {
         grid-template-areas:
@@ -640,6 +653,7 @@
       const spacer = gmailVariant ? "8" : "10";
       const fontBody = data.style === "compact" ? 12 : 13;
       const nameSize = data.style === "compact" ? 18 : 20;
+      const imageColWidth = imageSize + Number(spacer) + 14;
       const normalizedImageUrl = normUrl(data.imageUrl);
       const hasImage = hasValidImageUrl(data.imageUrl);
       const showDivider = hasImage;
@@ -661,12 +675,14 @@
     </td>`;
 
       const contentRows = `<tr>${hasImage ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>` : ""}${sideBySideTextCell}</tr>`;
+      const colGroup = hasImage ? `<colgroup><col style="width:${imageColWidth}px" /><col /></colgroup>` : "";
       const footerRow = bio
         ? `<tr><td${hasImage ? " colspan=\"2\"" : ""} style="font-size:${fontBody}px;color:#444;line-height:1.35;padding-top:8px;white-space:normal;word-break:break-word;overflow-wrap:anywhere;word-wrap:break-word;max-width:560px;">${bio}</td></tr>`
         : "";
 
       return `
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#111;width:560px;max-width:560px;table-layout:fixed;line-height:1.35;">
+  ${colGroup}
   ${contentRows}
   ${footerRow}
 </table>`.trim();
@@ -772,8 +788,6 @@
           node.classList.toggle("active", node.dataset.color.toLowerCase() === normalized);
         }
       });
-      const customSwatch = document.getElementById("customSwatch");
-      if (customSwatch) customSwatch.style.background = color;
       renderPreview();
     }
 
@@ -795,7 +809,7 @@
       custom.className = "swatch custom";
       custom.title = "Custom color…";
       custom.setAttribute("aria-label", "Custom color");
-      custom.textContent = "+";
+      custom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.5 16.5 3 21l-1-1 4.5-4.5 11-11a2.12 2.12 0 1 1 3 3l-11 11ZM14 6l4 4M6.5 17.5l2 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       custom.addEventListener("click", () => el.accentCustom.click());
       container.appendChild(custom);
       setAccent(state.accent);
