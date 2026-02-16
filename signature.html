@@ -329,7 +329,7 @@
         <select id="style">
           <option value="clean" selected>Clean</option>
           <option value="compact">Compact</option>
-          <option value="paw">ProAgent Works</option>
+          <option value="paw">ProAgent Member</option>
         </select>
       </div>
 
@@ -383,10 +383,6 @@
 
         <details id="imageSection">
           <summary class="accordion-summary">Image / logo <svg class="accordion-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10l4-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-          <div class="toggle">
-            <input id="includeImage" type="checkbox" />
-            <label for="includeImage">Include image</label>
-          </div>
           <div class="field-row">
             <div class="field">
               <label for="imageType">Image type</label>
@@ -394,15 +390,25 @@
             </div>
             <div class="field">
               <label for="imageShape">Shape</label>
-              <select id="imageShape"><option>Rounded square</option><option>Circle</option></select>
+              <select id="imageShape"><option>Square</option><option selected>Rounded square</option><option>Circle</option></select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="imageFit">Image display</label>
+              <select id="imageFit"><option value="contain" selected>Show full image (recommended)</option></select>
+            </div>
+            <div class="field">
+              <label for="imageLayout">Layout</label>
+              <select id="imageLayout"><option selected>Side-by-side (image left)</option><option>Stacked</option></select>
             </div>
           </div>
           <div class="field-row">
             <div class="field">
               <label for="imageSize">Size</label>
-              <select id="imageSize"><option>Small</option><option>Medium</option></select>
+              <select id="imageSize"><option>Small</option><option>Medium</option><option>Large</option></select>
             </div>
-            <div class="field"><label for="imageUrl">Image URL</label><input id="imageUrl" placeholder="https://" /></div>
+            <div class="field"><label for="imageUrl">Image URL</label><input id="imageUrl" placeholder="https://" /><div class="subtle">Clear the URL to remove the image.</div></div>
           </div>
         </details>
 
@@ -506,7 +512,7 @@
 
     const ids = [
       "style", "accentCustom", "fullName", "title", "brokerage", "phone", "email", "website", "officeLocation", "license",
-      "linkedin", "instagram", "facebook", "youtube", "includeImage", "imageType", "imageUrl", "imageShape", "imageSize",
+      "linkedin", "instagram", "facebook", "youtube", "imageType", "imageUrl", "imageShape", "imageFit", "imageLayout", "imageSize",
       "audience", "tone", "focus", "location", "office", "tagline", "bio"
     ];
 
@@ -577,6 +583,20 @@
       return /^https?:\/\//i.test(v) ? v : `https://${v}`;
     }
 
+
+    const PAW_DEFAULT_IMAGE_URL = "https://paw-tools.pages.dev/siglogoreal.png";
+
+    function hasValidImageUrl(value) {
+      const normalized = normUrl(value);
+      if (!normalized) return false;
+      try {
+        const parsed = new URL(normalized);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+      } catch (_) {
+        return false;
+      }
+    }
+
     function icon(name, color) {
       const common = `width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
       if (name === "linkedin") return `<svg ${common}><path d="M6 9v9"/><path d="M6 6h.01"/><path d="M10 9v9"/><path d="M10 13c0-2 1.2-4 3.2-4S17 11 17 13v5"/></svg>`;
@@ -587,13 +607,15 @@
 
     function buildSignatureHtml(gmailVariant = false) {
       const data = Object.fromEntries(Object.entries(el).map(([k, node]) => [k, node.type === "checkbox" ? node.checked : node.value.trim()]));
-      const imageSize = data.imageSize === "Medium" ? 72 : 56;
-      const imageRadius = data.imageShape === "Circle" ? "50%" : "10px";
+      const isLogo = data.imageType === "Logo";
+      const imageSize = isLogo ? (data.imageSize === "Large" ? 112 : (data.imageSize === "Medium" ? 92 : 72)) : (data.imageSize === "Large" ? 86 : (data.imageSize === "Medium" ? 72 : 56));
+      const imageRadius = data.imageShape === "Circle" ? "50%" : (data.imageShape === "Square" ? "0" : "10px");
+      const imageFit = isLogo ? "contain" : (data.imageFit === "cover" ? "cover" : "contain");
       const contactRows = [];
 
-      if (data.phone) contactRows.push(`<span style="color:${state.accent};">P</span> <a href="tel:${safe(data.phone)}" style="color:${state.accent};text-decoration:none;">${safe(data.phone)}</a>`);
-      if (data.email) contactRows.push(`<span style="color:${state.accent};">E</span> <a href="mailto:${safe(data.email)}" style="color:${state.accent};text-decoration:none;">${safe(data.email)}</a>`);
-      if (data.website) contactRows.push(`<span style="color:${state.accent};">W</span> <a href="${safe(normUrl(data.website))}" style="color:${state.accent};text-decoration:none;">${safe(data.website)}</a>`);
+      if (data.phone) contactRows.push(`<span style="color:#4b5563;font-weight:600;">Phone:</span> <a href="tel:${safe(data.phone)}" style="color:${state.accent};text-decoration:none;">${safe(data.phone)}</a>`);
+      if (data.email) contactRows.push(`<span style="color:#4b5563;font-weight:600;">Email:</span> <a href="mailto:${safe(data.email)}" style="color:${state.accent};text-decoration:none;">${safe(data.email)}</a>`);
+      if (data.website) contactRows.push(`<span style="color:#4b5563;font-weight:600;">Web:</span> <a href="${safe(normUrl(data.website))}" style="color:${state.accent};text-decoration:none;">${safe(data.website)}</a>`);
       if (data.officeLocation) contactRows.push(`<span>${safe(data.officeLocation)}</span>`);
       if (data.license) contactRows.push(`<span>License # ${safe(data.license)}</span>`);
 
@@ -612,24 +634,45 @@
       const spacer = gmailVariant ? "8" : "10";
       const fontBody = data.style === "compact" ? 12 : 13;
       const nameSize = data.style === "compact" ? 18 : 20;
+      const normalizedImageUrl = normUrl(data.imageUrl);
+      const hasImage = hasValidImageUrl(data.imageUrl);
+      const isStacked = data.imageLayout === "Stacked";
+      const showDivider = hasImage && !isStacked;
 
-      const imageCell = data.includeImage && data.imageUrl
-        ? `<td style="vertical-align:top;padding-right:${spacer}px;"><img src="${safe(data.imageUrl)}" alt="${safe(data.imageType || "Image")}" width="${imageSize}" height="${imageSize}" style="display:block;border:0;outline:none;text-decoration:none;width:${imageSize}px;height:${imageSize}px;border-radius:${imageRadius};object-fit:cover;" /></td>`
+      const imageContainerStyle = isLogo
+        ? "display:block;background:#ffffff;"
+        : "display:block;padding:4px;border:1px solid #d1d5db;border-radius:8px;background:#ffffff;";
+
+      const imageFrame = hasImage
+        ? `<div style="${imageContainerStyle}"><img src="${safe(normalizedImageUrl)}" alt="${safe(data.imageType || "Image")}" width="${imageSize}" height="${imageSize}" style="display:block;border:0;outline:none;text-decoration:none;width:${imageSize}px;height:${imageSize}px;border-radius:${imageRadius};object-fit:${imageFit};object-position:center center;background:#ffffff;" /></div>`
         : "";
 
-      return `
-<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:560px;line-height:1.35;">
-  <tr>
-    ${imageCell}
-    <td style="vertical-align:top;${imageCell ? "padding-left:2px;" : ""}">
-      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 2px;">${safe(data.fullName || "Your Name")}</div>
-      <div style="font-size:${fontBody}px;color:#333;margin:0 0 6px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
+      const sideBySideTextCell = `<td style="vertical-align:top;${hasImage ? "padding-left:10px;" : ""}${showDivider ? "border-left:1px solid #d1d5db;" : ""}">
+      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 1px;">${safe(data.fullName || "Your Name")}</div>
+      <div style="font-size:${fontBody}px;color:#111827;font-weight:600;margin:0 0 4px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:0 0 4px;">${tagline}</div>` : ""}
       ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
       <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
       ${social ? `<div style="margin-top:8px;">${social}</div>` : ""}
-    </td>
-  </tr>
+    </td>`;
+
+      const stackedCell = `<td style="vertical-align:top;">
+      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 1px;">${safe(data.fullName || "Your Name")}</div>
+      <div style="font-size:${fontBody}px;color:#111827;font-weight:600;margin:0 0 4px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
+      <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
+      ${hasImage ? `<div style="margin-top:0;margin-bottom:0;">${imageFrame}</div>` : ""}
+      ${social ? `<div style="margin-top:${hasImage ? "0" : "1"}px;">${social}</div>` : ""}
+      ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:${social || hasImage ? "8" : "6"}px 0 4px;">${tagline}</div>` : ""}
+      ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
+    </td>`;
+
+      const contentRows = isStacked && hasImage
+        ? `<tr>${stackedCell}</tr>`
+        : `<tr>${hasImage ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>` : ""}${sideBySideTextCell}</tr>`;
+
+      return `
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:560px;line-height:1.35;">
+  ${contentRows}
 </table>`.trim();
     }
 
@@ -708,13 +751,42 @@
       }, 1500);
     }
 
+    function syncImageDisplayOptions() {
+      const isLogoType = el.imageType.value === "Logo";
+      if (isLogoType) {
+        el.imageFit.innerHTML = '<option value="contain" selected>Show full image (recommended)</option>';
+        el.imageFit.value = "contain";
+      } else {
+        el.imageFit.innerHTML = '<option value="contain">Show full image (recommended)</option><option value="cover">Fill area (crop)</option>';
+        if (!["contain", "cover"].includes(el.imageFit.value)) {
+          el.imageFit.value = "cover";
+        }
+      }
+    }
+
     function applyPawPreset() {
-      el.includeImage.checked = true;
       el.imageType.value = "Logo";
-      el.imageUrl.value = "https://paw-tools.pages.dev/siglogoreal.png";
+      el.imageUrl.value = PAW_DEFAULT_IMAGE_URL;
       el.imageShape.value = "Rounded square";
+      syncImageDisplayOptions();
+      el.imageFit.value = "contain";
+      el.imageLayout.value = "Side-by-side (image left)";
       setAccent("#2f6fed");
     }
+
+    el.imageType.addEventListener("change", () => {
+      syncImageDisplayOptions();
+      if (el.imageType.value === "Headshot") {
+        el.imageFit.value = "cover";
+      }
+      renderPreview();
+      scheduleResize(30);
+    });
+
+    el.imageLayout.addEventListener("change", () => {
+      renderPreview();
+      scheduleResize(30);
+    });
 
     function setAccent(color) {
       state.accent = color;
@@ -850,7 +922,11 @@
     }
 
     el.style.addEventListener("change", () => {
-      if (el.style.value === "paw") applyPawPreset();
+      if (el.style.value === "paw") {
+        applyPawPreset();
+      } else if (el.imageUrl.value.trim() === PAW_DEFAULT_IMAGE_URL) {
+        el.imageUrl.value = "";
+      }
       renderPreview();
     });
 
@@ -908,6 +984,7 @@
 
     placePreviewPanel();
     initSwatches();
+    syncImageDisplayOptions();
     renderPreview();
     scheduleResize();
     setTimeout(() => scheduleResize(), 200);
