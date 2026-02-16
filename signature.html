@@ -302,12 +302,6 @@
     .modal ul { margin: 0 0 12px 18px; color: var(--muted); }
     .modal .row { display: flex; gap: 8px; justify-content: flex-end; }
 
-    #turnstile-wrap {
-      margin: 8px 0;
-      display: none;
-      min-height: 70px;
-    }
-
     @media (max-width: 980px) {
       .top-controls,
       .grid,
@@ -361,7 +355,7 @@
             <div class="field"><label for="email">Email</label><input id="email" type="email" /></div>
           </div>
           <div class="field-row">
-            <div class="field"><label for="website">Website</label><input id="website" placeholder="https://" /></div>
+            <div class="field"><label for="website">Website</label><input id="website" placeholder="example.com" /></div>
             <div class="field"><label for="officeLocation">Office/location line (City, State) (optional)</label><input id="officeLocation" /></div>
           </div>
           <div class="field"><label for="license">License # (optional)</label><input id="license" /></div>
@@ -395,48 +389,23 @@
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="imageFit">Image display</label>
-              <select id="imageFit"><option value="contain" selected>Show full image (recommended)</option></select>
-            </div>
-            <div class="field">
               <label for="imageLayout">Layout</label>
-              <select id="imageLayout"><option selected>Side-by-side (image left)</option><option>Stacked</option></select>
+              <select id="imageLayout"><option selected>Side-by-side (image left)</option></select>
             </div>
-          </div>
-          <div class="field-row">
             <div class="field">
               <label for="imageSize">Size</label>
               <select id="imageSize"><option>Small</option><option>Medium</option><option>Large</option></select>
             </div>
-            <div class="field"><label for="imageUrl">Image URL</label><input id="imageUrl" placeholder="https://" /><div class="subtle">Clear the URL to remove the image.</div></div>
+          </div>
+          <div class="field-row">
+            <div class="field" style="grid-column: 1 / -1;"><label for="imageUrl">Image URL</label><input id="imageUrl" placeholder="https://" /><div class="subtle">Clear the URL to remove the image.</div></div>
           </div>
         </details>
 
-        <details id="aiSection">
+        <details id="taglineSection">
           <summary class="accordion-summary">Tagline + mini bio (optional) <svg class="accordion-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10l4-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-          <div class="field-row">
-            <div class="field"><label for="audience">Audience</label><input id="audience" /></div>
-            <div class="field">
-              <label for="tone">Tone</label>
-              <select id="tone"><option value="">Select tone</option><option>Professional</option><option>Warm</option><option>Confident</option><option>Friendly</option></select>
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label for="focus">Focus</label><input id="focus" /></div>
-            <div class="field"><label for="location">Location</label><input id="location" /></div>
-          </div>
-          <div class="field"><label for="office">Office</label><input id="office" /></div>
-
-          <div id="turnstile-wrap"><div id="turnstile"></div></div>
-
-          <div class="field-row">
-            <button id="generateBtn" type="button" class="primary">Generate</button>
-            <button id="regenerateBtn" type="button">Regenerate</button>
-          </div>
-          <div class="status" id="aiStatus"></div>
-
           <div class="field"><label for="tagline">Tagline (short)</label><input id="tagline" /></div>
-          <div class="field"><label for="bio">Micro bio (1 sentence)</label><textarea id="bio"></textarea></div>
+          <div class="field"><label for="bio">Bio / disclosure (footer)</label><textarea id="bio"></textarea><div class="subtle">Appears across the bottom of the signature.</div></div>
         </details>
       </section>
 
@@ -472,7 +441,6 @@
         <li><strong>Your info stays in your browser.</strong> This tool doesn’t require an account and doesn’t store your form inputs on our servers.</li>
         <li><strong>No surprise outreach.</strong> Using this tool won’t add you to a list and won’t trigger marketing emails.</li>
         <li><strong>We’re earning trust on purpose.</strong> ProAgent Works is built to do what it says—so you can feel confident using the full suite when you’re ready.</li>
-        <li><strong>AI is optional and minimized.</strong> If you use AI, we only send a few optional “about your work” fields plus an anti-abuse verification token. Your contact fields (phone/email) aren’t required for AI generation.</li>
       </ul>
       <div class="row">
         <a href="https://www.proagentworks.com/join" target="_blank" rel="noopener noreferrer" style="color: var(--muted);">Learn about ProAgent Works</a>
@@ -483,11 +451,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <script>
-    const TURNSTILE_SITE_KEY = "REPLACE_WITH_TURNSTILE_SITE_KEY";
-    const PAW_API_BASE = "REPLACE_WITH_PAW_API_BASE";
-
     (function enforceEmbedOnly() {
       try {
         if (window.top === window.self) {
@@ -499,27 +463,20 @@
     })();
 
     const state = {
-      accent: "#2f6fed",
-      turnstileWidgetId: null,
-      turnstileToken: "",
-      turnstileVisible: false,
-      aiInFlight: false,
-      cooldownUntil: 0,
-      cooldownTimer: null
+      accent: "#2f6fed"
     };
 
     const swatches = ["#2f6fed", "#1f9d72", "#9b59b6", "#ef4444", "#f59e0b", "#06b6d4", "#64748b", "#111827"];
 
     const ids = [
       "style", "accentCustom", "fullName", "title", "brokerage", "phone", "email", "website", "officeLocation", "license",
-      "linkedin", "instagram", "facebook", "youtube", "imageType", "imageUrl", "imageShape", "imageFit", "imageLayout", "imageSize",
-      "audience", "tone", "focus", "location", "office", "tagline", "bio"
+      "linkedin", "instagram", "facebook", "youtube", "imageType", "imageUrl", "imageShape", "imageLayout", "imageSize",
+      "tagline", "bio"
     ];
 
     const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
     const preview = document.getElementById("preview");
     const toast = document.getElementById("toast");
-    const aiStatus = document.getElementById("aiStatus");
     const copyStatus = document.getElementById("copyStatus");
     const previewPanel = document.getElementById("previewPanel");
     const accordionPanel = document.getElementById("accordionPanel");
@@ -598,11 +555,11 @@
     }
 
     function icon(name, color) {
-      const common = `width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
-      if (name === "linkedin") return `<svg ${common}><path d="M6 9v9"/><path d="M6 6h.01"/><path d="M10 9v9"/><path d="M10 13c0-2 1.2-4 3.2-4S17 11 17 13v5"/></svg>`;
-      if (name === "instagram") return `<svg ${common}><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6"/></svg>`;
-      if (name === "facebook") return `<svg ${common}><path d="M13 21v-8h3l.5-3H13V8.8c0-.9.4-1.8 1.8-1.8H17V4.2S15.9 4 14.8 4C12.2 4 11 5.6 11 8.4V10H8v3h3v8"/></svg>`;
-      return `<svg ${common}><path d="M22 12s0-5-1-7c-.3-.9-1-1.6-1.9-1.9C17.2 2 12 2 12 2S6.8 2 4.9 3.1C4 3.4 3.3 4.1 3 5c-1 2-1 7-1 7s0 5 1 7c.3.9 1 1.6 1.9 1.9C6.8 22 12 22 12 22s5.2 0 7.1-1.1c.9-.3 1.6-1 1.9-1.9 1-2 1-7 1-7Z"/><path d="m10 15 5-3-5-3z"/></svg>`;
+      const common = `width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"`;
+      if (name === "linkedin") return `<svg ${common}><path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854zM4.943 13.5V6.169H2.542V13.5zM3.743 5.13c.837 0 1.358-.554 1.358-1.248-.015-.709-.521-1.248-1.342-1.248S2.4 3.173 2.4 3.882c0 .694.52 1.248 1.327 1.248zm9.757 8.37h-2.4V9.859c0-.915-.327-1.54-1.145-1.54-.625 0-.996.42-1.16.826-.06.146-.075.35-.075.554V13.5h-2.4s.03-6.168 0-6.807h2.4v.965c.319-.492.889-1.193 2.165-1.193 1.58 0 2.765 1.03 2.765 3.244z"/></svg>`;
+      if (name === "instagram") return `<svg ${common}><path d="M8 0C5.829 0 5.555.01 4.703.048 3.85.088 3.269.222 2.76.42a5.4 5.4 0 0 0-1.95 1.27A5.4 5.4 0 0 0 .42 2.76c-.198.509-.332 1.09-.372 1.943C.01 5.555 0 5.829 0 8s.01 2.445.048 3.297c.04.853.174 1.434.372 1.943q.297.764.81 1.374a5.4 5.4 0 0 0 1.53 1.23c.509.198 1.09.332 1.943.372C5.555 15.99 5.829 16 8 16s2.445-.01 3.297-.048c.853-.04 1.434-.174 1.943-.372a5.4 5.4 0 0 0 1.374-.81 5.4 5.4 0 0 0 1.23-1.53c.198-.509.332-1.09.372-1.943C15.99 10.445 16 10.171 16 8s-.01-2.445-.048-3.297c-.04-.853-.174-1.434-.372-1.943a5.4 5.4 0 0 0-.81-1.374 5.4 5.4 0 0 0-1.53-1.23c-.509-.198-1.09-.332-1.943-.372C10.445.01 10.171 0 8 0m0 1.441c2.134 0 2.387.008 3.232.046.78.036 1.203.166 1.485.275.374.145.64.317.92.597s.452.546.597.92c.109.282.239.705.275 1.485.038.845.046 1.098.046 3.232s-.008 2.387-.046 3.232c-.036.78-.166 1.203-.275 1.485a3.95 3.95 0 0 1-.597.92 3.95 3.95 0 0 1-.92.597c-.282.109-.705.239-1.485.275-.845.038-1.098.046-3.232.046s-2.387-.008-3.232-.046c-.78-.036-1.203-.166-1.485-.275a3.95 3.95 0 0 1-.92-.597 3.95 3.95 0 0 1-.597-.92c-.109-.282-.239-.705-.275-1.485C1.449 10.387 1.441 10.134 1.441 8s.008-2.387.046-3.232c.036-.78.166-1.203.275-1.485.145-.374.317-.64.597-.92s.546-.452.92-.597c.282-.109.705-.239 1.485-.275C5.613 1.449 5.866 1.441 8 1.441m0 2.456A4.103 4.103 0 1 0 12.103 8 4.103 4.103 0 0 0 8 3.897m0 6.765A2.662 2.662 0 1 1 10.662 8 2.662 2.662 0 0 1 8 10.662m5.224-7.89a.96.96 0 1 1-.96.96.96.96 0 0 1 .96-.96"/></svg>`;
+      if (name === "facebook") return `<svg ${common}><path d="M16 8.049C16 3.603 12.418 0 8 0S0 3.603 0 8.049C0 12.067 2.925 15.397 6.75 16v-5.625H4.719V8.049H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.875 0 1.79.157 1.79.157v1.98h-1.01c-.994 0-1.303.621-1.303 1.258v1.51h2.219l-.355 2.326H9.25V16C13.075 15.397 16 12.067 16 8.049"/></svg>`;
+      return `<svg ${common}><path d="M8.051 1.999h-.103c-1.077.005-4.407.056-5.93.47-.46.124-.821.485-.945.945-.414 1.523-.465 4.853-.47 5.93v.103c.005 1.077.056 4.407.47 5.93.124.46.486.821.945.945 1.523.414 4.853.465 5.93.47h.103c1.077-.005 4.407-.056 5.93-.47.46-.124.821-.486.945-.945.414-1.523.465-4.853.47-5.93v-.103c-.005-1.077-.056-4.407-.47-5.93a1.34 1.34 0 0 0-.945-.945c-1.523-.414-4.853-.465-5.93-.47M6.545 11.4V6.6L10.727 9z"/></svg>`;
     }
 
     function buildSignatureHtml(gmailVariant = false) {
@@ -610,7 +567,7 @@
       const isLogo = data.imageType === "Logo";
       const imageSize = isLogo ? (data.imageSize === "Large" ? 112 : (data.imageSize === "Medium" ? 92 : 72)) : (data.imageSize === "Large" ? 86 : (data.imageSize === "Medium" ? 72 : 56));
       const imageRadius = data.imageShape === "Circle" ? "50%" : (data.imageShape === "Square" ? "0" : "10px");
-      const imageFit = isLogo ? "contain" : (data.imageFit === "cover" ? "cover" : "contain");
+      const imageFit = isLogo ? "contain" : "cover";
       const contactRows = [];
 
       if (data.phone) contactRows.push(`<span style="color:#4b5563;font-weight:600;">Phone:</span> <a href="tel:${safe(data.phone)}" style="color:${state.accent};text-decoration:none;">${safe(data.phone)}</a>`);
@@ -625,7 +582,7 @@
         ["facebook", data.facebook, "Facebook"],
         ["youtube", data.youtube, "YouTube"]
       ].filter(([, url]) => url).map(([key, url, label]) => (
-        `<a href="${safe(normUrl(url))}" title="${label}" aria-label="${label}" style="display:inline-block;margin-right:8px;text-decoration:none;">${icon(key, state.accent)}</a>`
+        `<a href="${safe(normUrl(url))}" title="${label}" aria-label="${label}" style="display:inline-block;margin-right:10px;text-decoration:none;color:${state.accent};">${icon(key, state.accent)}</a>`
       )).join("");
 
       const tagline = safe((data.tagline || "").slice(0, 120));
@@ -636,8 +593,7 @@
       const nameSize = data.style === "compact" ? 18 : 20;
       const normalizedImageUrl = normUrl(data.imageUrl);
       const hasImage = hasValidImageUrl(data.imageUrl);
-      const isStacked = data.imageLayout === "Stacked";
-      const showDivider = hasImage && !isStacked;
+      const showDivider = hasImage;
 
       const imageContainerStyle = isLogo
         ? "display:block;background:#ffffff;"
@@ -651,28 +607,19 @@
       <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 1px;">${safe(data.fullName || "Your Name")}</div>
       <div style="font-size:${fontBody}px;color:#111827;font-weight:600;margin:0 0 4px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
       ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:0 0 4px;">${tagline}</div>` : ""}
-      ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
       <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
       ${social ? `<div style="margin-top:8px;">${social}</div>` : ""}
     </td>`;
 
-      const stackedCell = `<td style="vertical-align:top;">
-      <div style="font-size:${nameSize}px;font-weight:bold;color:#111;margin:0 0 1px;">${safe(data.fullName || "Your Name")}</div>
-      <div style="font-size:${fontBody}px;color:#111827;font-weight:600;margin:0 0 4px;">${safe(data.title)}${data.title && data.brokerage ? " | " : ""}${safe(data.brokerage)}</div>
-      <div style="font-size:${fontBody}px;color:#333;">${contactRows.join("<br />")}</div>
-      ${hasImage ? `<div style="margin-top:0;margin-bottom:0;">${imageFrame}</div>` : ""}
-      ${social ? `<div style="margin-top:${hasImage ? "0" : "1"}px;">${social}</div>` : ""}
-      ${tagline ? `<div style="font-size:${fontBody}px;color:${state.accent};margin:${social || hasImage ? "8" : "6"}px 0 4px;">${tagline}</div>` : ""}
-      ${bio ? `<div style="font-size:${fontBody}px;color:#444;margin:0 0 6px;">${bio}</div>` : ""}
-    </td>`;
-
-      const contentRows = isStacked && hasImage
-        ? `<tr>${stackedCell}</tr>`
-        : `<tr>${hasImage ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>` : ""}${sideBySideTextCell}</tr>`;
+      const contentRows = `<tr>${hasImage ? `<td style="vertical-align:top;padding-right:${spacer}px;">${imageFrame}</td>` : ""}${sideBySideTextCell}</tr>`;
+      const footerRow = bio
+        ? `<tr><td${hasImage ? " colspan=\"2\"" : ""} style="font-size:${fontBody}px;color:#444;line-height:1.35;padding-top:8px;white-space:normal;word-break:break-word;overflow-wrap:anywhere;max-width:560px;">${bio}</td></tr>`
+        : "";
 
       return `
 <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:560px;line-height:1.35;">
   ${contentRows}
+  ${footerRow}
 </table>`.trim();
     }
 
@@ -750,40 +697,15 @@
         scheduleResize(10);
       }, 1500);
     }
-
-    function syncImageDisplayOptions() {
-      const isLogoType = el.imageType.value === "Logo";
-      if (isLogoType) {
-        el.imageFit.innerHTML = '<option value="contain" selected>Show full image (recommended)</option>';
-        el.imageFit.value = "contain";
-      } else {
-        el.imageFit.innerHTML = '<option value="contain">Show full image (recommended)</option><option value="cover">Fill area (crop)</option>';
-        if (!["contain", "cover"].includes(el.imageFit.value)) {
-          el.imageFit.value = "cover";
-        }
-      }
-    }
-
     function applyPawPreset() {
       el.imageType.value = "Logo";
       el.imageUrl.value = PAW_DEFAULT_IMAGE_URL;
       el.imageShape.value = "Rounded square";
-      syncImageDisplayOptions();
-      el.imageFit.value = "contain";
       el.imageLayout.value = "Side-by-side (image left)";
       setAccent("#2f6fed");
     }
 
     el.imageType.addEventListener("change", () => {
-      syncImageDisplayOptions();
-      if (el.imageType.value === "Headshot") {
-        el.imageFit.value = "cover";
-      }
-      renderPreview();
-      scheduleResize(30);
-    });
-
-    el.imageLayout.addEventListener("change", () => {
       renderPreview();
       scheduleResize(30);
     });
@@ -820,107 +742,6 @@
       scheduleResize();
     }
 
-    function updateCooldownUi() {
-      const remaining = Math.max(0, Math.ceil((state.cooldownUntil - Date.now()) / 1000));
-      const disabled = state.aiInFlight || remaining > 0;
-      document.getElementById("generateBtn").disabled = disabled;
-      document.getElementById("regenerateBtn").disabled = disabled;
-      if (state.aiInFlight) {
-        aiStatus.textContent = "Generating…";
-      } else if (remaining > 0) {
-        aiStatus.textContent = `Please wait ${remaining}s before generating again.`;
-      } else {
-        aiStatus.textContent = "";
-      }
-      scheduleResize();
-    }
-
-    function startCooldown(seconds = 15) {
-      state.cooldownUntil = Date.now() + seconds * 1000;
-      clearInterval(state.cooldownTimer);
-      state.cooldownTimer = setInterval(() => {
-        updateCooldownUi();
-        if (Date.now() >= state.cooldownUntil) clearInterval(state.cooldownTimer);
-      }, 250);
-      updateCooldownUi();
-    }
-
-    function ensureTurnstileVisible() {
-      const wrap = document.getElementById("turnstile-wrap");
-      if (state.turnstileVisible) return;
-      wrap.style.display = "block";
-      state.turnstileVisible = true;
-      scheduleResize();
-      if (!window.turnstile || state.turnstileWidgetId !== null) return;
-      state.turnstileWidgetId = window.turnstile.render("#turnstile", {
-        sitekey: TURNSTILE_SITE_KEY,
-        callback: (token) => {
-          state.turnstileToken = token;
-          aiStatus.textContent = "Verification complete. You can generate now.";
-          scheduleResize();
-        },
-        "expired-callback": () => { state.turnstileToken = ""; },
-        "error-callback": () => {
-          state.turnstileToken = "";
-          showToast("Verification error. Please retry.", true);
-        }
-      });
-    }
-
-    async function runAiGeneration() {
-      if (state.aiInFlight) return;
-      ensureTurnstileVisible();
-      if (!state.turnstileToken) {
-        showToast("Complete verification to use AI assist.", true);
-        return;
-      }
-      if (Date.now() < state.cooldownUntil) {
-        updateCooldownUi();
-        return;
-      }
-
-      state.aiInFlight = true;
-      updateCooldownUi();
-
-      const payload = {
-        title: el.title.value.trim(),
-        office: el.office.value.trim(),
-        location: el.location.value.trim(),
-        audience: el.audience.value.trim(),
-        tone: el.tone.value.trim(),
-        focus: el.focus.value.trim(),
-        turnstileToken: state.turnstileToken
-      };
-
-      try {
-        const res = await fetch(`${PAW_API_BASE}/signature/generate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          throw new Error("non-200");
-        }
-
-        const data = await res.json();
-        el.tagline.value = String(data.tagline || "").slice(0, 120);
-        el.bio.value = String(data.bio || "").slice(0, 220);
-        renderPreview();
-        showToast("AI content generated.");
-        startCooldown(15);
-        if (window.turnstile && state.turnstileWidgetId !== null) {
-          window.turnstile.reset(state.turnstileWidgetId);
-          state.turnstileToken = "";
-        }
-      } catch {
-        showToast("Could not generate right now. Please try again.", true);
-      } finally {
-        state.aiInFlight = false;
-        updateCooldownUi();
-      }
-    }
-
     el.style.addEventListener("change", () => {
       if (el.style.value === "paw") {
         applyPawPreset();
@@ -938,9 +759,6 @@
       if (evt.target.id === "privacyModal") openPrivacyModal(false);
     });
 
-    document.getElementById("generateBtn").addEventListener("click", runAiGeneration);
-    document.getElementById("regenerateBtn").addEventListener("click", runAiGeneration);
-
     document.getElementById("copyPaste").addEventListener("click", () => {
       handleCopyAction("copyPaste", () => copyHtmlRich(buildSignatureHtml(false)));
     });
@@ -951,7 +769,7 @@
       handleCopyAction("copyHtml", () => copyHtmlTextOnly(buildSignatureHtml(false)));
     });
 
-    const accordionIds = ["contactSection", "socialSection", "imageSection", "aiSection"];
+    const accordionIds = ["contactSection", "socialSection", "imageSection", "taglineSection"];
     accordionIds.forEach((id) => {
       document.getElementById(id).addEventListener("toggle", (evt) => {
         if (evt.target.open) {
@@ -984,7 +802,6 @@
 
     placePreviewPanel();
     initSwatches();
-    syncImageDisplayOptions();
     renderPreview();
     scheduleResize();
     setTimeout(() => scheduleResize(), 200);
