@@ -43,6 +43,42 @@
     Changing shared classes affects multiple tools.
   -->
 <link href="./paw-ui.css" rel="stylesheet"/>
+<style>
+  .guide-mode-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+  }
+  .guide-mode-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(15,23,42,.72);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .guide-mode-row .paw-seg {
+    min-width: 0;
+    width: 100%;
+  }
+  .guide-mode-row .paw-seg__btn {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .guide-mode-row .paw-seg__btn.primary {
+    background: rgba(5,195,249,.18);
+    color: rgba(15,23,42,.92);
+  }
+  @media (max-width: 560px) {
+    .guide-mode-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+  }
+</style>
 </head>
 <body class="paw-ask">
 <div class="app">
@@ -69,7 +105,16 @@
 <div class="composer">
 <div class="composer-main">
 <div class="composer-help">Ask anything, or paste text to rewrite.</div>
-<textarea id="input" placeholder="Example: Rewrite this to sound confident and warm"></textarea>
+<div aria-label="Mode" class="guide-mode-row">
+<div class="guide-mode-label">Mode</div>
+<div class="paw-seg" role="group" aria-label="Guide mode">
+<button class="paw-seg__btn" data-mode="guide" type="button">PAW Guide</button>
+<button class="paw-seg__btn" data-mode="coach" type="button">Coach</button>
+<button class="paw-seg__btn" data-mode="tech_support" type="button">Tech Support</button>
+<button class="paw-seg__btn" data-mode="general" type="button">General</button>
+</div>
+</div>
+<textarea id="input" placeholder="e.g., Rewrite this to sound confident and friendly"></textarea>
 </div>
 <button aria-label="Send" class="send" id="send" type="button">
 <img alt="" class="send-icon" src="https://paw-tools.pages.dev/paw.png"/>
@@ -122,6 +167,42 @@ Examples
 • “Rewrite this text to sound confident and friendly…”
 • “Give me 3 replies to this objection: …”`;
 
+      const MODE_PLACEHOLDERS = {
+        guide: "Example: How do I do this in PAW, and what’s the next best step?",
+        coach: "Example: Coach me through what to say and what to do next.",
+        tech_support: "Example: Help me troubleshoot what’s happening (device/app + what you tried).",
+        general: "e.g., Rewrite this to sound confident and friendly"
+      };
+
+      let selectedMode = "general";
+
+      function applyModeUI(){
+        try {
+          const buttons = document.querySelectorAll(".guide-mode-row .paw-seg__btn[data-mode]");
+          buttons.forEach((btn) => {
+            const mode = String(btn.getAttribute("data-mode") || "");
+            btn.classList.toggle("primary", mode === selectedMode);
+            btn.setAttribute("aria-pressed", mode === selectedMode ? "true" : "false");
+          });
+        } catch (_) {}
+      }
+
+      function applyModePlaceholder(){
+        try {
+          const $input = document.getElementById("input");
+          if (!$input) return;
+          const next = MODE_PLACEHOLDERS[selectedMode] || MODE_PLACEHOLDERS.general;
+          $input.setAttribute("placeholder", next);
+        } catch (_) {}
+      }
+
+      function setMode(nextMode){
+        const next = MODE_PLACEHOLDERS[nextMode] ? nextMode : "general";
+        selectedMode = next;
+        applyModeUI();
+        applyModePlaceholder();
+      }
+
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "assistant",
@@ -136,6 +217,19 @@ Examples
         maxHistoryItems: 20,
         deliverableMode: false
       });
+
+      try {
+        const modeButtons = document.querySelectorAll(".guide-mode-row .paw-seg__btn[data-mode]");
+        modeButtons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const mode = String(btn.getAttribute("data-mode") || "general");
+            setMode(mode);
+            scheduleDraftSave();
+          });
+        });
+      } catch (_) {}
+
+      setMode("general");
 
       // ==========================================================
       // Local Save + Resume (Assistant tool)
@@ -203,6 +297,7 @@ Examples
             v: 1,
             updatedAt: new Date().toISOString(),
             toolId: "assistant",
+            mode: selectedMode,
             shell: st
           });
           if (!ok && !__draftSaveFailWarned) {
@@ -289,6 +384,7 @@ Examples
         if ($resumeGo) $resumeGo.addEventListener("click", () => {
           const d = storageGet(DRAFT_KEY);
           closeResumeModal();
+          if (d && typeof d.mode === "string") setMode(d.mode);
           if (d && d.shell && shell && shell.setState) shell.setState(d.shell);
         });
       } catch (_) {}
