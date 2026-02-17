@@ -74,15 +74,17 @@
   @media (max-width: 560px) {
     .guide-mode-row {
       flex-direction: column;
-      align-items: flex-start;
+      align-items: stretch;
       gap: 6px;
     }
     .guide-mode-row .paw-seg {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      max-width: 100%;
     }
     .guide-mode-row .paw-seg__btn {
-      flex: 1 1 50%;
+      width: 100%;
     }
   }
 </style>
@@ -174,9 +176,9 @@ Examples
 
       const MODE_PLACEHOLDERS = {
         guide: "Example: How do I do this in PAW, and what’s the next best step?",
-        coach: "Example: Coach me through what to say and what to do next.",
+        coach: "Example: Coach me on my real estate business—what should I focus on this week, and what’s my next best step?",
         tech_support: "Example: Help me troubleshoot what’s happening (device/app + what you tried).",
-        general: "e.g., Rewrite this to sound confident and friendly"
+        general: "Example: Ask anything—draft a message, brainstorm, or rewrite text in my voice."
       };
 
       let selectedMode = "guide";
