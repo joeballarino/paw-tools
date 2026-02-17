@@ -385,7 +385,7 @@
     <div class="top-controls">
       <div class="field style-control">
         <label for="style">Style</label>
-        <select id="style">
+        <select id="style" class="big-input">
           <option value="clean" selected>Clean</option>
           <option value="compact">Compact</option>
           <option value="paw">ProAgent Member</option>
@@ -395,7 +395,7 @@
       <div class="accent-control">
         <label>Accent color</label>
         <div class="swatches" id="swatches"></div>
-        <input type="color" id="accentCustom" class="color-picker-hidden" value="#2f6fed" aria-label="Custom accent color" />
+        <input type="color" id="accentCustom" class="color-picker-hidden big-input" value="#2f6fed" aria-label="Custom accent color" />
       </div>
 
       <div class="privacy-line">
@@ -408,20 +408,20 @@
       <section id="accordionPanel">
         <details id="contactSection" open>
           <summary class="accordion-summary">Contact details <svg class="accordion-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10l4-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-          <div class="field"><label for="fullName">Full name</label><input id="fullName" /></div>
+          <div class="field"><label for="fullName">Full name</label><input id="fullName" class="big-input" /></div>
           <div class="field-row">
-            <div class="field"><label for="title">Title</label><input id="title" /></div>
-            <div class="field"><label for="brokerage">Brokerage / Team</label><input id="brokerage" /></div>
+            <div class="field"><label for="title">Title</label><input id="title" class="big-input" /></div>
+            <div class="field"><label for="brokerage">Brokerage / Team</label><input id="brokerage" class="big-input" /></div>
           </div>
           <div class="field-row">
-            <div class="field"><label for="phone">Phone</label><input id="phone" /></div>
-            <div class="field"><label for="email">Email</label><input id="email" type="email" /></div>
+            <div class="field"><label for="phone">Phone</label><input id="phone" class="big-input" /></div>
+            <div class="field"><label for="email">Email</label><input id="email" class="big-input" type="email" /></div>
           </div>
           <div class="field-row">
-            <div class="field"><label for="website">Website</label><input id="website" placeholder="example.com" /></div>
-            <div class="field"><label for="officeLocation">Office/location line (City, State) (optional)</label><input id="officeLocation" /></div>
+            <div class="field"><label for="website">Website</label><input id="website" class="big-input" placeholder="example.com" /></div>
+            <div class="field"><label for="officeLocation">Office/location line (City, State) (optional)</label><input id="officeLocation" class="big-input" /></div>
           </div>
-          <div class="field"><label for="license">License # (optional)</label><input id="license" /></div>
+          <div class="field"><label for="license">License # (optional)</label><input id="license" class="big-input" /></div>
         </details>
 
         <div id="previewMobileAnchor"></div>
@@ -429,12 +429,12 @@
         <details id="socialSection">
           <summary class="accordion-summary">Social icons <svg class="accordion-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10l4-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
           <div class="field-row">
-            <div class="field"><label for="linkedin">LinkedIn URL (optional)</label><input id="linkedin" placeholder="https://" /></div>
-            <div class="field"><label for="instagram">Instagram URL (optional)</label><input id="instagram" placeholder="https://" /></div>
+            <div class="field"><label for="linkedin">LinkedIn URL (optional)</label><input id="linkedin" class="big-input" placeholder="https://" /></div>
+            <div class="field"><label for="instagram">Instagram URL (optional)</label><input id="instagram" class="big-input" placeholder="https://" /></div>
           </div>
           <div class="field-row">
-            <div class="field"><label for="facebook">Facebook URL (optional)</label><input id="facebook" placeholder="https://" /></div>
-            <div class="field"><label for="youtube">YouTube URL (optional)</label><input id="youtube" placeholder="https://" /></div>
+            <div class="field"><label for="facebook">Facebook URL (optional)</label><input id="facebook" class="big-input" placeholder="https://" /></div>
+            <div class="field"><label for="youtube">YouTube URL (optional)</label><input id="youtube" class="big-input" placeholder="https://" /></div>
           </div>
         </details>
 
@@ -443,32 +443,32 @@
           <div class="field-row">
             <div class="field">
               <label for="imageType">Image type</label>
-              <select id="imageType"><option>Logo</option><option>Headshot</option></select>
+              <select id="imageType" class="big-input"><option>Logo</option><option>Headshot</option></select>
             </div>
             <div class="field">
               <label for="imageShape">Shape</label>
-              <select id="imageShape"><option>Square</option><option selected>Rounded square</option><option>Circle</option></select>
+              <select id="imageShape" class="big-input"><option>Square</option><option selected>Rounded square</option><option>Circle</option></select>
             </div>
           </div>
           <div class="field-row">
             <div class="field">
               <label for="imageLayout">Layout</label>
-              <select id="imageLayout"><option selected>Side-by-side (image left)</option></select>
+              <select id="imageLayout" class="big-input"><option selected>Side-by-side (image left)</option></select>
             </div>
             <div class="field">
               <label for="imageSize">Size</label>
-              <select id="imageSize"><option>Small</option><option>Medium</option><option>Large</option></select>
+              <select id="imageSize" class="big-input"><option>Small</option><option>Medium</option><option>Large</option></select>
             </div>
           </div>
           <div class="field-row">
-            <div class="field" style="grid-column: 1 / -1;"><label for="imageUrl">Image URL</label><input id="imageUrl" placeholder="https://" /><div class="subtle">Clear the URL to remove the image.</div></div>
+            <div class="field" style="grid-column: 1 / -1;"><label for="imageUrl">Image URL</label><input id="imageUrl" class="big-input" placeholder="https://" /><div class="subtle">Clear the URL to remove the image.</div></div>
           </div>
         </details>
 
         <details id="taglineSection">
           <summary class="accordion-summary">Tagline + mini bio (optional) <svg class="accordion-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10l4-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-          <div class="field"><label for="tagline">Tagline (short)</label><input id="tagline" /></div>
-          <div class="field"><label for="bio">Bio / disclosure (footer)</label><textarea id="bio"></textarea><div class="subtle">Appears across the bottom of the signature.</div></div>
+          <div class="field"><label for="tagline">Tagline (short)</label><input id="tagline" class="big-input" /></div>
+          <div class="field"><label for="bio">Bio / disclosure (footer)</label><textarea id="bio" class="big-input"></textarea><div class="subtle">Appears across the bottom of the signature.</div></div>
         </details>
       </section>
 
