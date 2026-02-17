@@ -57,6 +57,10 @@
     min-width: 0;
     width: 100%;
   }
+  body.paw-ask .composer-main .messages {
+    max-height: 260px;
+    overflow-y: auto;
+  }
   .guide-mode-row .paw-seg__btn {
     height: 32px;
     padding: 0 10px;
@@ -72,6 +76,13 @@
       flex-direction: column;
       align-items: flex-start;
       gap: 6px;
+    }
+    .guide-mode-row .paw-seg {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .guide-mode-row .paw-seg__btn {
+      flex: 1 1 50%;
     }
   }
 </style>
@@ -97,7 +108,6 @@
 </div>
 </div>
 </div>
-<div class="messages" id="messages"></div>
 <div class="composer">
 <div class="composer-main">
 <div aria-label="Mode" class="guide-mode-row">
@@ -108,6 +118,7 @@
 <button class="paw-seg__btn" data-mode="general" type="button">General</button>
 </div>
 </div>
+<div class="messages" id="messages"></div>
 <textarea id="input" placeholder="e.g., Rewrite this to sound confident and friendly"></textarea>
 </div>
 <button aria-label="Send" class="send" id="send" type="button">
