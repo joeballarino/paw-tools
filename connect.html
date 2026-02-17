@@ -127,7 +127,11 @@
       gap:0;
     }
 
-    .connect-seg.paw-seg { width: auto; }
+    .connect-seg.paw-seg {
+      display: inline-flex;
+      width: auto;
+      flex: 0 0 auto;
+    }
 
     .connect-seg-btn{
       flex:0 0 auto;
@@ -137,7 +141,7 @@
       white-space:nowrap;
     }
 
-    .connect-seg-btn.paw-seg__btn { flex: 0 0 auto; }
+    .connect-seg-btn.paw-seg__btn { flex: 0 0 auto !important; }
 
     .connect-controls .connect-seg.paw-seg .paw-seg__btn {
       padding: 0 10px !important;
