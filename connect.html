@@ -102,9 +102,7 @@
       display:flex;
       align-items:center;
       gap:18px;
-      flex-wrap:nowrap;
-      overflow-x:auto;
-      -webkit-overflow-scrolling: touch;
+      flex-wrap:wrap;
     }
 
     .connect-block{
@@ -127,11 +125,6 @@
       display:flex;
       align-items:center;
       gap:0;
-      border:1px solid rgba(15,23,42,.12);
-      background:rgba(255,255,255,.86);
-      border-radius:999px;
-      overflow:hidden;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
     }
 
     .connect-seg-btn{
@@ -139,25 +132,7 @@
       min-width:0;
       height:32px;
       padding:0 14px;
-      border:0;
-      background:transparent;
-      color:rgba(15,23,42,.78);
-      font-weight:800;
-      font-size:13px;
-      cursor:pointer;
       white-space:nowrap;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      transition: background .15s ease, color .15s ease;
-    }
-    .connect-seg-btn:hover{ background:rgba(15,23,42,.05); }
-    .connect-seg-btn + .connect-seg-btn{ border-left:1px solid rgba(15,23,42,.10); }
-
-    /* Active state uses the same .primary convention as other PAW controls */
-    .connect-seg-btn.primary{
-      background: rgba(5,195,249,.18);
-      color: rgba(15,23,42,.92);
     }
 
     /* Mobile: stack each block, full-width segmented control */
@@ -167,7 +142,6 @@
         flex-direction:column;
         align-items:stretch;
         gap:12px;
-        overflow-x:visible;
       }
       .connect-block{
         flex-direction:column;
@@ -214,25 +188,25 @@
 
     <div class="connect-block">
       <div class="connect-label">Choose one</div>
-      <div class="connect-seg" role="group" aria-label="Type">
-        <button class="connect-seg-btn" type="button" data-group="type" data-value="first_contact">First contact</button>
-        <button class="connect-seg-btn" type="button" data-group="type" data-value="continue">Continue</button>
+      <div class="connect-seg paw-seg" role="group" aria-label="Type">
+        <button class="connect-seg-btn paw-seg__btn" type="button" data-group="type" data-value="first_contact">First contact</button>
+        <button class="connect-seg-btn paw-seg__btn" type="button" data-group="type" data-value="continue">Continue</button>
       </div>
     </div>
 
     <div class="connect-block">
       <div class="connect-label">Send via</div>
-      <div class="connect-seg" role="group" aria-label="Send via">
-        <button class="connect-seg-btn" type="button" data-group="channel" data-value="email">Email</button>
-        <button class="connect-seg-btn" type="button" data-group="channel" data-value="text">Text</button>
+      <div class="connect-seg paw-seg" role="group" aria-label="Send via">
+        <button class="connect-seg-btn paw-seg__btn" type="button" data-group="channel" data-value="email">Email</button>
+        <button class="connect-seg-btn paw-seg__btn" type="button" data-group="channel" data-value="text">Text</button>
       </div>
     </div>
 
     <div class="connect-block">
       <div class="connect-label">Use as</div>
-      <div class="connect-seg" role="group" aria-label="Use as">
-        <button class="connect-seg-btn" type="button" data-group="use" data-value="once">Send once</button>
-        <button class="connect-seg-btn" type="button" data-group="use" data-value="template">Template</button>
+      <div class="connect-seg paw-seg" role="group" aria-label="Use as">
+        <button class="connect-seg-btn paw-seg__btn" type="button" data-group="use" data-value="once">Send once</button>
+        <button class="connect-seg-btn paw-seg__btn" type="button" data-group="use" data-value="template">Template</button>
       </div>
     </div>
 
