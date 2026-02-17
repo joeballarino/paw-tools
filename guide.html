@@ -81,10 +81,22 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       width: 100%;
-      max-width: 100%;
     }
     .guide-mode-row .paw-seg__btn {
       width: 100%;
+      border-radius: 0;
+    }
+    .guide-mode-row .paw-seg__btn:nth-child(1) {
+      border-top-left-radius: 18px;
+    }
+    .guide-mode-row .paw-seg__btn:nth-child(2) {
+      border-top-right-radius: 18px;
+    }
+    .guide-mode-row .paw-seg__btn:nth-child(3) {
+      border-bottom-left-radius: 18px;
+    }
+    .guide-mode-row .paw-seg__btn:nth-child(4) {
+      border-bottom-right-radius: 18px;
     }
   }
 </style>
