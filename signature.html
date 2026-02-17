@@ -19,9 +19,9 @@
       --radius: 12px;
     }
 
-    * { box-sizing: border-box; }
+    .tool-signature * { box-sizing: border-box; }
 
-    body {
+    .tool-signature {
       margin: 0;
       padding: 20px;
       font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -30,12 +30,12 @@
       line-height: 1.4;
     }
 
-    .wrap {
+    .tool-signature .wrap {
       max-width: 1200px;
       margin: 0 auto;
     }
 
-    .top-controls, .grid > section {
+    .tool-signature .top-controls, .tool-signature .grid > section {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -44,7 +44,7 @@
       color: #111827;
     }
 
-    .top-controls {
+    .tool-signature .top-controls {
       display: grid;
       grid-template-columns: minmax(280px, 1fr) auto;
       grid-template-areas:
@@ -54,15 +54,15 @@
       align-items: start;
     }
 
-    .style-control {
+    .tool-signature .style-control {
       grid-area: style;
       margin-bottom: 0;
       max-width: 520px;
       width: 100%;
     }
-    .accent-control { grid-area: accent; }
+    .tool-signature .accent-control { grid-area: accent; }
 
-    .privacy-line {
+    .tool-signature .privacy-line {
       grid-area: privacy;
       font-size: 14px;
       color: var(--muted);
@@ -71,7 +71,7 @@
       white-space: nowrap;
     }
 
-    .privacy-line button {
+    .tool-signature .privacy-line button {
       background: transparent;
       color: #111827;
       border: 0;
@@ -81,25 +81,25 @@
       font: inherit;
     }
 
-    .field {
+    .tool-signature .field {
       display: grid;
       gap: 6px;
       margin-bottom: 10px;
     }
 
-    .field-row {
+    .tool-signature .field-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
     }
 
-    label { font-size: 13px; color: #4b5563; }
+    .tool-signature label { font-size: 13px; color: #4b5563; }
 
-    input, select, textarea, button {
+    .tool-signature input, .tool-signature select, .tool-signature textarea, .tool-signature button {
       font: inherit;
     }
 
-    input, select, textarea {
+    .tool-signature input, .tool-signature select, .tool-signature textarea {
       width: 100%;
       background: var(--panel-2);
       color: #111827;
@@ -109,12 +109,12 @@
       outline: none;
     }
 
-    input[type="color"] {
+    .tool-signature input[type="color"] {
       height: 36px;
       padding: 4px;
     }
 
-    .color-picker-hidden {
+    .tool-signature .color-picker-hidden {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -126,33 +126,33 @@
       border: 0;
     }
 
-    textarea { min-height: 64px; resize: vertical; }
+    .tool-signature textarea { min-height: 64px; resize: vertical; }
 
-    h1 {
+    .tool-signature h1 {
       margin: 0 0 10px;
       font-size: 22px;
     }
 
-    h2 {
+    .tool-signature h2 {
       margin: 0 0 12px;
       font-size: 17px;
     }
 
-    .grid {
+    .tool-signature .grid {
       display: grid;
       grid-template-columns: 1.1fr 0.9fr;
       gap: 12px;
       align-items: start;
     }
 
-    .swatches {
+    .tool-signature .swatches {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       margin-bottom: 8px;
     }
 
-    .swatch {
+    .tool-signature .swatch {
       width: 28px;
       height: 28px;
       border-radius: 6px;
@@ -160,12 +160,12 @@
       cursor: pointer;
     }
 
-    .swatch.active {
+    .tool-signature .swatch.active {
       border-color: #111827;
       box-shadow: 0 0 0 1px #111827;
     }
 
-    .swatch.custom {
+    .tool-signature .swatch.custom {
       border: 1px solid #9ca3af;
       background: #f8fafc;
       color: #6b7280;
@@ -175,18 +175,18 @@
       padding: 0;
     }
 
-    .swatch.custom svg {
+    .tool-signature .swatch.custom svg {
       width: 14px;
       height: 14px;
       display: block;
     }
 
-    .subtle {
+    .tool-signature .subtle {
       color: var(--muted);
       font-size: 12px;
     }
 
-    details {
+    .tool-signature details {
       border: 1px solid var(--line);
       border-radius: 10px;
       padding: 8px 10px;
@@ -195,16 +195,16 @@
       color: #111827;
     }
 
-    details > summary {
+    .tool-signature details > summary {
       cursor: pointer;
       list-style: none;
       font-weight: 600;
       font-size: 14px;
     }
 
-    details > summary::-webkit-details-marker { display: none; }
+    .tool-signature details > summary::-webkit-details-marker { display: none; }
 
-    .accordion-summary {
+    .tool-signature .accordion-summary {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -214,27 +214,27 @@
       transition: background 0.18s ease;
     }
 
-    .accordion-summary:hover {
+    .tool-signature .accordion-summary:hover {
       background: #f3f4f6;
     }
 
-    .accordion-chevron {
+    .tool-signature .accordion-chevron {
       width: 16px;
       height: 16px;
       flex: 0 0 16px;
       transition: transform 0.18s ease;
     }
 
-    details[open] > summary .accordion-chevron {
+    .tool-signature details[open] > summary .accordion-chevron {
       transform: rotate(180deg);
     }
 
-    #previewDesktopAnchor,
-    #previewMobileAnchor {
+    .tool-signature #previewDesktopAnchor,
+    .tool-signature #previewMobileAnchor {
       display: none;
     }
 
-    .preview-panel {
+    .tool-signature .preview-panel {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -243,14 +243,14 @@
       color: #111827;
     }
 
-    .toggle {
+    .tool-signature .toggle {
       display: flex;
       align-items: center;
       gap: 8px;
       margin: 8px 0;
     }
 
-    .preview-card {
+    .tool-signature .preview-card {
       background: #fff;
       color: #111;
       border-radius: 10px;
@@ -260,26 +260,26 @@
       min-height: 220px;
     }
 
-    .actions {
+    .tool-signature .actions {
       display: grid;
       gap: 8px;
       margin-top: 10px;
     }
 
-    .copy-status {
+    .tool-signature .copy-status {
       margin-top: 8px;
       font-size: 13px;
       color: var(--muted);
       min-height: 18px;
     }
 
-    .manual-copy-target {
+    .tool-signature .manual-copy-target {
       outline: 2px solid var(--danger);
       outline-offset: 2px;
       transition: outline-color 0.3s ease;
     }
 
-    button {
+    .tool-signature button {
       border: 1px solid var(--line);
       background: var(--panel-2);
       color: #111827;
@@ -288,22 +288,22 @@
       cursor: pointer;
     }
 
-    button.primary {
+    .tool-signature button.primary {
       border-color: color-mix(in srgb, var(--accent), #000 20%);
       background: var(--accent);
       color: #fff;
     }
 
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .tool-signature button:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    .status {
+    .tool-signature .status {
       margin-top: 8px;
       font-size: 13px;
       color: var(--muted);
       min-height: 18px;
     }
 
-    .toast {
+    .tool-signature .toast {
       position: fixed;
       right: 12px;
       bottom: 12px;
@@ -321,12 +321,12 @@
       z-index: 60;
     }
 
-    .toast.show {
+    .tool-signature .toast.show {
       opacity: 1;
       transform: translateY(0);
     }
 
-    .modal-backdrop {
+    .tool-signature .modal-backdrop {
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.55);
@@ -337,9 +337,9 @@
       padding: 12px;
     }
 
-    .modal-backdrop.open { display: flex; }
+    .tool-signature .modal-backdrop.open { display: flex; }
 
-    .modal {
+    .tool-signature .modal {
       width: min(620px, 100%);
       background: var(--panel);
       border: 1px solid var(--line);
@@ -347,38 +347,38 @@
       padding: 16px;
     }
 
-    .modal h3 { margin: 0 0 10px; }
-    .modal ul { margin: 0 0 12px 18px; color: var(--muted); }
-    .modal .row { display: flex; gap: 8px; justify-content: flex-end; }
+    .tool-signature .modal h3 { margin: 0 0 10px; }
+    .tool-signature .modal ul { margin: 0 0 12px 18px; color: var(--muted); }
+    .tool-signature .modal .row { display: flex; gap: 8px; justify-content: flex-end; }
 
     @media (max-width: 980px) {
-      .top-controls,
-      .grid,
-      .field-row {
+      .tool-signature .top-controls,
+      .tool-signature .grid,
+      .tool-signature .field-row {
         grid-template-columns: 1fr;
       }
 
-      .top-controls { grid-template-columns: 1fr; }
-      .grid { grid-template-columns: 1fr; }
-      .field-row { grid-template-columns: 1fr; }
+      .tool-signature .top-controls { grid-template-columns: 1fr; }
+      .tool-signature .grid { grid-template-columns: 1fr; }
+      .tool-signature .field-row { grid-template-columns: 1fr; }
 
-      .top-controls {
+      .tool-signature .top-controls {
         grid-template-areas:
           "style"
           "privacy"
           "accent";
       }
 
-      .privacy-line {
+      .tool-signature .privacy-line {
         text-align: left;
         white-space: normal;
       }
 
-      .preview-panel { margin-top: 2px; }
+      .tool-signature .preview-panel { margin-top: 2px; }
     }
   </style>
 </head>
-<body>
+<body class="tool-signature">
   <div class="wrap">
     <h1>Email Signature Creator</h1>
 
