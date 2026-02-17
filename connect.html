@@ -102,7 +102,7 @@
       display:flex;
       align-items:center;
       gap:18px;
-      flex-wrap:wrap;
+      flex-wrap:nowrap;
     }
 
     .connect-block{
@@ -133,6 +133,12 @@
       height:32px;
       padding:0 14px;
       white-space:nowrap;
+    }
+
+    @media (max-width: 1040px){
+      .connect-row{
+        flex-wrap:wrap;
+      }
     }
 
     /* Mobile: stack each block, full-width segmented control */
