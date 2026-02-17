@@ -75,28 +75,26 @@
     .guide-mode-row {
       flex-direction: column;
       align-items: stretch;
-      gap: 6px;
+      gap: 8px;
     }
+
     .guide-mode-row .paw-seg {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
       width: 100%;
+      background: transparent !important;
+      border: 0 !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      overflow: visible !important;
     }
+
     .guide-mode-row .paw-seg__btn {
-      width: 100%;
-      border-radius: 0;
-    }
-    .guide-mode-row .paw-seg__btn:nth-child(1) {
-      border-top-left-radius: 18px;
-    }
-    .guide-mode-row .paw-seg__btn:nth-child(2) {
-      border-top-right-radius: 18px;
-    }
-    .guide-mode-row .paw-seg__btn:nth-child(3) {
-      border-bottom-left-radius: 18px;
-    }
-    .guide-mode-row .paw-seg__btn:nth-child(4) {
-      border-bottom-right-radius: 18px;
+      flex: 1 1 calc(50% - 8px);
+      width: auto;
+      min-width: 0;
+      border-radius: 999px;
     }
   }
 </style>
