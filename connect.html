@@ -127,21 +127,12 @@
       gap:0;
     }
 
-    .connect-seg.paw-seg { width: auto; flex: 0 0 auto; }
-
     .connect-seg-btn{
-      flex:0 0 auto;
       min-width:0;
       height:32px;
       padding:0 14px;
       white-space:nowrap;
     }
-
-    .connect-seg-btn.paw-seg__btn { flex: 0 0 auto; }
-
-    .connect-controls .paw-seg { width: fit-content !important; flex: 0 0 auto !important; }
-
-    .connect-controls .paw-seg__btn { flex: 0 0 auto !important; }
 
     .connect-controls .connect-block { flex: 0 0 auto; }
 
@@ -165,8 +156,8 @@
         gap:6px;
         width:100%;
       }
-      .connect-seg{ width:100%; }
-      .connect-seg-btn{ flex:1 1 0; }
+      .connect-seg.paw-seg.paw-seg--compact{ width:100%; display:flex; }
+      .connect-seg.paw-seg.paw-seg--compact .paw-seg__btn{ flex:1 1 0; }
     }
 </style>
 </head>
@@ -204,7 +195,7 @@
 
     <div class="connect-block">
       <div class="connect-label">Choose one</div>
-      <div class="connect-seg paw-seg" role="group" aria-label="Type">
+      <div class="connect-seg paw-seg paw-seg--compact" role="group" aria-label="Type">
         <button class="connect-seg-btn paw-seg__btn" type="button" data-group="type" data-value="first_contact">First contact</button>
         <button class="connect-seg-btn paw-seg__btn" type="button" data-group="type" data-value="continue">Continue</button>
       </div>
@@ -212,7 +203,7 @@
 
     <div class="connect-block">
       <div class="connect-label">Send via</div>
-      <div class="connect-seg paw-seg" role="group" aria-label="Send via">
+      <div class="connect-seg paw-seg paw-seg--compact" role="group" aria-label="Send via">
         <button class="connect-seg-btn paw-seg__btn" type="button" data-group="channel" data-value="email">Email</button>
         <button class="connect-seg-btn paw-seg__btn" type="button" data-group="channel" data-value="text">Text</button>
       </div>
@@ -220,7 +211,7 @@
 
     <div class="connect-block">
       <div class="connect-label">Use as</div>
-      <div class="connect-seg paw-seg" role="group" aria-label="Use as">
+      <div class="connect-seg paw-seg paw-seg--compact" role="group" aria-label="Use as">
         <button class="connect-seg-btn paw-seg__btn" type="button" data-group="use" data-value="once">Send once</button>
         <button class="connect-seg-btn paw-seg__btn" type="button" data-group="use" data-value="template">Template</button>
       </div>
