@@ -1191,6 +1191,106 @@ body.paw-works-mode{
   body.paw-works-mode #pawWorksModeRoot .paw-works-mode__utilities{ opacity:.45; }
 }
 
+
+/* Works actions + session table layout */
+.paw-works-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:12px;
+}
+.paw-works-linkbtn{
+  border:none;
+  background:transparent;
+  color:rgba(var(--accent-rgb),1);
+  padding:8px 4px;
+  min-height:auto;
+  cursor:pointer;
+  font:inherit;
+}
+.paw-works-linkbtn:hover{
+  background:transparent;
+  text-decoration:underline;
+}
+
+.paw-works-recents__head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.paw-works-recents__title{ font-weight:800; }
+.paw-works-recents__sub{ font-size:12px; opacity:.65; margin-top:2px; }
+.paw-works-search{ min-width:220px; max-width:360px; width:100%; }
+
+.paw-works-table-head,
+.paw-works-row{
+  display:grid;
+  grid-template-columns:minmax(0,2fr) minmax(110px,1fr) minmax(130px,1fr) auto;
+  gap:10px;
+  align-items:center;
+}
+.paw-works-table-head{
+  font-size:12px;
+  font-weight:700;
+  color:rgba(15,23,42,.66);
+  padding:0 10px 8px;
+  border-bottom:1px solid rgba(15,23,42,.08);
+}
+.paw-works-row{
+  padding:10px;
+  border-bottom:1px solid rgba(15,23,42,.06);
+}
+.paw-works-col{ min-width:0; }
+.paw-works-col--name{
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.paw-works-col--action{ display:flex; justify-content:flex-end; }
+
+/* Name this work modal fields */
+.paw-workname-label{
+  display:block;
+  font-weight:700;
+  margin-bottom:6px;
+}
+.paw-workname-input{
+  width:100%;
+  border:1px solid rgba(15,23,42,.16);
+  border-radius:10px;
+  padding:10px 12px;
+  font:inherit;
+}
+.paw-workname-error{
+  min-height:18px;
+  margin-top:6px;
+  font-size:12px;
+  color:#b91c1c;
+}
+.paw-workname-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:8px;
+}
+
+@media (max-width: 560px){
+  .paw-works-recents__head{ flex-direction:column; align-items:stretch; }
+  .paw-works-search{ max-width:none; min-width:0; }
+  .paw-works-table-head{ display:none; }
+  .paw-works-row{
+    grid-template-columns:1fr;
+    gap:6px;
+    border:1px solid rgba(15,23,42,.08);
+    border-radius:12px;
+    margin-bottom:8px;
+  }
+  .paw-works-col--action{ justify-content:flex-start; }
+}
+
 /* ==========================================================
    
 /* ==========================================================

@@ -1910,43 +1910,65 @@ function ensureWorksRoot(){
       return;
     }
 
-    // Save current output (tools can listen for this event; UI is ready).
-    if (t.getAttribute("data-paw-works-save") === "1"){
+    if (t.getAttribute("data-paw-works-open") === "1"){
       try{
-        var ev = new CustomEvent("paw:works:save_current_output", { detail: { active_work: getActiveWork() } });
-        window.dispatchEvent(ev);
-      }catch(_){}
-
-      // If nothing handles it yet, show a gentle placeholder toast.
-      try{
-        if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Save flow is coming next.");
-      }catch(_){}
+        var listEl = __worksRoot ? __worksRoot.querySelector('[data-paw-works-list="1"]') : null;
+        var searchEl = __worksRoot ? __worksRoot.querySelector('[data-paw-works-search="1"]') : null;
+        if (listEl && typeof listEl.scrollIntoView === "function") listEl.scrollIntoView({ block:"start" });
+        if (searchEl && typeof searchEl.focus === "function") searchEl.focus();
+      }catch(_){ }
       return;
     }
 
-    // Create new work placeholder (session-only) and attach immediately.
-    if (t.getAttribute("data-paw-works-create") === "1"){
-      // Minimal, safe chooser: create a new empty container and attach.
-      // NOTE: Content editing remains intentional (saving actions). This is just a container.
-      var now = new Date();
-      var id2 = "w_" + now.getTime();
-      var label2 = "New work";
-      var bucket2 = "listings"; // default; can be expanded later
-      attachWork({ bucket: bucket2, id: id2, label: label2 });
-      _touchRecent({ bucket: bucket2, id: id2, label: label2, subtitle: "" });
-      renderWorksBody();
+    if (t.getAttribute("data-paw-works-save-new") === "1"){
+      openWorkNameModal("", function(name){
+        var nw = { bucket:"listings", id:"w_" + Date.now(), label:String(name||""), subtitle:"" };
+        attachWork(nw);
+        _touchRecent(nw);
+        renderWorksBody();
+        emitWorksSave("create");
+        try{
+          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Created for this session.");
+        }catch(_){ }
+      });
+      return;
+    }
 
-      try{
-        if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Created a new work for this session.");
-      }catch(_){}
+    if (t.getAttribute("data-paw-works-save-as-new") === "1"){
+      openWorkNameModal("", function(name){
+        var bucket = (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "listings";
+        var nw = { bucket:bucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"" };
+        attachWork(nw);
+        _touchRecent(nw);
+        renderWorksBody();
+        emitWorksSave("save_as_new");
+      });
+      return;
+    }
+
+    // Save current output (tools can listen for this event; UI is ready).
+    if (t.getAttribute("data-paw-works-save") === "1"){
+      emitWorksSave("save_updates");
       return;
     }
   });
 
-  // ESC exits Works mode (Work button also exits).
+  // ESC handling in Works mode:
+  // - If a modal is open, close the modal only.
+  // - If no modal is open, exit Works mode.
   document.addEventListener("keydown", function(e){
     if (!__worksModeOn) return;
     if (e.key !== "Escape") return;
+    try{
+      var anyModal = document.querySelector(".modal.show");
+      if (anyModal){
+        var wn = document.getElementById("pawWorkNameModal");
+        if (wn && wn.classList && wn.classList.contains("show")) closeWorkNameModal();
+        var tips = document.getElementById("pawTipsModal");
+        if (tips && tips.classList && tips.classList.contains("show") && typeof closeTipsModal === "function") closeTipsModal();
+        return;
+      }
+    }catch(_){ }
     exitWorksMode();
   });
 
@@ -1968,24 +1990,6 @@ function ensureWorksRoot(){
     if (bucket === "listings") return "Listing";
     if (bucket === "transactions") return "Transaction";
     return "Work";
-  }
-
-  function _formatRelative(ts){
-    // Minimal, non-localized helper: keep it simple and safe.
-    try{
-      if (!ts) return "";
-      var d = (ts instanceof Date) ? ts : new Date(ts);
-      if (isNaN(d.getTime())) return "";
-      var diff = Date.now() - d.getTime();
-      var mins = Math.floor(diff/60000);
-      if (mins < 1) return "Just now";
-      if (mins < 60) return mins + " min ago";
-      var hrs = Math.floor(mins/60);
-      if (hrs < 24) return hrs + " hr" + (hrs===1?"":"s") + " ago";
-      var days = Math.floor(hrs/24);
-      if (days === 1) return "Yesterday";
-      return days + " days ago";
-    }catch(_){ return ""; }
   }
 
   function _dedupeRecent(arr){
@@ -2013,6 +2017,102 @@ function ensureWorksRoot(){
     }catch(_){}
   };
 
+  function emitWorksSave(intent){
+    try{
+      var ev = new CustomEvent("paw:works:save_current_output", {
+        detail: { active_work: getActiveWork(), intent: String(intent || "") }
+      });
+      window.dispatchEvent(ev);
+    }catch(_){ }
+  }
+
+  function ensureWorkNameModal(){
+    try{
+      var existing = document.getElementById("pawWorkNameModal");
+      if (existing) return existing;
+
+      var m = document.createElement("div");
+      m.id = "pawWorkNameModal";
+      m.className = "modal";
+      m.setAttribute("aria-hidden","true");
+
+      m.innerHTML =
+        '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawWorkNameTitle">' +
+          '<div class="modal-head">' +
+            '<div id="pawWorkNameTitle" class="modal-title">Name this work</div>' +
+            '<button class="modal-close" id="pawWorkNameClose" aria-label="Close" type="button">✕</button>' +
+          '</div>' +
+          '<div class="modal-body">' +
+            '<label class="paw-workname-label" for="pawWorkNameInput">Work name</label>' +
+            '<input id="pawWorkNameInput" class="paw-workname-input" type="text" placeholder="e.g., Spring listing prep" />' +
+            '<div id="pawWorkNameError" class="paw-workname-error" aria-live="polite"></div>' +
+            '<div class="paw-workname-actions">' +
+              '<button class="btn" id="pawWorkNameCancel" type="button">Cancel</button>' +
+              '<button class="btn primary" id="pawWorkNameSave" type="button">Save</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      document.body.appendChild(m);
+
+      var closeBtn = document.getElementById("pawWorkNameClose");
+      if (closeBtn) closeBtn.addEventListener("click", function(){ closeWorkNameModal(); });
+      var cancelBtn = document.getElementById("pawWorkNameCancel");
+      if (cancelBtn) cancelBtn.addEventListener("click", function(){ closeWorkNameModal(); });
+
+      m.addEventListener("click", function(e){
+        if (e.target === m) closeWorkNameModal();
+      });
+
+      document.addEventListener("keydown", function(e){
+        if (e.key === "Escape") closeWorkNameModal();
+      });
+
+      return m;
+    }catch(_){ return null; }
+  }
+
+  function closeWorkNameModal(){
+    try{
+      var m = document.getElementById("pawWorkNameModal");
+      if (!m) return;
+      m.classList.remove("show");
+      m.setAttribute("aria-hidden","true");
+    }catch(_){ }
+  }
+
+  function openWorkNameModal(initialName, onConfirm){
+    try{
+      var m = ensureWorkNameModal();
+      if (!m) return;
+      var input = document.getElementById("pawWorkNameInput");
+      var err = document.getElementById("pawWorkNameError");
+      var saveBtn = document.getElementById("pawWorkNameSave");
+
+      if (err) err.textContent = "";
+      if (input) input.value = String(initialName || "");
+
+      function submit(){
+        var v = input ? String(input.value || "").trim() : "";
+        if (!v){
+          if (err) err.textContent = "Please enter a name.";
+          try{ if (input) input.focus(); }catch(_){ }
+          return;
+        }
+        if (err) err.textContent = "";
+        try{ if (typeof onConfirm === "function") onConfirm(v); }catch(_){ }
+        closeWorkNameModal();
+      }
+
+      if (saveBtn) saveBtn.onclick = submit;
+      if (input) input.onkeydown = function(e){ if (e.key === "Enter") submit(); };
+
+      m.classList.add("show");
+      m.setAttribute("aria-hidden","false");
+      setTimeout(function(){ try{ if (input) input.focus(); }catch(_){ } }, 0);
+    }catch(_){ }
+  }
+
   renderWorksBody = function renderWorksBody(){
     try{
       if (!__worksRoot) return;
@@ -2037,43 +2137,56 @@ function ensureWorksRoot(){
 
       // Attached confirmation row (NOT in the top bar)
       if (hasAttached){
+        var lastSaved = "—";
         html += `
           <div class="paw-works-mode__note paw-works-attached">
-            <div class="paw-works-mode__note-title">Currently using</div>
-            <div class="paw-works-attached__row">
-              <div class="paw-works-attached__meta">
-                <div class="paw-works-attached__name">${escapeHtml(attachedName)}</div>
-                <div class="paw-works-attached__sub">${escapeHtml(attachedType)}</div>
-              </div>
-              <div class="paw-works-attached__actions">
-                <button class="btn" type="button" data-paw-works-detach="1">Detach</button>
-              </div>
-            </div>
+            <div class="paw-works-mode__note-title">Working on: ${escapeHtml(attachedName)}</div>
+            <div class="paw-works-mode__note-copy">${escapeHtml(attachedType)} • Last saved ${escapeHtml(lastSaved || "—")}</div>
           </div>
         `;
       } else {
         html += `
           <div class="paw-works-mode__note">
-            <div class="paw-works-mode__note-title">No work attached</div>
-            <div class="paw-works-mode__note-copy">Attach a saved work to give PAW context, or save what you're working on.</div>
+            <div class="paw-works-mode__note-title">Nothing saved yet</div>
+            <div class="paw-works-mode__note-copy">Save what you’re working on, or open a saved work.</div>
           </div>
         `;
       }
 
       // Primary actions
-      html += `
-        <div class="paw-works-actions">
-          <button class="btn primary" type="button" data-paw-works-save="1">Save current output</button>
-          <button class="btn" type="button" data-paw-works-create="1">Create new work</button>
-        </div>
-      `;
+      if (!hasAttached){
+        html += `
+          <div class="paw-works-actions">
+            <button class="btn primary" type="button" data-paw-works-save-new="1">Save</button>
+            <button class="btn" type="button" data-paw-works-open="1">Open</button>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="paw-works-actions">
+            <button class="btn primary" type="button" data-paw-works-save="1">Save updates</button>
+            <button class="btn" type="button" data-paw-works-save-as-new="1">Save as new</button>
+            <button class="paw-works-linkbtn" type="button" data-paw-works-open="1">Switch</button>
+            <button class="paw-works-linkbtn" type="button" data-paw-works-detach="1">Detach</button>
+          </div>
+        `;
+      }
 
       // Search + list header
       html += `
         <div class="paw-works-recents">
           <div class="paw-works-recents__head">
-            <div class="paw-works-recents__title">Recent works</div>
-            <input class="paw-works-search" type="search" placeholder="Search your works" value="${escapeHtml(__worksSearchQ||"")}" aria-label="Search works" data-paw-works-search="1"/>
+            <div>
+              <div class="paw-works-recents__title">Saved works</div>
+              <div class="paw-works-recents__sub">Recent in this session</div>
+            </div>
+            <input class="paw-works-search" type="search" placeholder="Search saved works" value="${escapeHtml(__worksSearchQ||"")}" aria-label="Search works" data-paw-works-search="1"/>
+          </div>
+          <div class="paw-works-table-head" role="presentation">
+            <div>Name</div>
+            <div>Type</div>
+            <div>Last updated</div>
+            <div></div>
           </div>
           <div class="paw-works-list" data-paw-works-list="1">
       `;
@@ -2089,20 +2202,15 @@ function ensureWorksRoot(){
         for (var i=0;i<list.length;i++){
           var w = list[i];
           var type = _workTypeLabel(w.bucket);
-          var sub = w.subtitle ? String(w.subtitle) : "";
           var when = _formatRelative(w._last_used);
+          var rowAction = hasAttached ? "Switch" : "Open";
           html += `
-            <div class="paw-works-item">
-              <div class="paw-works-item__main">
-                <div class="paw-works-item__name">${escapeHtml(String(w.label||"Untitled"))}</div>
-                <div class="paw-works-item__meta">
-                  <span class="paw-works-badge">${escapeHtml(type)}</span>
-                  ${sub ? `<span class="paw-works-item__sub">${escapeHtml(sub)}</span>` : ""}
-                  ${when ? `<span class="paw-works-item__when">${escapeHtml(when)}</span>` : ""}
-                </div>
-              </div>
-              <div class="paw-works-item__actions">
-                <button class="btn" type="button" data-paw-works-attach="1" data-bucket="${escapeHtml(String(w.bucket||""))}" data-id="${escapeHtml(String(w.id||""))}">Attach</button>
+            <div class="paw-works-item paw-works-row">
+              <div class="paw-works-col paw-works-col--name">${escapeHtml(String(w.label||"Untitled"))}</div>
+              <div class="paw-works-col">${escapeHtml(type)}</div>
+              <div class="paw-works-col">${escapeHtml(when || "—")}</div>
+              <div class="paw-works-col paw-works-col--action">
+                <button class="btn" type="button" data-paw-works-attach="1" data-bucket="${escapeHtml(String(w.bucket||""))}" data-id="${escapeHtml(String(w.id||""))}">${rowAction}</button>
               </div>
             </div>
           `;
