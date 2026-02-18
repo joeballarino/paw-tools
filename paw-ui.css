@@ -743,7 +743,8 @@ body.paw-works-mode{
   justify-content:center;
   padding:18px;
   background: rgba(15,23,42,.48);
-  z-index:9990;
+  /* Layering contract: all modals (and modal variants) must sit above Works mode root (#pawWorksModeRoot at 9996). */
+  z-index:10000;
 }
 .modal.show{ display:flex; }
 .modal-card{
