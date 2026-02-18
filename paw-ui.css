@@ -161,6 +161,19 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 .paw-seg__btn + .paw-seg__btn,
 .util-btn + .util-btn{ border-left:1px solid rgba(15,23,42,.08); }
 
+/* Compact segmented control variant for dense tool settings rows (content-width). */
+.paw-seg.paw-seg--compact{
+  display:inline-flex;
+  width:auto;
+  flex:0 0 auto;
+}
+.paw-seg.paw-seg--compact .paw-seg__btn{
+  flex:0 0 auto;
+  height:34px;
+  padding:0 14px;
+  font-size:13px;
+}
+
 /* Back-compat wrapper used by some tools */
 .utility-pair{ display:flex; }
 
@@ -176,6 +189,9 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   .paw-seg,
   .topbar-right.paw-seg{
     min-width:320px;
+  }
+  .paw-seg.paw-seg--compact{
+    min-width:0;
   }
 }
 
