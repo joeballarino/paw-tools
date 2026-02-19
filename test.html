@@ -79,11 +79,19 @@
       });
 
       window.addEventListener("message", (e) => {
-        if (!e.data || e.data.type !== "paw:resize") {
+        if (e.source !== previewFrame.contentWindow) {
           return;
         }
 
-        if (e.source !== previewFrame.contentWindow) {
+        if (e.data && e.data.type === "paw_identity_request_v1") {
+          previewFrame.contentWindow.postMessage(
+            { type: "paw_identity_v1", member_id: "test_user_1" },
+            "*"
+          );
+          return;
+        }
+
+        if (!e.data || e.data.type !== "paw:resize") {
           return;
         }
 
