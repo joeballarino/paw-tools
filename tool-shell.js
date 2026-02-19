@@ -1849,20 +1849,21 @@ var _touchRecent = function(){ };
 function _worksDebug(msg){
   try{
     if (!__worksRoot) return;
-    var body = __worksRoot.querySelector('[data-paw-works-body="1"]');
-    if (!body) return;
-    var el = body.querySelector('[data-paw-works-debug="1"]');
+    var host = __worksRoot.querySelector('[data-paw-works-top-right="1"]') || __worksRoot.querySelector('[data-paw-works-top-left="1"]') || __worksRoot;
+    if (!host) return;
+    var el = host.querySelector('[data-paw-works-debug="1"]');
     if (!el){
       el = document.createElement("div");
       el.setAttribute("data-paw-works-debug","1");
-      el.style.margin = "8px 0";
+      el.style.marginLeft = "12px";
       el.style.fontSize = "12px";
       el.style.opacity = "0.75";
-      body.insertBefore(el, body.firstChild);
+      host.appendChild(el);
     }
     el.textContent = String(msg || "");
-  }catch(_){}
+  }catch(_){ }
 }
+
 
 function ensureWorksRoot(){
   if (__worksRoot && document.body.contains(__worksRoot)) return __worksRoot;
@@ -1940,27 +1941,27 @@ function ensureWorksRoot(){
 
     if (t.getAttribute("data-paw-works-save-new") === "1"){
       openWorkNameModal("", async function(name, bucket){
-        _worksDebug("Save clicked…");
+        _worksDebug("Save start");
         if (!__apiEndpoint){
-          _worksDebug("Save blocked: missing API endpoint");
+          _worksDebug("apiEndpoint=" + (__apiEndpoint ? "yes" : "no"));
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saving isn’t available right now."); }catch(_){ }
           return;
         }
-        _worksDebug("Save endpoint ready");
+        _worksDebug("apiEndpoint=" + (__apiEndpoint ? "yes" : "no"));
         try{
           if (window.PAWAuth && window.PAWAuth.whenReady) { await window.PAWAuth.whenReady(); }
         }catch(_){ }
         _worksDebug("Auth readiness check complete");
         var token = "";
         try{ token = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ token = ""; }
-        _worksDebug("Token present: " + (token ? "yes" : "no"));
+        _worksDebug("token=" + (token ? "yes" : "no"));
         if (!token){
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Not signed in yet. Please wait a moment and try again."); }catch(_){ }
           return;
         }
         var resolvedBucket = String(bucket||"") || _inferWorkBucketFromPage() || "brand_assets";
         try{
-          _worksDebug("Creating work…");
+          _worksDebug("POST /myworks…");
           var work = await createMyWork(resolvedBucket, name, function(status){ _worksDebug("Create response status: " + status); });
           var nw = { bucket: work.bucket, id: work.work_id, label: work.label, subtitle:"", created_at: work.created_at, updated_at: work.updated_at };
           attachWork(nw);
@@ -2789,8 +2790,11 @@ function exitWorksMode(){
       throw new Error((data && (data.error || data.message || data.reply)) || "Could not create work");
     }
     var work = data && data.data ? data.data.work : null;
-    _worksDebug("POST /myworks ok, work_id=" + (work && work.work_id ? "yes" : "no"));
-    if (!work || !work.work_id) throw new Error("Invalid create response");
+    if (!work || !work.work_id){
+      _worksDebug("POST /myworks ok but missing work_id");
+      throw new Error("Invalid create response");
+    }
+    _worksDebug("POST /myworks ok work_id=yes");
     return work;
   }
 
