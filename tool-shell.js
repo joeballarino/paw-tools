@@ -1927,13 +1927,13 @@ function ensureWorksRoot(){
         try{ if (window.PAWAuth && window.PAWAuth.whenReady) await window.PAWAuth.whenReady().catch(function(){}); }catch(_){ }
         var resolvedBucket = String(bucket||"") || _inferWorkBucketFromPage() || "brand_assets";
         if (!_getApiEndpoint()){
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saving isn’t available right now.");
+          _worksToast("Saving isn’t available right now.");
           return;
         }
         var tok = "";
         try{ tok = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ }
         if (!tok){
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Not signed in yet. Please try again.");
+          _worksToast("Not signed in yet. Please try again.");
           return;
         }
         try{
@@ -1950,9 +1950,9 @@ function ensureWorksRoot(){
           _touchRecent(nw);
           renderWorksBody();
           emitWorksSave("create");
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved.");
+          _worksToast("Saved.");
         }catch(err){
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast((err && err.message) ? err.message : "Couldn’t save right now.");
+          _worksToast((err && err.message) ? err.message : "Couldn’t save right now.");
         }
       }, { defaultBucket: _inferWorkBucketFromPage() });
       return;
@@ -1963,13 +1963,13 @@ function ensureWorksRoot(){
         try{ if (window.PAWAuth && window.PAWAuth.whenReady) await window.PAWAuth.whenReady().catch(function(){}); }catch(_){ }
         var resolvedBucket = String(bucket||"") || ((__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "") || _inferWorkBucketFromPage() || "brand_assets";
         if (!_getApiEndpoint()){
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saving isn’t available right now.");
+          _worksToast("Saving isn’t available right now.");
           return;
         }
         var tok = "";
         try{ tok = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ }
         if (!tok){
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Not signed in yet. Please try again.");
+          _worksToast("Not signed in yet. Please try again.");
           return;
         }
         try{
@@ -1986,9 +1986,9 @@ function ensureWorksRoot(){
           _touchRecent(nw);
           renderWorksBody();
           emitWorksSave("save_as_new");
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved.");
+          _worksToast("Saved.");
         }catch(err){
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast((err && err.message) ? err.message : "Couldn’t save right now.");
+          _worksToast((err && err.message) ? err.message : "Couldn’t save right now.");
         }
       }, {
         defaultBucket: (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : _inferWorkBucketFromPage()
@@ -2065,6 +2065,17 @@ function ensureWorksRoot(){
       if (path.indexOf("guide.html") !== -1 || path.indexOf("connect.html") !== -1) return "brand_assets";
     }catch(_){ }
     return "brand_assets";
+  }
+
+
+  function _worksToast(msg){
+    try{
+      if (window.PAWToolShell && window.PAWToolShell._toast) {
+        window.PAWToolShell._toast(String(msg||""));
+        return;
+      }
+    }catch(_){ }
+    try{ alert(String(msg||"")); }catch(_){ }
   }
 
   function _getApiEndpoint(){
