@@ -2230,16 +2230,25 @@ function ensureWorksRoot(){
       if (bucketSelect) bucketSelect.value = defaultBucket;
 
       function submit(){
+        _worksDebug("Modal submit fired");
         var v = input ? String(input.value || "").trim() : "";
         var bucket = bucketSelect ? String(bucketSelect.value || "") : "";
         if (!bucket) bucket = attachedBucket || inferredBucket;
+        _worksDebug("Modal submit: name ok, bucket=" + bucket);
         if (!v){
           if (err) err.textContent = "Please enter a name.";
           try{ if (input) input.focus(); }catch(_){ }
           return;
         }
         if (err) err.textContent = "";
-        try{ if (typeof onConfirm === "function") onConfirm(v, bucket); }catch(_){ }
+        try{
+          if (typeof onConfirm === "function") {
+            var r = onConfirm(v, bucket);
+            _worksDebug("onConfirm called");
+          }
+        }catch(e){
+          _worksDebug("onConfirm threw: " + (e && e.message ? e.message : e));
+        }
         closeWorkNameModal();
       }
 
