@@ -2184,7 +2184,7 @@ function ensureWorksRoot(){
       m.innerHTML =
         '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawWorkNameTitle">' +
           '<div class="modal-head">' +
-            '<div id="pawWorkNameTitle" class="modal-title">Name this work</div>' +
+            '<div id="pawWorkNameTitle" class="modal-title">Name this work (WS1)</div>' +
             '<button class="modal-close" id="pawWorkNameClose" aria-label="Close" type="button">✕</button>' +
           '</div>' +
           '<div class="modal-body">' +
