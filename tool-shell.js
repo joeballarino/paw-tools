@@ -1921,30 +1921,57 @@ function ensureWorksRoot(){
     }
 
     if (t.getAttribute("data-paw-works-save-new") === "1"){
-      openWorkNameModal("", function(name, bucket){
-        var nowIso = new Date().toISOString();
+      openWorkNameModal("", async function(name, bucket){
+        if (!__apiEndpoint){
+          try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saving isn’t available right now."); }catch(_){ }
+          return;
+        }
+        var token = "";
+        try{ token = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ token = ""; }
+        if (!token){
+          try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Not signed in. Please refresh."); }catch(_){ }
+          return;
+        }
         var resolvedBucket = String(bucket||"") || _inferWorkBucketFromPage() || "brand_assets";
-        var nw = { bucket:resolvedBucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
-        attachWork(nw);
-        _touchRecent(nw);
-        renderWorksBody();
-        emitWorksSave("create");
         try{
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Created for this session.");
-        }catch(_){ }
+          var work = await createMyWork(resolvedBucket, name);
+          var nw = { bucket: work.bucket, id: work.work_id, label: work.label, subtitle:"", created_at: work.created_at, updated_at: work.updated_at };
+          attachWork(nw);
+          _touchRecent(nw);
+          renderWorksBody();
+          emitWorksSave("create");
+          try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved."); }catch(_){ }
+        }catch(_e){
+          try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Couldn’t save right now."); }catch(_){ }
+        }
       }, { defaultBucket: _inferWorkBucketFromPage() });
       return;
     }
 
     if (t.getAttribute("data-paw-works-save-as-new") === "1"){
-      openWorkNameModal("", function(name, bucket){
-        var nowIso = new Date().toISOString();
+      openWorkNameModal("", async function(name, bucket){
+        if (!__apiEndpoint){
+          try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saving isn’t available right now."); }catch(_){ }
+          return;
+        }
+        var token = "";
+        try{ token = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ token = ""; }
+        if (!token){
+          try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Not signed in. Please refresh."); }catch(_){ }
+          return;
+        }
         var resolvedBucket = String(bucket||"") || ((__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "") || _inferWorkBucketFromPage() || "brand_assets";
-        var nw = { bucket:resolvedBucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
-        attachWork(nw);
-        _touchRecent(nw);
-        renderWorksBody();
-        emitWorksSave("save_as_new");
+        try{
+          var work = await createMyWork(resolvedBucket, name);
+          var nw = { bucket: work.bucket, id: work.work_id, label: work.label, subtitle:"", created_at: work.created_at, updated_at: work.updated_at };
+          attachWork(nw);
+          _touchRecent(nw);
+          renderWorksBody();
+          emitWorksSave("save_as_new");
+          try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved."); }catch(_){ }
+        }catch(_e){
+          try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Couldn’t save right now."); }catch(_){ }
+        }
       }, {
         defaultBucket: (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : _inferWorkBucketFromPage()
       });
@@ -2688,14 +2715,33 @@ function exitWorksMode(){
   // ------------------------------------------------------------
   // Brand panel (wired to Worker)
   // ------------------------------------------------------------
-  async function fetchBrand(){
-    if (!__apiEndpoint) return null;
-    var url = String(__apiEndpoint).replace(/\/+$/,"") + "/mystuff/brand";
+  function _apiHeadersJsonAuth(){
     var headers = { "Content-Type":"application/json" };
     try{
       var t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
       if (t) headers["Authorization"] = "Bearer " + t;
     }catch(_){}
+    return headers;
+  }
+
+  async function createMyWork(bucket, label){
+    var url = String(__apiEndpoint || "").replace(/\/+$/,"") + "/myworks";
+    var res = await fetch(url, {
+      method:"POST",
+      headers: _apiHeadersJsonAuth(),
+      body: JSON.stringify({ bucket: String(bucket || ""), label: String(label || ""), payload: {} })
+    });
+    var data = await res.json().catch(function(){ return {}; });
+    if (!res.ok) throw new Error((data && (data.error || data.message || data.reply)) || "Could not create work");
+    var work = data && data.data ? data.data.work : null;
+    if (!work || !work.work_id) throw new Error("Invalid create response");
+    return work;
+  }
+
+  async function fetchBrand(){
+    if (!__apiEndpoint) return null;
+    var url = String(__apiEndpoint).replace(/\/+$/,"") + "/mystuff/brand";
+    var headers = _apiHeadersJsonAuth();
     var res = await fetch(url, { method:"GET", headers: headers });
     var data = await res.json().catch(function(){ return {}; });
     if (!res.ok) throw new Error((data && (data.error || data.message)) || "Could not load My Brand");
@@ -2705,11 +2751,7 @@ function exitWorksMode(){
   async function fetchBrandSummary(){
     if (!__apiEndpoint) return "";
     var url = String(__apiEndpoint).replace(/\/+$/,"") + "/mystuff/brand/summary";
-    var headers = { "Content-Type":"application/json" };
-    try{
-      var t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
-      if (t) headers["Authorization"] = "Bearer " + t;
-    }catch(_){}
+    var headers = _apiHeadersJsonAuth();
     var res = await fetch(url, { method:"GET", headers: headers });
     var data = await res.json().catch(function(){ return {}; });
     if (!res.ok) return "";
