@@ -1846,6 +1846,24 @@ var __worksStatusHomeParent = null;
 var renderWorksBody = function(){ };
 var _touchRecent = function(){ };
 
+function _worksDebug(msg){
+  try{
+    if (!__worksRoot) return;
+    var body = __worksRoot.querySelector('[data-paw-works-body="1"]');
+    if (!body) return;
+    var el = body.querySelector('[data-paw-works-debug="1"]');
+    if (!el){
+      el = document.createElement("div");
+      el.setAttribute("data-paw-works-debug","1");
+      el.style.margin = "8px 0";
+      el.style.fontSize = "12px";
+      el.style.opacity = "0.75";
+      body.insertBefore(el, body.firstChild);
+    }
+    el.textContent = String(msg || "");
+  }catch(_){}
+}
+
 function ensureWorksRoot(){
   if (__worksRoot && document.body.contains(__worksRoot)) return __worksRoot;
 
@@ -1922,22 +1940,28 @@ function ensureWorksRoot(){
 
     if (t.getAttribute("data-paw-works-save-new") === "1"){
       openWorkNameModal("", async function(name, bucket){
+        _worksDebug("Save clicked…");
         if (!__apiEndpoint){
+          _worksDebug("Save blocked: missing API endpoint");
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saving isn’t available right now."); }catch(_){ }
           return;
         }
+        _worksDebug("Save endpoint ready");
         try{
           if (window.PAWAuth && window.PAWAuth.whenReady) { await window.PAWAuth.whenReady(); }
         }catch(_){ }
+        _worksDebug("Auth readiness check complete");
         var token = "";
         try{ token = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ token = ""; }
+        _worksDebug("Token present: " + (token ? "yes" : "no"));
         if (!token){
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Not signed in yet. Please wait a moment and try again."); }catch(_){ }
           return;
         }
         var resolvedBucket = String(bucket||"") || _inferWorkBucketFromPage() || "brand_assets";
         try{
-          var work = await createMyWork(resolvedBucket, name);
+          _worksDebug("Creating work…");
+          var work = await createMyWork(resolvedBucket, name, function(status){ _worksDebug("Create response status: " + status); });
           var nw = { bucket: work.bucket, id: work.work_id, label: work.label, subtitle:"", created_at: work.created_at, updated_at: work.updated_at };
           attachWork(nw);
           _touchRecent(nw);
@@ -1946,6 +1970,7 @@ function ensureWorksRoot(){
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved."); }catch(_){ }
         }catch(_e){
           var msg = (_e && _e.message) ? String(_e.message).trim() : "";
+          _worksDebug("Save error: " + (msg || "Couldn’t save right now."));
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast(msg || "Couldn’t save right now."); }catch(_){ }
         }
       }, { defaultBucket: _inferWorkBucketFromPage() });
@@ -1954,22 +1979,28 @@ function ensureWorksRoot(){
 
     if (t.getAttribute("data-paw-works-save-as-new") === "1"){
       openWorkNameModal("", async function(name, bucket){
+        _worksDebug("Save clicked…");
         if (!__apiEndpoint){
+          _worksDebug("Save blocked: missing API endpoint");
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saving isn’t available right now."); }catch(_){ }
           return;
         }
+        _worksDebug("Save endpoint ready");
         try{
           if (window.PAWAuth && window.PAWAuth.whenReady) { await window.PAWAuth.whenReady(); }
         }catch(_){ }
+        _worksDebug("Auth readiness check complete");
         var token = "";
         try{ token = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ token = ""; }
+        _worksDebug("Token present: " + (token ? "yes" : "no"));
         if (!token){
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Not signed in yet. Please wait a moment and try again."); }catch(_){ }
           return;
         }
         var resolvedBucket = String(bucket||"") || ((__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "") || _inferWorkBucketFromPage() || "brand_assets";
         try{
-          var work = await createMyWork(resolvedBucket, name);
+          _worksDebug("Creating work…");
+          var work = await createMyWork(resolvedBucket, name, function(status){ _worksDebug("Create response status: " + status); });
           var nw = { bucket: work.bucket, id: work.work_id, label: work.label, subtitle:"", created_at: work.created_at, updated_at: work.updated_at };
           attachWork(nw);
           _touchRecent(nw);
@@ -1978,6 +2009,7 @@ function ensureWorksRoot(){
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved."); }catch(_){ }
         }catch(_e){
           var msg = (_e && _e.message) ? String(_e.message).trim() : "";
+          _worksDebug("Save error: " + (msg || "Couldn’t save right now."));
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast(msg || "Couldn’t save right now."); }catch(_){ }
         }
       }, {
@@ -2732,13 +2764,14 @@ function exitWorksMode(){
     return headers;
   }
 
-  async function createMyWork(bucket, label){
+  async function createMyWork(bucket, label, onStatus){
     var url = String(__apiEndpoint || "").replace(/\/+$/,"") + "/myworks";
     var res = await fetch(url, {
       method:"POST",
       headers: _apiHeadersJsonAuth(),
       body: JSON.stringify({ bucket: String(bucket || ""), label: String(label || ""), payload: {} })
     });
+    try{ if (typeof onStatus === "function") onStatus(res.status); }catch(_){}
     var data = await res.json().catch(function(){ return {}; });
     if (!res.ok) throw new Error((data && (data.error || data.message || data.reply)) || "Could not create work");
     var work = data && data.data ? data.data.work : null;
