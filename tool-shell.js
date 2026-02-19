@@ -2775,15 +2775,21 @@ function exitWorksMode(){
 
   async function createMyWork(bucket, label, onStatus){
     var url = String(__apiEndpoint || "").replace(/\/+$/,"") + "/myworks";
+    _worksDebug("POST /myworks…");
     var res = await fetch(url, {
       method:"POST",
       headers: _apiHeadersJsonAuth(),
       body: JSON.stringify({ bucket: String(bucket || ""), label: String(label || ""), payload: {} })
     });
+    _worksDebug("POST /myworks status=" + res.status);
     try{ if (typeof onStatus === "function") onStatus(res.status); }catch(_){}
     var data = await res.json().catch(function(){ return {}; });
-    if (!res.ok) throw new Error((data && (data.error || data.message || data.reply)) || "Could not create work");
+    if (!res.ok){
+      _worksDebug("POST /myworks error=" + (data && (data.error || data.message || data.reply) ? (data.error || data.message || data.reply) : "unknown"));
+      throw new Error((data && (data.error || data.message || data.reply)) || "Could not create work");
+    }
     var work = data && data.data ? data.data.work : null;
+    _worksDebug("POST /myworks ok, work_id=" + (work && work.work_id ? "yes" : "no"));
     if (!work || !work.work_id) throw new Error("Invalid create response");
     return work;
   }
