@@ -1925,6 +1925,16 @@ function ensureWorksRoot(){
       openWorkNameModal("", async function(name, bucket){
         try{ if (window.PAWAuth && window.PAWAuth.whenReady) await window.PAWAuth.whenReady().catch(function(){}); }catch(_){ }
         var resolvedBucket = String(bucket||"") || _inferWorkBucketFromPage() || "brand_assets";
+        if (!_getApiEndpoint()){
+          showToast("Saving isn’t available right now.");
+          return;
+        }
+        var tok = "";
+        try{ tok = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ }
+        if (!tok){
+          showToast("Not signed in yet. Please try again.");
+          return;
+        }
         try{
           var work = await createMyWork(resolvedBucket, String(name||""));
           var nw = {
@@ -1939,13 +1949,9 @@ function ensureWorksRoot(){
           _touchRecent(nw);
           renderWorksBody();
           emitWorksSave("create");
-          try{
-            if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved.");
-          }catch(_){ }
+          showToast("Saved.");
         }catch(err){
-          try{
-            if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast((err && err.message) ? err.message : "Couldn’t save right now.");
-          }catch(_){ }
+          showToast((err && err.message) ? err.message : "Couldn’t save right now.");
         }
       }, { defaultBucket: _inferWorkBucketFromPage() });
       return;
@@ -1955,6 +1961,16 @@ function ensureWorksRoot(){
       openWorkNameModal("", async function(name, bucket){
         try{ if (window.PAWAuth && window.PAWAuth.whenReady) await window.PAWAuth.whenReady().catch(function(){}); }catch(_){ }
         var resolvedBucket = String(bucket||"") || ((__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "") || _inferWorkBucketFromPage() || "brand_assets";
+        if (!_getApiEndpoint()){
+          showToast("Saving isn’t available right now.");
+          return;
+        }
+        var tok = "";
+        try{ tok = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ }
+        if (!tok){
+          showToast("Not signed in yet. Please try again.");
+          return;
+        }
         try{
           var work = await createMyWork(resolvedBucket, String(name||""));
           var nw = {
@@ -1969,13 +1985,9 @@ function ensureWorksRoot(){
           _touchRecent(nw);
           renderWorksBody();
           emitWorksSave("save_as_new");
-          try{
-            if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved.");
-          }catch(_){ }
+          showToast("Saved.");
         }catch(err){
-          try{
-            if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast((err && err.message) ? err.message : "Couldn’t save right now.");
-          }catch(_){ }
+          showToast((err && err.message) ? err.message : "Couldn’t save right now.");
         }
       }, {
         defaultBucket: (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : _inferWorkBucketFromPage()
