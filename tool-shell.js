@@ -1944,6 +1944,7 @@ function ensureWorksRoot(){
         _worksDebug("Save start");
         if (!__apiEndpoint){
           _worksDebug("apiEndpoint=" + (__apiEndpoint ? "yes" : "no"));
+          console.warn("[PAW Works Save] missing __apiEndpoint");
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saving isn’t available right now."); }catch(_){ }
           return;
         }
@@ -1956,12 +1957,14 @@ function ensureWorksRoot(){
         try{ token = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ token = ""; }
         _worksDebug("token=" + (token ? "yes" : "no"));
         if (!token){
+          console.warn("[PAW Works Save] missing auth token");
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Not signed in yet. Please wait a moment and try again."); }catch(_){ }
           return;
         }
         var resolvedBucket = String(bucket||"") || _inferWorkBucketFromPage() || "brand_assets";
         try{
           _worksDebug("POST /myworks…");
+          console.warn("[PAW Works Save] POST /myworks start", { bucket: resolvedBucket });
           var work = await createMyWork(resolvedBucket, name, function(status){ _worksDebug("Create response status: " + status); });
           var nw = { bucket: work.bucket, id: work.work_id, label: work.label, subtitle:"", created_at: work.created_at, updated_at: work.updated_at };
           attachWork(nw);
@@ -1971,6 +1974,7 @@ function ensureWorksRoot(){
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved."); }catch(_){ }
         }catch(_e){
           var msg = (_e && _e.message) ? String(_e.message).trim() : "";
+          console.warn("[PAW Works Save] createMyWork failed:", (_e && _e.message) ? _e.message : _e);
           _worksDebug("Save error: " + (msg || "Couldn’t save right now."));
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast(msg || "Couldn’t save right now."); }catch(_){ }
         }
@@ -1983,6 +1987,7 @@ function ensureWorksRoot(){
         _worksDebug("Save clicked…");
         if (!__apiEndpoint){
           _worksDebug("Save blocked: missing API endpoint");
+          console.warn("[PAW Works Save] missing __apiEndpoint");
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saving isn’t available right now."); }catch(_){ }
           return;
         }
@@ -1995,12 +2000,14 @@ function ensureWorksRoot(){
         try{ token = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ token = ""; }
         _worksDebug("Token present: " + (token ? "yes" : "no"));
         if (!token){
+          console.warn("[PAW Works Save] missing auth token");
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Not signed in yet. Please wait a moment and try again."); }catch(_){ }
           return;
         }
         var resolvedBucket = String(bucket||"") || ((__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "") || _inferWorkBucketFromPage() || "brand_assets";
         try{
           _worksDebug("Creating work…");
+          console.warn("[PAW Works Save] POST /myworks start", { bucket: resolvedBucket });
           var work = await createMyWork(resolvedBucket, name, function(status){ _worksDebug("Create response status: " + status); });
           var nw = { bucket: work.bucket, id: work.work_id, label: work.label, subtitle:"", created_at: work.created_at, updated_at: work.updated_at };
           attachWork(nw);
@@ -2010,6 +2017,7 @@ function ensureWorksRoot(){
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Saved."); }catch(_){ }
         }catch(_e){
           var msg = (_e && _e.message) ? String(_e.message).trim() : "";
+          console.warn("[PAW Works Save] createMyWork failed:", (_e && _e.message) ? _e.message : _e);
           _worksDebug("Save error: " + (msg || "Couldn’t save right now."));
           try{ if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast(msg || "Couldn’t save right now."); }catch(_){ }
         }
@@ -2783,11 +2791,14 @@ function exitWorksMode(){
       body: JSON.stringify({ bucket: String(bucket || ""), label: String(label || ""), payload: {} })
     });
     _worksDebug("POST /myworks status=" + res.status);
+    console.warn("[PAW Works Save] POST /myworks status", res.status);
     try{ if (typeof onStatus === "function") onStatus(res.status); }catch(_){}
     var data = await res.json().catch(function(){ return {}; });
     if (!res.ok){
+      var msg = (data && (data.error || data.message || data.reply)) || "Could not create work";
       _worksDebug("POST /myworks error=" + (data && (data.error || data.message || data.reply) ? (data.error || data.message || data.reply) : "unknown"));
-      throw new Error((data && (data.error || data.message || data.reply)) || "Could not create work");
+      console.warn("[PAW Works Save] POST /myworks error", msg);
+      throw new Error(msg);
     }
     var work = data && data.data ? data.data.work : null;
     if (!work || !work.work_id){
