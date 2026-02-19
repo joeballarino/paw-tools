@@ -1922,7 +1922,8 @@ function ensureWorksRoot(){
 
     if (t.getAttribute("data-paw-works-save-new") === "1"){
       openWorkNameModal("", function(name){
-        var nw = { bucket:"listings", id:"w_" + Date.now(), label:String(name||""), subtitle:"" };
+        var nowIso = new Date().toISOString();
+        var nw = { bucket:"listings", id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
         attachWork(nw);
         _touchRecent(nw);
         renderWorksBody();
@@ -1937,7 +1938,8 @@ function ensureWorksRoot(){
     if (t.getAttribute("data-paw-works-save-as-new") === "1"){
       openWorkNameModal("", function(name){
         var bucket = (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "listings";
-        var nw = { bucket:bucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"" };
+        var nowIso = new Date().toISOString();
+        var nw = { bucket:bucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
         attachWork(nw);
         _touchRecent(nw);
         renderWorksBody();
@@ -1948,7 +1950,20 @@ function ensureWorksRoot(){
 
     // Save current output (tools can listen for this event; UI is ready).
     if (t.getAttribute("data-paw-works-save") === "1"){
+      try{
+        if (__pawActiveWork){
+          __pawActiveWork.updated_at = new Date().toISOString();
+          _touchRecent(__pawActiveWork);
+        }
+      }catch(_){ }
+      try{ renderWorksBody(); }catch(_){ }
       emitWorksSave("save_updates");
+      return;
+    }
+
+    if (t.getAttribute("data-paw-works-load-more") === "1"){
+      __worksListLimit += 25;
+      renderWorksBody();
       return;
     }
   });
@@ -1984,12 +1999,42 @@ function ensureWorksRoot(){
 
   var __worksRecent = [];   // Most recently used works (session-only)
   var __worksSearchQ = "";
+  var __worksListLimit = 25;
 
   function _workTypeLabel(bucket){
-    if (bucket === "brand_assets") return "Brand";
+    if (bucket === "brand_assets") return "Brand Asset";
     if (bucket === "listings") return "Listing";
     if (bucket === "transactions") return "Transaction";
     return "Work";
+  }
+
+  function _formatRelative(input){
+    try{
+      if (!input) return "";
+      var d = (input instanceof Date) ? input : new Date(String(input));
+      var t = d.getTime();
+      if (!isFinite(t)) return "";
+      var diff = Date.now() - t;
+      if (diff < 0) diff = 0;
+      var sec = Math.floor(diff / 1000);
+      if (sec < 10) return "just now";
+      if (sec < 60) return sec + "s ago";
+      var min = Math.floor(sec / 60);
+      if (min < 60) return min + "m ago";
+      var hr = Math.floor(min / 60);
+      if (hr < 24) return hr + "h ago";
+      var day = Math.floor(hr / 24);
+      if (day < 7) return day + "d ago";
+      return d.toLocaleDateString();
+    }catch(_){ return ""; }
+  }
+
+  function _workTimeValue(w){
+    try{
+      var raw = (w && (w.updated_at || w.created_at || w._last_used)) ? String(w.updated_at || w.created_at || w._last_used) : "";
+      var t = raw ? new Date(raw).getTime() : 0;
+      return isFinite(t) ? t : 0;
+    }catch(_){ return 0; }
   }
 
   function _dedupeRecent(arr){
@@ -2126,6 +2171,11 @@ function ensureWorksRoot(){
       // Filter recent list by search query
       var q = (__worksSearchQ || "").trim().toLowerCase();
       var list = (__worksRecent || []).slice(0);
+
+      list.sort(function(a,b){
+        return _workTimeValue(b) - _workTimeValue(a);
+      });
+
       if (q){
         list = list.filter(function(w){
           var hay = (String(w.label||"") + " " + String(w.subtitle||"") + " " + String(_workTypeLabel(w.bucket)||"")).toLowerCase();
@@ -2133,11 +2183,14 @@ function ensureWorksRoot(){
         });
       }
 
+      var visibleList = list.slice(0, __worksListLimit);
+      var hasMore = list.length > visibleList.length;
+
       var html = "";
 
       // Attached confirmation row (NOT in the top bar)
       if (hasAttached){
-        var lastSaved = "—";
+        var lastSaved = _formatRelative(__pawActiveWork.updated_at || __pawActiveWork.created_at || __pawActiveWork._last_used);
         html += `
           <div class="paw-works-mode__note paw-works-attached">
             <div class="paw-works-mode__note-title">Working on: ${escapeHtml(attachedName)}</div>
@@ -2199,10 +2252,10 @@ function ensureWorksRoot(){
             </div>
         `;
       } else {
-        for (var i=0;i<list.length;i++){
-          var w = list[i];
+        for (var i=0;i<visibleList.length;i++){
+          var w = visibleList[i];
           var type = _workTypeLabel(w.bucket);
-          var when = _formatRelative(w._last_used);
+          var when = _formatRelative(w.updated_at || w.created_at || w._last_used);
           var rowAction = hasAttached ? "Switch" : "Open";
           html += `
             <div class="paw-works-item paw-works-row">
@@ -2212,6 +2265,13 @@ function ensureWorksRoot(){
               <div class="paw-works-col paw-works-col--action">
                 <button class="btn" type="button" data-paw-works-attach="1" data-bucket="${escapeHtml(String(w.bucket||""))}" data-id="${escapeHtml(String(w.id||""))}">${rowAction}</button>
               </div>
+            </div>
+          `;
+        }
+        if (hasMore){
+          html += `
+            <div class="paw-works-actions">
+              <button class="btn" type="button" data-paw-works-load-more="1">Load more</button>
             </div>
           `;
         }
@@ -2230,6 +2290,7 @@ function ensureWorksRoot(){
         if (inp){
           inp.oninput = function(){
             __worksSearchQ = String(inp.value || "");
+            __worksListLimit = 25;
             renderWorksBody();
           };
         }
