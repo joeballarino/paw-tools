@@ -1921,9 +1921,10 @@ function ensureWorksRoot(){
     }
 
     if (t.getAttribute("data-paw-works-save-new") === "1"){
-      openWorkNameModal("", function(name){
+      openWorkNameModal("", function(name, bucket){
         var nowIso = new Date().toISOString();
-        var nw = { bucket:"listings", id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
+        var resolvedBucket = String(bucket||"") || _inferWorkBucketFromPage() || "brand_assets";
+        var nw = { bucket:resolvedBucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
         attachWork(nw);
         _touchRecent(nw);
         renderWorksBody();
@@ -1931,19 +1932,21 @@ function ensureWorksRoot(){
         try{
           if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Created for this session.");
         }catch(_){ }
-      });
+      }, { defaultBucket: _inferWorkBucketFromPage() });
       return;
     }
 
     if (t.getAttribute("data-paw-works-save-as-new") === "1"){
-      openWorkNameModal("", function(name){
-        var bucket = (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "listings";
+      openWorkNameModal("", function(name, bucket){
         var nowIso = new Date().toISOString();
-        var nw = { bucket:bucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
+        var resolvedBucket = String(bucket||"") || ((__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "") || _inferWorkBucketFromPage() || "brand_assets";
+        var nw = { bucket:resolvedBucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
         attachWork(nw);
         _touchRecent(nw);
         renderWorksBody();
         emitWorksSave("save_as_new");
+      }, {
+        defaultBucket: (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : _inferWorkBucketFromPage()
       });
       return;
     }
@@ -2006,6 +2009,17 @@ function ensureWorksRoot(){
     if (bucket === "listings") return "Listing";
     if (bucket === "transactions") return "Transaction";
     return "Work";
+  }
+
+  function _inferWorkBucketFromPage(){
+    try{
+      var path = String((window.location && window.location.pathname) || "").toLowerCase();
+      if (path.indexOf("presence.html") !== -1) return "brand_assets";
+      if (path.indexOf("listing.html") !== -1) return "listings";
+      if (path.indexOf("transactions.html") !== -1) return "transactions";
+      if (path.indexOf("guide.html") !== -1 || path.indexOf("connect.html") !== -1) return "brand_assets";
+    }catch(_){ }
+    return "brand_assets";
   }
 
   function _formatRelative(input){
@@ -2090,6 +2104,12 @@ function ensureWorksRoot(){
           '<div class="modal-body">' +
             '<label class="paw-workname-label" for="pawWorkNameInput">Work name</label>' +
             '<input id="pawWorkNameInput" class="paw-workname-input" type="text" placeholder="e.g., Spring listing prep" />' +
+            '<label class="paw-workname-label" for="pawWorkBucketSelect">Save to</label>' +
+            '<select id="pawWorkBucketSelect" class="paw-workname-input">' +
+              '<option value="brand_assets">Brand Assets</option>' +
+              '<option value="listings">Listings</option>' +
+              '<option value="transactions">Transactions</option>' +
+            '</select>' +
             '<div id="pawWorkNameError" class="paw-workname-error" aria-live="polite"></div>' +
             '<div class="paw-workname-actions">' +
               '<button class="btn" id="pawWorkNameCancel" type="button">Cancel</button>' +
@@ -2126,26 +2146,33 @@ function ensureWorksRoot(){
     }catch(_){ }
   }
 
-  function openWorkNameModal(initialName, onConfirm){
+  function openWorkNameModal(initialName, onConfirm, opts){
     try{
       var m = ensureWorkNameModal();
       if (!m) return;
       var input = document.getElementById("pawWorkNameInput");
+      var bucketSelect = document.getElementById("pawWorkBucketSelect");
       var err = document.getElementById("pawWorkNameError");
       var saveBtn = document.getElementById("pawWorkNameSave");
+      var inferredBucket = _inferWorkBucketFromPage();
+      var attachedBucket = (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "";
+      var defaultBucket = (opts && opts.defaultBucket) ? String(opts.defaultBucket) : inferredBucket;
 
       if (err) err.textContent = "";
       if (input) input.value = String(initialName || "");
+      if (bucketSelect) bucketSelect.value = defaultBucket;
 
       function submit(){
         var v = input ? String(input.value || "").trim() : "";
+        var bucket = bucketSelect ? String(bucketSelect.value || "") : "";
+        if (!bucket) bucket = attachedBucket || inferredBucket;
         if (!v){
           if (err) err.textContent = "Please enter a name.";
           try{ if (input) input.focus(); }catch(_){ }
           return;
         }
         if (err) err.textContent = "";
-        try{ if (typeof onConfirm === "function") onConfirm(v); }catch(_){ }
+        try{ if (typeof onConfirm === "function") onConfirm(v, bucket); }catch(_){ }
         closeWorkNameModal();
       }
 
