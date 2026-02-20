@@ -87,6 +87,24 @@
   const PAW_IDENTITY_MSG = "paw_identity_v1";
   const PAW_IDENTITY_REQ = "paw_identity_request_v1";
 
+  function isAllowedParentOrigin(origin) {
+    try {
+      var u = new URL(String(origin || ""));
+      var h = String(u.hostname || "").toLowerCase();
+      // Safe allowlist expansion for Circle test embeds hosted on Pages:
+      // we only allow the production Pages hostname and its preview subdomains.
+      return (
+        h === "proagentworks.circle.so" ||
+        h === "proagentworks.com" ||
+        h === "www.proagentworks.com" ||
+        h === "paw-tools.pages.dev" ||
+        h.endsWith(".paw-tools.pages.dev")
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
   const PAWAuth = (function () {
     let _apiEndpoint = "";
     let _memberId = "";
@@ -145,7 +163,7 @@
           if (data.type !== PAW_IDENTITY_MSG) return;
 
           // Origin hard check (Circle native + custom domain allowlist)
-          if (!PAW_ALLOWED_PARENT_ORIGINS.includes(String(event.origin || ""))) return;
+          if (!isAllowedParentOrigin(event.origin)) return;
 
           const memberId = String(data.member_id || data.memberId || "").trim();
           if (!memberId) return;
@@ -525,6 +543,8 @@ function removeNode(node) {
     },
     init: function (config) {
       config = config || {};
+      window.PAWToolShell._config = config || {};
+      window.PAWToolShell._toast = showToast;
 
       // Ensure embed mode when framed (fixes “double container” look)
       coerceEmbedMode();
@@ -1921,30 +1941,73 @@ function ensureWorksRoot(){
     }
 
     if (t.getAttribute("data-paw-works-save-new") === "1"){
-      openWorkNameModal("", function(name, bucket){
-        var nowIso = new Date().toISOString();
+      openWorkNameModal("", async function(name, bucket){
+        try{ if (window.PAWAuth && window.PAWAuth.whenReady) await window.PAWAuth.whenReady().catch(function(){}); }catch(_){ }
         var resolvedBucket = String(bucket||"") || _inferWorkBucketFromPage() || "brand_assets";
-        var nw = { bucket:resolvedBucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
-        attachWork(nw);
-        _touchRecent(nw);
-        renderWorksBody();
-        emitWorksSave("create");
+        if (!_getApiEndpoint()){
+          _worksToast("Saving isn’t available right now.");
+          return;
+        }
+        var tok = "";
+        try{ tok = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ }
+        if (!tok){
+          _worksToast("Not signed in yet. Please try again.");
+          return;
+        }
         try{
-          if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Created for this session.");
-        }catch(_){ }
+          var work = await createMyWork(resolvedBucket, String(name||""));
+          var nw = {
+            bucket: work.bucket,
+            id: work.work_id,
+            label: work.label,
+            subtitle: "",
+            created_at: work.created_at,
+            updated_at: work.updated_at
+          };
+          attachWork(nw);
+          _touchRecent(nw);
+          renderWorksBody();
+          emitWorksSave("create");
+          _worksToast("Saved.");
+        }catch(err){
+          _worksToast((err && err.message) ? err.message : "Couldn’t save right now.");
+        }
       }, { defaultBucket: _inferWorkBucketFromPage() });
       return;
     }
 
     if (t.getAttribute("data-paw-works-save-as-new") === "1"){
-      openWorkNameModal("", function(name, bucket){
-        var nowIso = new Date().toISOString();
+      openWorkNameModal("", async function(name, bucket){
+        try{ if (window.PAWAuth && window.PAWAuth.whenReady) await window.PAWAuth.whenReady().catch(function(){}); }catch(_){ }
         var resolvedBucket = String(bucket||"") || ((__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "") || _inferWorkBucketFromPage() || "brand_assets";
-        var nw = { bucket:resolvedBucket, id:"w_" + Date.now(), label:String(name||""), subtitle:"", created_at: nowIso, updated_at: nowIso };
-        attachWork(nw);
-        _touchRecent(nw);
-        renderWorksBody();
-        emitWorksSave("save_as_new");
+        if (!_getApiEndpoint()){
+          _worksToast("Saving isn’t available right now.");
+          return;
+        }
+        var tok = "";
+        try{ tok = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ }
+        if (!tok){
+          _worksToast("Not signed in yet. Please try again.");
+          return;
+        }
+        try{
+          var work = await createMyWork(resolvedBucket, String(name||""));
+          var nw = {
+            bucket: work.bucket,
+            id: work.work_id,
+            label: work.label,
+            subtitle: "",
+            created_at: work.created_at,
+            updated_at: work.updated_at
+          };
+          attachWork(nw);
+          _touchRecent(nw);
+          renderWorksBody();
+          emitWorksSave("save_as_new");
+          _worksToast("Saved.");
+        }catch(err){
+          _worksToast((err && err.message) ? err.message : "Couldn’t save right now.");
+        }
       }, {
         defaultBucket: (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : _inferWorkBucketFromPage()
       });
@@ -2020,6 +2083,59 @@ function ensureWorksRoot(){
       if (path.indexOf("guide.html") !== -1 || path.indexOf("connect.html") !== -1) return "brand_assets";
     }catch(_){ }
     return "brand_assets";
+  }
+
+
+  function _worksToast(msg){
+    try{
+      if (window.PAWToolShell && window.PAWToolShell._toast) {
+        window.PAWToolShell._toast(String(msg||""));
+        return;
+      }
+    }catch(_){ }
+    try{ alert(String(msg||"")); }catch(_){ }
+  }
+
+  function _getApiEndpoint(){
+    try{
+      if (__apiEndpoint) return String(__apiEndpoint || "");
+      if (window.PAWToolShell && window.PAWToolShell._config && window.PAWToolShell._config.apiEndpoint){
+        return String(window.PAWToolShell._config.apiEndpoint || "");
+      }
+    }catch(_){ }
+    return "";
+  }
+
+  function _apiHeadersJsonAuth(){
+    var headers = { "Content-Type":"application/json" };
+    try{
+      var t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (t) headers["Authorization"] = "Bearer " + t;
+    }catch(_){ }
+    return headers;
+  }
+
+  async function createMyWork(bucket, label){
+    var ep = _getApiEndpoint();
+    if (!ep) throw new Error("Saving isn’t available right now.");
+    var url = String(ep).replace(/\/+$/,"") + "/myworks";
+    var res = await fetch(url, {
+      method: "POST",
+      headers: _apiHeadersJsonAuth(),
+      body: JSON.stringify({ bucket: bucket, label: label, payload: {} })
+    });
+
+    var text = await res.text();
+    var data = null;
+    try{ data = JSON.parse(text); }catch(_){ data = { reply: text || "" }; }
+
+    if (!res.ok){
+      throw new Error((data && (data.error || data.message || data.reply)) || ("Request failed (" + res.status + ")"));
+    }
+
+    var work = data && data.data && data.data.work ? data.data.work : null;
+    if (!work || !work.work_id) throw new Error("Invalid create response");
+    return work;
   }
 
   function _formatRelative(input){
@@ -2098,7 +2214,7 @@ function ensureWorksRoot(){
       m.innerHTML =
         '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawWorkNameTitle">' +
           '<div class="modal-head">' +
-            '<div id="pawWorkNameTitle" class="modal-title">Name this work</div>' +
+            '<div id="pawWorkNameTitle" class="modal-title">Name this work (WS1)</div>' +
             '<button class="modal-close" id="pawWorkNameClose" aria-label="Close" type="button">✕</button>' +
           '</div>' +
           '<div class="modal-body">' +
