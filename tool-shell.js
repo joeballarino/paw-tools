@@ -786,8 +786,6 @@ if ($input) {
             try { resetAutoGrowTextarea($input); } catch (_) {}
             try { updateSendEnabled(); } catch (_) {}
    }
-        // Auto-grow: return to baseline height when cleared
-        resetAutoGrowTextarea($input);
 
         if ($input && opts.keepFocus) {
           try { $input.focus(); } catch (_) {}
@@ -1366,7 +1364,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
             renderDeliverable(reply, {
               toolId: toolId,
               toolTitle: getDeliverableTitle(),
-              userMessage: trimmed,
+              userMessage: msg,
               extraPayload: extraPayload,
               historyTail: (function () {
                 try {
@@ -2214,7 +2212,7 @@ function ensureWorksRoot(){
       m.innerHTML =
         '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawWorkNameTitle">' +
           '<div class="modal-head">' +
-            '<div id="pawWorkNameTitle" class="modal-title">Name this work (WS1)</div>' +
+            '<div id="pawWorkNameTitle" class="modal-title">Name this work</div>' +
             '<button class="modal-close" id="pawWorkNameClose" aria-label="Close" type="button">✕</button>' +
           '</div>' +
           '<div class="modal-body">' +
