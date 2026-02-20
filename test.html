@@ -27,6 +27,11 @@
         gap: 10px;
         margin-bottom: 8px;
       }
+      .loaded-url {
+        margin-bottom: 8px;
+        font-size: 12px;
+        color: #555;
+      }
       .controls a {
         color: inherit;
         text-decoration: underline;
@@ -47,6 +52,8 @@
       />
     </div>
 
+    <div id="loadedUrl" class="loaded-url" aria-live="polite">Loaded:</div>
+
     <div class="controls" role="group" aria-label="Preview pages">
       <a href="#" data-page="guide.html">Guide</a>
       <a href="#" data-page="connect.html">Connect</a>
@@ -62,13 +69,18 @@
     <script>
       const baseUrlInput = document.getElementById("baseUrl");
       const previewFrame = document.getElementById("previewFrame");
+      const loadedUrl = document.getElementById("loadedUrl");
 
       function loadPage(page) {
         const baseUrl = baseUrlInput.value.trim().replace(/\/$/, "");
         if (!baseUrl) {
+          loadedUrl.textContent = "Loaded:";
           return;
         }
-        previewFrame.src = `${baseUrl}/${page}`;
+        const separator = page.includes("?") ? "&" : "?";
+        const url = `${baseUrl}/${page}${separator}embed=1&v=${Date.now()}`;
+        previewFrame.src = url;
+        loadedUrl.textContent = `Loaded: ${url}`;
       }
 
       document.querySelectorAll("a[data-page]").forEach((link) => {
