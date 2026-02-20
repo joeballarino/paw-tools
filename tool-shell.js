@@ -87,6 +87,24 @@
   const PAW_IDENTITY_MSG = "paw_identity_v1";
   const PAW_IDENTITY_REQ = "paw_identity_request_v1";
 
+  function isAllowedParentOrigin(origin) {
+    try {
+      var u = new URL(String(origin || ""));
+      var h = String(u.hostname || "").toLowerCase();
+      // Safe allowlist expansion for Circle test embeds hosted on Pages:
+      // we only allow the production Pages hostname and its preview subdomains.
+      return (
+        h === "proagentworks.circle.so" ||
+        h === "proagentworks.com" ||
+        h === "www.proagentworks.com" ||
+        h === "paw-tools.pages.dev" ||
+        h.endsWith(".paw-tools.pages.dev")
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
   const PAWAuth = (function () {
     let _apiEndpoint = "";
     let _memberId = "";
@@ -145,7 +163,7 @@
           if (data.type !== PAW_IDENTITY_MSG) return;
 
           // Origin hard check (Circle native + custom domain allowlist)
-          if (!PAW_ALLOWED_PARENT_ORIGINS.includes(String(event.origin || ""))) return;
+          if (!isAllowedParentOrigin(event.origin)) return;
 
           const memberId = String(data.member_id || data.memberId || "").trim();
           if (!memberId) return;
