@@ -1901,40 +1901,41 @@ function ensureWorksRoot(){
     var t = e.target;
     if (!t || !t.getAttribute) return;
 
-    // Attach an existing recent work (session-only list for now).
     if (t.getAttribute("data-paw-works-attach") === "1"){
       var b = t.getAttribute("data-bucket") || "";
       var id = t.getAttribute("data-id") || "";
       var chosen = null;
 
-      // Find in recents (preferred), otherwise attach a minimal object.
       try{
-        for (var i=0;i<(__worksRecent||[]).length;i++){
-          var w = __worksRecent[i];
+        for (var i=0;i<(__worksListItems||[]).length;i++){
+          var w = __worksListItems[i];
           if (w && String(w.bucket||"") === String(b) && String(w.id||"") === String(id)){
             chosen = w;
             break;
           }
         }
-      }catch(_){}
+      }catch(_){ }
+
+      if (!chosen){
+        try{
+          for (var j=0;j<(__worksRecent||[]).length;j++){
+            var wr = __worksRecent[j];
+            if (wr && String(wr.bucket||"") === String(b) && String(wr.id||"") === String(id)){
+              chosen = wr;
+              break;
+            }
+          }
+        }catch(_){ }
+      }
 
       attachWork(chosen || { bucket:b, id:id, label:"Untitled" });
+      exitWorksMode();
       return;
     }
 
     // Detach from this session
     if (t.getAttribute("data-paw-works-detach") === "1"){
       detachWork();
-      return;
-    }
-
-    if (t.getAttribute("data-paw-works-open") === "1"){
-      try{
-        var listEl = __worksRoot ? __worksRoot.querySelector('[data-paw-works-list="1"]') : null;
-        var searchEl = __worksRoot ? __worksRoot.querySelector('[data-paw-works-search="1"]') : null;
-        if (listEl && typeof listEl.scrollIntoView === "function") listEl.scrollIntoView({ block:"start" });
-        if (searchEl && typeof searchEl.focus === "function") searchEl.focus();
-      }catch(_){ }
       return;
     }
 
@@ -1964,7 +1965,7 @@ function ensureWorksRoot(){
           };
           attachWork(nw);
           _touchRecent(nw);
-          renderWorksBody();
+          await reloadWorksList({ append:false });
           emitWorksSave("create");
           _worksToast("Saved.");
         }catch(err){
@@ -2000,7 +2001,7 @@ function ensureWorksRoot(){
           };
           attachWork(nw);
           _touchRecent(nw);
-          renderWorksBody();
+          await reloadWorksList({ append:false });
           emitWorksSave("save_as_new");
           _worksToast("Saved.");
         }catch(err){
@@ -2026,8 +2027,12 @@ function ensureWorksRoot(){
     }
 
     if (t.getAttribute("data-paw-works-load-more") === "1"){
-      __worksListLimit += 25;
-      renderWorksBody();
+      reloadWorksList({ append:true });
+      return;
+    }
+
+    if (t.getAttribute("data-paw-works-retry") === "1"){
+      reloadWorksList({ append:false });
       return;
     }
   });
@@ -2061,9 +2066,15 @@ function ensureWorksRoot(){
   //
   // This is session-only UI: no persistence is assumed here.
 
-  var __worksRecent = [];   // Most recently used works (session-only)
+  var __worksRecent = [];   // Session-only MRU for active-context convenience.
   var __worksSearchQ = "";
+  var __worksBucketFilter = "all"; // all | brand_assets | listings | transactions
   var __worksListLimit = 25;
+  var __worksListItems = [];
+  var __worksNextCursor = "";
+  var __worksListLoading = false;
+  var __worksListError = "";
+  var __worksListHasLoaded = false;
 
   function _workTypeLabel(bucket){
     if (bucket === "brand_assets") return "Brand Asset";
@@ -2134,6 +2145,71 @@ function ensureWorksRoot(){
     var work = data && data.data && data.data.work ? data.data.work : null;
     if (!work || !work.work_id) throw new Error("Invalid create response");
     return work;
+  }
+
+  function _normalizeWorkRow(raw){
+    var w = raw && typeof raw === "object" ? raw : {};
+    return {
+      id: String(w.work_id || w.id || ""),
+      work_id: String(w.work_id || w.id || ""),
+      bucket: String(w.bucket || ""),
+      label: String(w.label || "Untitled"),
+      created_at: w.created_at || "",
+      updated_at: w.updated_at || "",
+      subtitle: String(w.subtitle || "")
+    };
+  }
+
+  async function fetchMyWorksList(opts){
+    opts = opts || {};
+    var ep = _getApiEndpoint();
+    if (!ep) throw new Error("Saving isn’t available right now.");
+    var params = new URLSearchParams();
+    params.set("limit", String(__worksListLimit || 25));
+    if (opts.cursor) params.set("cursor", String(opts.cursor));
+    if (__worksSearchQ) params.set("q", String(__worksSearchQ));
+    if (__worksBucketFilter && __worksBucketFilter !== "all") params.set("bucket", String(__worksBucketFilter));
+
+    var url = String(ep).replace(/\/+$/,"") + "/myworks?" + params.toString();
+    var res = await fetch(url, { method:"GET", headers: _apiHeadersJsonAuth() });
+    var text = await res.text();
+    var data = null;
+    try{ data = JSON.parse(text); }catch(_){ data = { reply: text || "" }; }
+    if (!res.ok){
+      throw new Error((data && (data.error || data.message || data.reply)) || ("Request failed (" + res.status + ")"));
+    }
+
+    var list = (data && data.data && Array.isArray(data.data.list)) ? data.data.list : [];
+    var next = (data && data.data && data.data.next_cursor) ? String(data.data.next_cursor) : "";
+    return { list: list.map(_normalizeWorkRow), nextCursor: next };
+  }
+
+  async function reloadWorksList(opts){
+    opts = opts || {};
+    var append = !!opts.append;
+    if (__worksListLoading) return;
+    __worksListLoading = true;
+    __worksListError = "";
+    try{ renderWorksBody(); }catch(_){ }
+
+    try{
+      var cursor = append ? (__worksNextCursor || "") : "";
+      var out = await fetchMyWorksList({ cursor: cursor });
+      var incoming = Array.isArray(out.list) ? out.list : [];
+      if (append) __worksListItems = (__worksListItems || []).concat(incoming);
+      else __worksListItems = incoming;
+
+      try{ __worksListItems.sort(function(a,b){ return _workTimeValue(b) - _workTimeValue(a); }); }catch(_){ }
+
+      __worksNextCursor = out.nextCursor || "";
+      __worksListHasLoaded = true;
+    }catch(_err){
+      __worksListError = "We can’t load your saved works right now. Please try again.";
+      if (!append) __worksListItems = [];
+    }finally{
+      __worksListLoading = false;
+      try{ renderWorksBody(); }catch(_){ }
+    }
   }
 
   function _formatRelative(input){
@@ -2308,28 +2384,11 @@ function ensureWorksRoot(){
       var hasAttached = !!(__pawActiveWork && __pawActiveWork.label);
       var attachedName = hasAttached ? String(__pawActiveWork.label) : "";
       var attachedType = hasAttached ? _workTypeLabel(__pawActiveWork.bucket) : "";
-
-      // Filter recent list by search query
-      var q = (__worksSearchQ || "").trim().toLowerCase();
-      var list = (__worksRecent || []).slice(0);
-
-      list.sort(function(a,b){
-        return _workTimeValue(b) - _workTimeValue(a);
-      });
-
-      if (q){
-        list = list.filter(function(w){
-          var hay = (String(w.label||"") + " " + String(w.subtitle||"") + " " + String(_workTypeLabel(w.bucket)||"")).toLowerCase();
-          return hay.indexOf(q) !== -1;
-        });
-      }
-
-      var visibleList = list.slice(0, __worksListLimit);
-      var hasMore = list.length > visibleList.length;
+      var list = (__worksListItems || []).slice(0);
+      var hasMore = !!__worksNextCursor;
 
       var html = "";
 
-      // Attached confirmation row (NOT in the top bar)
       if (hasAttached){
         var lastSaved = _formatRelative(__pawActiveWork.updated_at || __pawActiveWork.created_at || __pawActiveWork._last_used);
         html += `
@@ -2338,21 +2397,26 @@ function ensureWorksRoot(){
             <div class="paw-works-mode__note-copy">${escapeHtml(attachedType)} • Last saved ${escapeHtml(lastSaved || "—")}</div>
           </div>
         `;
+      } else if (__worksListError){
+        html += `
+          <div class="paw-works-mode__note">
+            <div class="paw-works-mode__note-title">We can’t load your saved works right now</div>
+            <div class="paw-works-mode__note-copy">Please try again.</div>
+          </div>
+        `;
       } else {
         html += `
           <div class="paw-works-mode__note">
             <div class="paw-works-mode__note-title">Nothing saved yet</div>
-            <div class="paw-works-mode__note-copy">Save what you’re working on, or open a saved work.</div>
+            <div class="paw-works-mode__note-copy">Save what you’re working on, or use a saved work.</div>
           </div>
         `;
       }
 
-      // Primary actions
       if (!hasAttached){
         html += `
           <div class="paw-works-actions">
             <button class="btn primary" type="button" data-paw-works-save-new="1">Save</button>
-            <button class="btn" type="button" data-paw-works-open="1">Open</button>
           </div>
         `;
       } else {
@@ -2360,51 +2424,61 @@ function ensureWorksRoot(){
           <div class="paw-works-actions">
             <button class="btn primary" type="button" data-paw-works-save="1">Save updates</button>
             <button class="btn" type="button" data-paw-works-save-as-new="1">Save as new</button>
-            <button class="paw-works-linkbtn" type="button" data-paw-works-open="1">Switch</button>
             <button class="paw-works-linkbtn" type="button" data-paw-works-detach="1">Detach</button>
           </div>
         `;
       }
 
-      // Search + list header
       html += `
         <div class="paw-works-recents">
           <div class="paw-works-recents__head">
             <div>
               <div class="paw-works-recents__title">Saved works</div>
-              <div class="paw-works-recents__sub">Recent in this session</div>
             </div>
-            <input class="paw-works-search" type="search" placeholder="Search saved works" value="${escapeHtml(__worksSearchQ||"")}" aria-label="Search works" data-paw-works-search="1"/>
+            <div class="paw-works-recents__filters">
+              <select class="paw-works-bucket" aria-label="Filter works by type" data-paw-works-bucket="1">
+                <option value="all" ${__worksBucketFilter === "all" ? "selected" : ""}>All works</option>
+                <option value="brand_assets" ${__worksBucketFilter === "brand_assets" ? "selected" : ""}>Brand Assets</option>
+                <option value="listings" ${__worksBucketFilter === "listings" ? "selected" : ""}>Listings</option>
+                <option value="transactions" ${__worksBucketFilter === "transactions" ? "selected" : ""}>Transactions</option>
+              </select>
+              <input class="paw-works-search" type="search" placeholder="Search saved works" value="${escapeHtml(__worksSearchQ||"")}" aria-label="Search works" data-paw-works-search="1"/>
+            </div>
           </div>
           <div class="paw-works-table-head" role="presentation">
             <div>Name</div>
             <div>Type</div>
-            <div>Last updated</div>
-            <div></div>
+            <div>Last used</div>
+            <div>Use</div>
           </div>
           <div class="paw-works-list" data-paw-works-list="1">
       `;
 
-      if (!list.length){
+      if (__worksListError){
         html += `
             <div class="paw-works-empty">
-              <div class="paw-works-empty__title">${q ? "No matches" : "You haven't saved anything yet."}</div>
-              <div class="paw-works-empty__body">${q ? "Try a different search." : "Create your first work or save what you're working on."}</div>
+              <div class="paw-works-empty__title">We can’t load your saved works right now</div>
+              <div class="paw-works-empty__body"><button class="btn" type="button" data-paw-works-retry="1">Try again</button></div>
+            </div>
+        `;
+      } else if (__worksListLoading && !__worksListHasLoaded){
+        html += `
+            <div class="paw-works-empty">
+              <div class="paw-works-empty__title">Loading saved works…</div>
             </div>
         `;
       } else {
-        for (var i=0;i<visibleList.length;i++){
-          var w = visibleList[i];
+        for (var i=0;i<list.length;i++){
+          var w = list[i];
           var type = _workTypeLabel(w.bucket);
           var when = _formatRelative(w.updated_at || w.created_at || w._last_used);
-          var rowAction = hasAttached ? "Switch" : "Open";
           html += `
             <div class="paw-works-item paw-works-row">
               <div class="paw-works-col paw-works-col--name">${escapeHtml(String(w.label||"Untitled"))}</div>
               <div class="paw-works-col">${escapeHtml(type)}</div>
               <div class="paw-works-col">${escapeHtml(when || "—")}</div>
               <div class="paw-works-col paw-works-col--action">
-                <button class="btn" type="button" data-paw-works-attach="1" data-bucket="${escapeHtml(String(w.bucket||""))}" data-id="${escapeHtml(String(w.id||""))}">${rowAction}</button>
+                <button class="btn" type="button" data-paw-works-attach="1" data-bucket="${escapeHtml(String(w.bucket||""))}" data-id="${escapeHtml(String(w.id||""))}">Use</button>
               </div>
             </div>
           `;
@@ -2425,19 +2499,25 @@ function ensureWorksRoot(){
 
       body.innerHTML = html;
 
-      // Wire search input (scoped)
       try{
         var inp = body.querySelector("[data-paw-works-search=\"1\"]");
         if (inp){
           inp.oninput = function(){
-            __worksSearchQ = String(inp.value || "");
-            __worksListLimit = 25;
-            renderWorksBody();
+            __worksSearchQ = String(inp.value || "").trim();
+            __worksNextCursor = "";
+            reloadWorksList({ append:false });
           };
         }
-      }catch(_){}
+        var bucketSel = body.querySelector("[data-paw-works-bucket=\"1\"]");
+        if (bucketSel){
+          bucketSel.onchange = function(){
+            __worksBucketFilter = String(bucketSel.value || "all");
+            __worksNextCursor = "";
+            reloadWorksList({ append:false });
+          };
+        }
+      }catch(_){ }
     }catch(_){
-      // Defensive fallback: if rendering fails for any reason, never show a blank surface.
       try{
         if (__worksRoot){
           var body2 = __worksRoot.querySelector('[data-paw-works-body="1"]');
@@ -2626,6 +2706,7 @@ function enterWorksMode(){
   // Ensure Works surface exists + show it.
   ensureWorksRoot();
   try{ renderWorksBody(); }catch(_){ }
+  try{ reloadWorksList({ append:false }); }catch(_){ }
 
   // Mount the Work button into the Works header (same position, no duplicate controls).
   try{
