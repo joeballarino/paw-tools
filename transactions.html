@@ -342,11 +342,13 @@ body.paw-contracts #analyzeBtn[disabled]{
 
   <script src="/tool-shell.js"></script>
   <script>
+    const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+
     // PAW Tool Shell init (required for consistent My Works mode across tools)
     try {
       if (window.PAWToolShell && window.PAWToolShell.init) {
         window.PAWToolShell.init({
-          apiEndpoint: "", // Placeholder until this tool uses the Worker
+          apiEndpoint: API_ENDPOINT,
           toolId: "transactions"
         });
       }
