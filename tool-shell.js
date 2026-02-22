@@ -2705,8 +2705,19 @@ function enterWorksMode(){
 
   // Ensure Works surface exists + show it.
   ensureWorksRoot();
+  __worksNextCursor = "";
+  __worksListError = "";
+  __worksListHasLoaded = false;
   try{ renderWorksBody(); }catch(_){ }
   try{ reloadWorksList({ append:false }); }catch(_){ }
+  try{
+    if (window.PAWAuth && typeof window.PAWAuth.whenReady === "function"){
+      window.PAWAuth.whenReady().then(function(){
+        if (!__worksModeOn) return;
+        reloadWorksList({ append:false });
+      }).catch(function(){});
+    }
+  }catch(_){ }
 
   // Mount the Work button into the Works header (same position, no duplicate controls).
   try{
