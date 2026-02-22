@@ -357,6 +357,8 @@ Examples
       // ==========================================================
 
       const DRAFT_KEY = "paw:listing_description_writer:draft:v1";
+      let __activeWorkLoadSeq = 0;
+      let __worksSaving = false;
 
       // Draft safety caps (localStorage is limited; large MLS pastes can exceed quotas)
       const MAX_DRAFT_INPUT_CHARS = 50000;   // ~50k chars of pasted listing/context
@@ -1037,6 +1039,183 @@ const shell = window.PAWToolShell.init({
       if (existingDraft) {
         openResumeModal(existingDraft);
       }
+
+      // ==========================================================
+      // Works -> Listing restore hook
+      // ----------------------------------------------------------
+      // When active work changes, load listing payload for listings bucket.
+      // ==========================================================
+      window.addEventListener("paw:works:active_changed", async (e) => {
+        const seq = ++__activeWorkLoadSeq;
+        try {
+          const aw = e && e.detail ? e.detail.active_work : null;
+          if (!aw) return;
+
+          const bucket = String(aw.bucket || "").trim();
+          if (bucket !== "listings") return;
+
+          const workId = String(aw.id || aw.work_id || "").trim();
+          if (!workId) return;
+
+          let token = "";
+          try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
+          if (!token) {
+            try {
+              if (window.PAWAuth && window.PAWAuth.whenReady) {
+                await window.PAWAuth.whenReady().catch(() => {});
+                token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+              }
+            } catch (_) {}
+          }
+          if (!token) {
+            try { if (shell && shell.toast) shell.toast("Not signed in yet. Please try again."); } catch (_) {}
+            return;
+          }
+
+          const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
+
+          let res = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + token
+            }
+          });
+
+          let data = await res.json().catch(() => ({}));
+          if (seq !== __activeWorkLoadSeq) return;
+
+          if ((res.status === 401 || res.status === 403)) {
+            try {
+              if (window.PAWAuth && window.PAWAuth.whenReady) {
+                await window.PAWAuth.whenReady().catch(() => {});
+              }
+              token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+            } catch (_) {}
+
+            if (token) {
+              res = await fetch(url, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + token
+                }
+              });
+              data = await res.json().catch(() => ({}));
+              if (seq !== __activeWorkLoadSeq) return;
+            }
+          }
+
+          if (!res.ok) {
+            try {
+              if (res.status === 401 || res.status === 403) {
+                if (shell && shell.toast) shell.toast("Session expired. Please try again.");
+              } else {
+                const msg = (data && (data.error || data.message)) ? String(data.error || data.message) : "Couldn’t load this work right now.";
+                if (shell && shell.toast) shell.toast(msg);
+              }
+            } catch (_) {}
+            return;
+          }
+
+          const payload = data && data.data && data.data.work ? data.data.work.payload : null;
+          const looksLikeDraft = !!(payload && typeof payload === "object" && payload.form && payload.shell);
+
+          if (!looksLikeDraft) {
+            try { if (shell && shell.toast) shell.toast("This work doesn’t have saved content yet."); } catch (_) {}
+            return;
+          }
+
+          applyDraft(payload);
+        } catch (_) {
+          if (seq !== __activeWorkLoadSeq) return;
+          try { if (shell && shell.toast) shell.toast("Couldn’t load this work right now."); } catch (_) {}
+        }
+      });
+
+      window.addEventListener("paw:works:save_current_output", async (e) => {
+        if (__worksSaving) return;
+
+        const detail = e && e.detail ? e.detail : {};
+        const intent = String(detail.intent || "").trim();
+        if (intent !== "save_updates") return;
+
+        const aw = detail.active_work || null;
+        if (!aw) return;
+
+        const bucket = String(aw.bucket || "").trim();
+        if (bucket !== "listings") return;
+
+        const workId = String(aw.id || aw.work_id || "").trim();
+        if (!workId) return;
+
+        let token = "";
+        try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
+        if (!token) {
+          try {
+            if (window.PAWAuth && window.PAWAuth.whenReady) {
+              await window.PAWAuth.whenReady().catch(() => {});
+              token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+            }
+          } catch (_) {}
+        }
+        if (!token) {
+          try { if (shell && shell.toast) shell.toast("Not signed in yet. Please try again."); } catch (_) {}
+          return;
+        }
+
+        __worksSaving = true;
+        try {
+          const draft = buildDraft();
+          const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
+
+          let res = await fetch(url, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({ payload: draft })
+          });
+
+          let data = await res.json().catch(() => ({}));
+
+          if ((res.status === 401 || res.status === 403)) {
+            try {
+              if (window.PAWAuth && window.PAWAuth.whenReady) {
+                await window.PAWAuth.whenReady().catch(() => {});
+              }
+              token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+            } catch (_) {}
+
+            if (token) {
+              res = await fetch(url, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({ payload: draft })
+              });
+              data = await res.json().catch(() => ({}));
+            }
+          }
+
+          if (!res.ok) {
+            try {
+              const msg = (data && (data.error || data.message)) ? String(data.error || data.message) : "Couldn’t save right now.";
+              if (shell && shell.toast) shell.toast(msg);
+            } catch (_) {}
+            return;
+          }
+
+          try { if (shell && shell.toast) shell.toast("Saved."); } catch (_) {}
+        } catch (_) {
+          try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+        } finally {
+          __worksSaving = false;
+        }
+      });
 
 })();
 </script>

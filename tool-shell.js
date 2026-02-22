@@ -2890,6 +2890,16 @@ function exitWorksMode(){
     }
   }
 
+  function emitActiveWorkChanged(){
+    try{
+      var aw = __pawActiveWork ? Object.assign({}, __pawActiveWork) : null;
+      var ev = new CustomEvent("paw:works:active_changed", {
+        detail: { active_work: aw }
+      });
+      window.dispatchEvent(ev);
+    }catch(_){}
+  }
+
   function attachWork(work){
     __pawActiveWork = work || null;
 
@@ -2908,6 +2918,7 @@ function exitWorksMode(){
     updateWorkPill();
     renderContextRow();
     try{ renderWorksBody(); }catch(_){}
+    emitActiveWorkChanged();
   }
 
   function detachWork(){
@@ -2919,6 +2930,7 @@ function exitWorksMode(){
     try{
       if (window.PAWToolShell && window.PAWToolShell._toast) window.PAWToolShell._toast("Detached from this session.");
     }catch(_){}
+    emitActiveWorkChanged();
   }
 
   // Exposed for tool-shell to include in payloads later.
