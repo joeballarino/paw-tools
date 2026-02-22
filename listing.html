@@ -1152,7 +1152,15 @@ const shell = window.PAWToolShell.init({
         let token = "";
         try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
         if (!token) {
-          try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+          try {
+            if (window.PAWAuth && window.PAWAuth.whenReady) {
+              await window.PAWAuth.whenReady().catch(() => {});
+              token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+            }
+          } catch (_) {}
+        }
+        if (!token) {
+          try { if (shell && shell.toast) shell.toast("Not signed in yet. Please try again."); } catch (_) {}
           return;
         }
 
@@ -1160,7 +1168,8 @@ const shell = window.PAWToolShell.init({
         try {
           const draft = buildDraft();
           const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
-          const res = await fetch(url, {
+
+          let res = await fetch(url, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
@@ -1169,8 +1178,34 @@ const shell = window.PAWToolShell.init({
             body: JSON.stringify({ payload: draft })
           });
 
+          let data = await res.json().catch(() => ({}));
+
+          if ((res.status === 401 || res.status === 403)) {
+            try {
+              if (window.PAWAuth && window.PAWAuth.whenReady) {
+                await window.PAWAuth.whenReady().catch(() => {});
+              }
+              token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+            } catch (_) {}
+
+            if (token) {
+              res = await fetch(url, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({ payload: draft })
+              });
+              data = await res.json().catch(() => ({}));
+            }
+          }
+
           if (!res.ok) {
-            try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+            try {
+              const msg = (data && (data.error || data.message)) ? String(data.error || data.message) : "Couldn’t save right now.";
+              if (shell && shell.toast) shell.toast(msg);
+            } catch (_) {}
             return;
           }
 
