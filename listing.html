@@ -1168,7 +1168,7 @@ const shell = window.PAWToolShell.init({
         try {
           const draft = buildDraft();
           const form = (draft && draft.form && typeof draft.form === "object") ? draft.form : {};
-          const title = String((aw && aw.label) ? aw.label : "");
+          const title = String((aw && aw.label) ? aw.label : "Untitled");
           let finalOutput = "";
           try {
             const bubbles = document.querySelectorAll("#messages .msg.ai .bubble");
