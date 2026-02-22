@@ -2188,8 +2188,15 @@ function ensureWorksRoot(){
     opts = opts || {};
     var append = !!opts.append;
     if (__worksListLoading) return;
+    if (!append){
+      __worksNextCursor = "";
+      __worksListError = "";
+      __worksListHasLoaded = false;
+      __worksListItems = [];
+    } else {
+      __worksListError = "";
+    }
     __worksListLoading = true;
-    __worksListError = "";
     try{ renderWorksBody(); }catch(_){ }
 
     try{
@@ -2705,9 +2712,6 @@ function enterWorksMode(){
 
   // Ensure Works surface exists + show it.
   ensureWorksRoot();
-  __worksNextCursor = "";
-  __worksListError = "";
-  __worksListHasLoaded = false;
   try{ renderWorksBody(); }catch(_){ }
   try{ reloadWorksList({ append:false }); }catch(_){ }
   try{
