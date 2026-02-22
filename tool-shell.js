@@ -1706,6 +1706,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   var __brandPanel = null;
 
   var __apiEndpoint = "";
+  var __worksApiEndpoint = "";
   var __brandCache = null; // { exists:boolean, brand:{...}, meta:{...} }
 
   function $(sel, root){ return (root || document).querySelector(sel); }
@@ -2115,6 +2116,15 @@ function ensureWorksRoot(){
     return "";
   }
 
+  function _getWorksApiEndpoint(){
+    var ep = "";
+    try{ ep = String(_getApiEndpoint() || "").trim(); }catch(_){ ep = ""; }
+    if (!ep){
+      try{ ep = String(__worksApiEndpoint || "").trim(); }catch(_){ ep = ""; }
+    }
+    return String(ep || "").replace(/\/+$/,"");
+  }
+
   function _apiHeadersJsonAuth(){
     var headers = { "Content-Type":"application/json" };
     try{
@@ -2125,7 +2135,7 @@ function ensureWorksRoot(){
   }
 
   async function createMyWork(bucket, label){
-    var ep = _getApiEndpoint();
+    var ep = _getWorksApiEndpoint();
     if (!ep) throw new Error("Saving isn’t available right now.");
     var url = String(ep).replace(/\/+$/,"") + "/myworks";
     var res = await fetch(url, {
@@ -2162,7 +2172,7 @@ function ensureWorksRoot(){
 
   async function fetchMyWorksList(opts){
     opts = opts || {};
-    var ep = _getApiEndpoint();
+    var ep = _getWorksApiEndpoint();
     if (!ep) throw new Error("Saving isn’t available right now.");
     var params = new URLSearchParams();
     params.set("limit", String(__worksListLimit || 25));
@@ -3036,6 +3046,7 @@ function exitWorksMode(){
 // ------------------------------------------------------------
 function init(apiEndpoint){
   __apiEndpoint = String(apiEndpoint || "");
+  __worksApiEndpoint = String(apiEndpoint || "");
 
   updateWorkPill();
 
