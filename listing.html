@@ -358,6 +358,7 @@ Examples
 
       const DRAFT_KEY = "paw:listing_description_writer:draft:v1";
       let __activeWorkLoadSeq = 0;
+      let __worksSaving = false;
 
       // Draft safety caps (localStorage is limited; large MLS pastes can exceed quotas)
       const MAX_DRAFT_INPUT_CHARS = 50000;   // ~50k chars of pasted listing/context
@@ -1095,6 +1096,55 @@ const shell = window.PAWToolShell.init({
         } catch (_) {
           if (seq !== __activeWorkLoadSeq) return;
           try { if (shell && shell.toast) shell.toast("Couldn’t load this work right now."); } catch (_) {}
+        }
+      });
+
+      window.addEventListener("paw:works:save_current_output", async (e) => {
+        if (__worksSaving) return;
+
+        const detail = e && e.detail ? e.detail : {};
+        const intent = String(detail.intent || "").trim();
+        if (intent !== "save_updates") return;
+
+        const aw = detail.active_work || null;
+        if (!aw) return;
+
+        const bucket = String(aw.bucket || "").trim();
+        if (bucket !== "listings") return;
+
+        const workId = String(aw.id || aw.work_id || "").trim();
+        if (!workId) return;
+
+        let token = "";
+        try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
+        if (!token) {
+          try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+          return;
+        }
+
+        __worksSaving = true;
+        try {
+          const draft = buildDraft();
+          const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
+          const res = await fetch(url, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({ payload: draft })
+          });
+
+          if (!res.ok) {
+            try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+            return;
+          }
+
+          try { if (shell && shell.toast) shell.toast("Saved."); } catch (_) {}
+        } catch (_) {
+          try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+        } finally {
+          __worksSaving = false;
         }
       });
 
