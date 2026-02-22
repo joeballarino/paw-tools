@@ -1706,6 +1706,7 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
   var __brandPanel = null;
 
   var __apiEndpoint = "";
+  var __worksApiEndpoint = "";
   var __brandCache = null; // { exists:boolean, brand:{...}, meta:{...} }
 
   function $(sel, root){ return (root || document).querySelector(sel); }
@@ -1863,6 +1864,8 @@ var __worksStatusHomeParent = null;
 // can render Works content immediately without changing the fragile container mechanics.
 var renderWorksBody = function(){ };
 var _touchRecent = function(){ };
+var __worksReloadWorksListFn = null;
+var __worksEnsureWorksListLoadedFn = null;
 
 function ensureWorksRoot(){
   if (__worksRoot && document.body.contains(__worksRoot)) return __worksRoot;
@@ -2115,6 +2118,15 @@ function ensureWorksRoot(){
     return "";
   }
 
+  function _getWorksApiEndpoint(){
+    var ep = "";
+    try{ ep = String(_getApiEndpoint() || "").trim(); }catch(_){ ep = ""; }
+    if (!ep){
+      try{ ep = String(__worksApiEndpoint || "").trim(); }catch(_){ ep = ""; }
+    }
+    return String(ep || "").replace(/\/+$/,"");
+  }
+
   function _apiHeadersJsonAuth(){
     var headers = { "Content-Type":"application/json" };
     try{
@@ -2125,7 +2137,7 @@ function ensureWorksRoot(){
   }
 
   async function createMyWork(bucket, label){
-    var ep = _getApiEndpoint();
+    var ep = _getWorksApiEndpoint();
     if (!ep) throw new Error("Saving isn’t available right now.");
     var url = String(ep).replace(/\/+$/,"") + "/myworks";
     var res = await fetch(url, {
@@ -2162,7 +2174,7 @@ function ensureWorksRoot(){
 
   async function fetchMyWorksList(opts){
     opts = opts || {};
-    var ep = _getApiEndpoint();
+    var ep = _getWorksApiEndpoint();
     if (!ep) throw new Error("Saving isn’t available right now.");
     var params = new URLSearchParams();
     params.set("limit", String(__worksListLimit || 25));
@@ -2184,12 +2196,43 @@ function ensureWorksRoot(){
     return { list: list.map(_normalizeWorkRow), nextCursor: next };
   }
 
+  function _ensureWorksListLoaded(){
+    try{
+      if (__worksListLoading && !__worksListHasLoaded) __worksListLoading = false;
+      reloadWorksList({ append:false });
+    }catch(_){ }
+    try{
+      if (window.PAWAuth && typeof window.PAWAuth.whenReady === "function"){
+        window.PAWAuth.whenReady().then(function(){
+          if (!document.body.classList.contains("paw-works-mode")) return;
+          try{
+            if (__worksListLoading && !__worksListHasLoaded) __worksListLoading = false;
+            reloadWorksList({ append:false });
+          }catch(_){ }
+        }).catch(function(){});
+      }
+    }catch(_){ }
+  }
+
   async function reloadWorksList(opts){
     opts = opts || {};
     var append = !!opts.append;
     if (__worksListLoading) return;
+    if (!append){
+      __worksNextCursor = "";
+      __worksListError = "";
+      __worksListHasLoaded = false;
+      __worksListItems = [];
+    } else {
+      __worksListError = "";
+    }
+    var tok = "";
+    try{ tok = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ tok = ""; }
+    if (!tok){
+      try{ renderWorksBody(); }catch(_){ }
+      return;
+    }
     __worksListLoading = true;
-    __worksListError = "";
     try{ renderWorksBody(); }catch(_){ }
 
     try{
@@ -2461,7 +2504,7 @@ function ensureWorksRoot(){
               <div class="paw-works-empty__body"><button class="btn" type="button" data-paw-works-retry="1">Try again</button></div>
             </div>
         `;
-      } else if (__worksListLoading && !__worksListHasLoaded){
+      } else if ((__worksListLoading && !__worksListHasLoaded) || (!__worksListHasLoaded && !__worksListError)){
         html += `
             <div class="paw-works-empty">
               <div class="paw-works-empty__title">Loading saved works…</div>
@@ -2528,6 +2571,9 @@ function ensureWorksRoot(){
       }catch(__){}
     }
   };
+
+  __worksReloadWorksListFn = reloadWorksList;
+  __worksEnsureWorksListLoadedFn = _ensureWorksListLoaded;
 
   return __worksRoot;
 }
@@ -2706,7 +2752,7 @@ function enterWorksMode(){
   // Ensure Works surface exists + show it.
   ensureWorksRoot();
   try{ renderWorksBody(); }catch(_){ }
-  try{ reloadWorksList({ append:false }); }catch(_){ }
+  try{ if (__worksEnsureWorksListLoadedFn) __worksEnsureWorksListLoadedFn(); }catch(_){ }
 
   // Mount the Work button into the Works header (same position, no duplicate controls).
   try{
@@ -3005,6 +3051,7 @@ function exitWorksMode(){
 // ------------------------------------------------------------
 function init(apiEndpoint){
   __apiEndpoint = String(apiEndpoint || "");
+  __worksApiEndpoint = String(apiEndpoint || "");
 
   updateWorkPill();
 
