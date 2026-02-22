@@ -1223,7 +1223,50 @@ body.paw-works-mode{
 }
 .paw-works-recents__title{ font-weight:800; }
 .paw-works-recents__sub{ font-size:12px; opacity:.65; margin-top:2px; }
-.paw-works-search{ min-width:220px; max-width:360px; width:100%; }
+
+body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+}
+body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters select.paw-works-bucket,
+body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters input.paw-works-search{
+  height:40px;
+  border:1px solid var(--field-border);
+  border-radius:12px;
+  background:var(--field-bg);
+  color:var(--text-strong);
+  font:inherit;
+  outline:none;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters select.paw-works-bucket{
+  min-width:180px;
+  padding:8px 34px 8px 12px;
+  appearance:none;
+  background-image:linear-gradient(45deg, transparent 50%, rgba(15,23,42,.50) 50%), linear-gradient(135deg, rgba(15,23,42,.50) 50%, transparent 50%);
+  background-position:calc(100% - 18px) calc(50% + 2px), calc(100% - 13px) calc(50% + 2px);
+  background-size:5px 5px, 5px 5px;
+  background-repeat:no-repeat;
+}
+body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters input.paw-works-search{
+  flex:1 1 220px;
+  min-width:220px;
+  max-width:360px;
+  width:100%;
+  padding:8px 12px;
+}
+body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters select.paw-works-bucket:hover,
+body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters input.paw-works-search:hover{
+  border-color:var(--field-hover);
+}
+body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters select.paw-works-bucket:focus,
+body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters input.paw-works-search:focus{
+  border-color:rgba(var(--accent-rgb),.60);
+  box-shadow:0 0 0 3px rgba(var(--accent-rgb),.12);
+  background:#fff;
+}
 
 .paw-works-table-head,
 .paw-works-row{
@@ -1280,7 +1323,16 @@ body.paw-works-mode{
 
 @media (max-width: 560px){
   .paw-works-recents__head{ flex-direction:column; align-items:stretch; }
-  .paw-works-search{ max-width:none; min-width:0; }
+  body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters{
+    gap:8px;
+  }
+  body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters select.paw-works-bucket,
+  body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters input.paw-works-search{
+    width:100%;
+    max-width:none;
+    min-width:0;
+    flex:1 1 100%;
+  }
   .paw-works-table-head{ display:none; }
   .paw-works-row{
     grid-template-columns:1fr;
