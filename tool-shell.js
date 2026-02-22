@@ -1864,6 +1864,8 @@ var __worksStatusHomeParent = null;
 // can render Works content immediately without changing the fragile container mechanics.
 var renderWorksBody = function(){ };
 var _touchRecent = function(){ };
+var __worksReloadWorksListFn = null;
+var __worksEnsureWorksListLoadedFn = null;
 
 function ensureWorksRoot(){
   if (__worksRoot && document.body.contains(__worksRoot)) return __worksRoot;
@@ -2570,6 +2572,9 @@ function ensureWorksRoot(){
     }
   };
 
+  __worksReloadWorksListFn = reloadWorksList;
+  __worksEnsureWorksListLoadedFn = _ensureWorksListLoaded;
+
   return __worksRoot;
 }
 
@@ -2747,7 +2752,7 @@ function enterWorksMode(){
   // Ensure Works surface exists + show it.
   ensureWorksRoot();
   try{ renderWorksBody(); }catch(_){ }
-  try{ _ensureWorksListLoaded(); }catch(_){ }
+  try{ if (__worksEnsureWorksListLoadedFn) __worksEnsureWorksListLoadedFn(); }catch(_){ }
 
   // Mount the Work button into the Works header (same position, no duplicate controls).
   try{
