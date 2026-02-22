@@ -1119,14 +1119,20 @@ const shell = window.PAWToolShell.init({
           }
 
           const payload = data && data.data && data.data.work ? data.data.work.payload : null;
-          const looksLikeDraft = !!(payload && typeof payload === "object" && payload.form && payload.shell);
+          const newToolState = (payload && typeof payload === "object" && payload.tool_state && typeof payload.tool_state === "object")
+            ? payload.tool_state
+            : null;
+          const legacyDraft = (payload && typeof payload === "object" && payload.form && payload.shell)
+            ? payload
+            : null;
+          const draftToApply = newToolState || legacyDraft;
 
-          if (!looksLikeDraft) {
+          if (!draftToApply) {
             try { if (shell && shell.toast) shell.toast("This work doesn’t have saved content yet."); } catch (_) {}
             return;
           }
 
-          applyDraft(payload);
+          applyDraft(draftToApply);
         } catch (_) {
           if (seq !== __activeWorkLoadSeq) return;
           try { if (shell && shell.toast) shell.toast("Couldn’t load this work right now."); } catch (_) {}
