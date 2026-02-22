@@ -1073,7 +1073,8 @@ const shell = window.PAWToolShell.init({
           }
 
           const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
-          const res = await fetch(url, {
+
+          let res = await fetch(url, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -1081,8 +1082,29 @@ const shell = window.PAWToolShell.init({
             }
           });
 
-          const data = await res.json().catch(() => ({}));
+          let data = await res.json().catch(() => ({}));
           if (seq !== __activeWorkLoadSeq) return;
+
+          if ((res.status === 401 || res.status === 403)) {
+            try {
+              if (window.PAWAuth && window.PAWAuth.whenReady) {
+                await window.PAWAuth.whenReady().catch(() => {});
+              }
+              token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+            } catch (_) {}
+
+            if (token) {
+              res = await fetch(url, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + token
+                }
+              });
+              data = await res.json().catch(() => ({}));
+              if (seq !== __activeWorkLoadSeq) return;
+            }
+          }
 
           if (!res.ok) {
             try {
