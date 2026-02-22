@@ -1167,6 +1167,53 @@ const shell = window.PAWToolShell.init({
         __worksSaving = true;
         try {
           const draft = buildDraft();
+          const form = (draft && draft.form && typeof draft.form === "object") ? draft.form : {};
+          const title = String((aw && aw.label) ? aw.label : "");
+          let finalOutput = "";
+          try {
+            const bubbles = document.querySelectorAll("#messages .msg.ai .bubble");
+            if (bubbles && bubbles.length) {
+              finalOutput = String((bubbles[bubbles.length - 1] && bubbles[bubbles.length - 1].textContent) || "").trim();
+            }
+          } catch (_) {}
+
+          const tone = String(form.tone || "").trim();
+          const len = String(form.len || "").trim();
+          const city = String(form.city || "").trim();
+          const state = String(form.state || "").trim();
+          const location = city && state
+            ? (city + ", " + state)
+            : (city || state || "the selected location");
+          const toneLabel = tone || "default";
+          const lenLabel = len || "default";
+
+          const portable = {
+            title,
+            facts: {
+              type: String(form.type || ""),
+              tone: String(form.tone || ""),
+              len: String(form.len || ""),
+              city: String(form.city || ""),
+              state: String(form.state || ""),
+              beds: String(form.beds || ""),
+              baths: String(form.baths || ""),
+              sqft: String(form.sqft || ""),
+              price: String(form.price || ""),
+              pool: String(form.pool || ""),
+              porch: String(form.porch || ""),
+              compelling: String(form.compelling || "")
+            },
+            final_output: finalOutput,
+            intent_text: "Create a listing description (Tone: " + toneLabel + ", Length: " + lenLabel + ") for a property in " + location + "."
+          };
+
+          const payloadToSave = {
+            v: 1,
+            origin_tool: "listing",
+            content_kind: "listing_description",
+            tool_state: draft,
+            portable
+          };
           const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
 
           let res = await fetch(url, {
@@ -1175,7 +1222,7 @@ const shell = window.PAWToolShell.init({
               "Content-Type": "application/json",
               "Authorization": "Bearer " + token
             },
-            body: JSON.stringify({ payload: draft })
+            body: JSON.stringify({ payload: payloadToSave })
           });
 
           let data = await res.json().catch(() => ({}));
@@ -1195,7 +1242,7 @@ const shell = window.PAWToolShell.init({
                   "Content-Type": "application/json",
                   "Authorization": "Bearer " + token
                 },
-                body: JSON.stringify({ payload: draft })
+                body: JSON.stringify({ payload: payloadToSave })
               });
               data = await res.json().catch(() => ({}));
             }
