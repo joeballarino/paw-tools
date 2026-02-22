@@ -1289,6 +1289,11 @@
       async function apiDeleteBrand(){
         return await apiFetch("/mystuff/brand", { method:"DELETE" });
       }
+      async function apiDeleteMyWork(workId){
+        const id = String(workId || "").trim();
+        if (!id) throw new Error("Couldn’t delete right now.");
+        return await apiFetch('/myworks/' + encodeURIComponent(id), { method: 'DELETE' });
+      }
 
       const WORK_BUCKETS = {
         assets: "brand_assets",
@@ -1776,10 +1781,19 @@ function showComing(msg){
       if ($workDeleteModal) $workDeleteModal.addEventListener('click', (e) => { if (e.target === $workDeleteModal) closeWorkDeleteModal(); });
       if ($workDeleteConfirm) {
         $workDeleteConfirm.addEventListener('click', async () => {
-          closeWorkDeleteModal();
           if (!pendingDeleteWork || !pendingDeleteWork.workId || !pendingDeleteWork.panelId) return;
-          // TODO: enable API delete call when Worker endpoint DELETE /myworks/{id} is supported.
-          toast("Delete isn’t available yet.");
+          const workId = pendingDeleteWork.workId;
+          const panelId = pendingDeleteWork.panelId;
+          try{
+            await apiDeleteMyWork(workId);
+            toast("Deleted.");
+            await loadWorksForPanel(panelId);
+            closeWorkDeleteModal();
+            pendingDeleteWork = null;
+          }catch(e){
+            const msg = (e && e.message) ? String(e.message) : "Couldn’t delete right now.";
+            toast(msg || "Couldn’t delete right now.");
+          }
         });
       }
 
