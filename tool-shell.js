@@ -2192,7 +2192,7 @@ function ensureWorksRoot(){
     try{
       if (window.PAWAuth && typeof window.PAWAuth.whenReady === "function"){
         window.PAWAuth.whenReady().then(function(){
-          if (!__worksModeOn) return;
+          if (!document.body.classList.contains("paw-works-mode")) return;
           try{
             if (__worksListLoading && !__worksListHasLoaded) __worksListLoading = false;
             reloadWorksList({ append:false });
