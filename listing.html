@@ -1185,8 +1185,10 @@ const shell = window.PAWToolShell.init({
 
           const tone = String(form.tone || "").trim();
           const len = String(form.len || "").trim();
-          const city = String(form.city || "").trim();
-          const state = String(form.state || "").trim();
+          const poi = (draft && draft.poi && typeof draft.poi === "object") ? draft.poi : {};
+          const poiCtx = (poi && poi.poiCtx && typeof poi.poiCtx === "object") ? poi.poiCtx : {};
+          const city = String(form.city || poiCtx.city || "").trim();
+          const state = String(form.state || poiCtx.state || "").trim();
           const location = city && state
             ? (city + ", " + state)
             : (city || state || "the selected location");
@@ -1199,8 +1201,8 @@ const shell = window.PAWToolShell.init({
               type: String(form.type || ""),
               tone: String(form.tone || ""),
               len: String(form.len || ""),
-              city: String(form.city || ""),
-              state: String(form.state || ""),
+              city: city,
+              state: state,
               beds: String(form.beds || ""),
               baths: String(form.baths || ""),
               sqft: String(form.sqft || ""),
