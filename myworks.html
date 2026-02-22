@@ -513,6 +513,23 @@
       line-height: 1.35;
       max-width: 980px;
     }
+    body.paw-mystuff .works-list{ margin-top:14px; display:grid; gap:10px; }
+    body.paw-mystuff .work-row{
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:12px;
+      background:#fff;
+      padding:10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    body.paw-mystuff .work-main{ min-width:220px; }
+    body.paw-mystuff .work-label{ font-size:14px; font-weight:800; color:var(--text-strong); }
+    body.paw-mystuff .work-meta{ margin-top:2px; font-size:12px; color:rgba(15,23,42,.62); }
+    body.paw-mystuff .work-actions{ display:flex; gap:8px; }
+    body.paw-mystuff .work-actions .btn{ min-width:78px; }
 
     @media (max-width: 560px){
   body.paw-mystuff .tool-head{ width:100%; }
@@ -841,9 +858,7 @@
               </div>
             </div>
 
-            <div class="list-placeholder">
-              <b>Coming next:</b> Saved brand assets will show up here as a simple list you can open, rename, or delete.
-            </div>
+            <div class="list-placeholder" id="works-assets" data-bucket="brand_assets"></div>
           </section>
 
 
@@ -873,9 +888,7 @@
               </div>
             </div>
 
-            <div class="list-placeholder">
-              <b>Coming next:</b> Saved listings will show up as a simple list you can open, rename, or delete.
-            </div>
+            <div class="list-placeholder" id="works-listings" data-bucket="listings"></div>
           </section>
 
           <section id="panel-transactions" class="tab-panel" role="tabpanel" aria-labelledby="tab-transactions">
@@ -889,9 +902,7 @@
               </div>
             </div>
 
-            <div class="list-placeholder">
-              <b>Coming next:</b> Transactions can exist with or without documents. You’ll name a transaction when you decide to save it.
-            </div>
+            <div class="list-placeholder" id="works-transactions" data-bucket="transactions"></div>
           </section>
 
         </div>
@@ -963,6 +974,23 @@
     </div>
   </div>
 
+  <!-- My Works delete confirmation (PAW-owned modal; avoid browser-native confirm) -->
+  <div id="workDeleteModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="workDeleteTitle">
+      <div class="modal-head">
+        <div id="workDeleteTitle" class="modal-title">Delete this work?</div>
+        <button class="modal-close" id="workDeleteClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="workDeleteBody" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45;">—</div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px; flex-wrap:wrap;">
+          <button class="btn" id="workDeleteCancel" type="button">Cancel</button>
+          <button class="btn primary" id="workDeleteConfirm" type="button">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Notice modal (fallback for messages when toast shell isn't available; avoid browser-native alert) -->
   <div id="noticeModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="noticeTitle">
@@ -1021,12 +1049,15 @@
         { btn: document.getElementById('tab-settings'), panel: document.getElementById('panel-settings') },
       ];
 
+      let activeTabId = 'tab-assets';
       function activateTab(btnId){
+        activeTabId = btnId;
         tabs.forEach(t => {
           const on = t.btn && t.btn.id === btnId;
           if (t.btn) t.btn.setAttribute('aria-selected', on ? 'true' : 'false');
           if (t.panel) t.panel.classList.toggle('active', !!on);
         });
+        try{ updateLimitsForActiveTab(); }catch(_){ }
       }
 
       tabs.forEach(t => {
@@ -1076,6 +1107,12 @@
       const $brandDeleteClose = document.getElementById('brandDeleteClose');
       const $brandDeleteCancel = document.getElementById('brandDeleteCancel');
       const $brandDeleteConfirm = document.getElementById('brandDeleteConfirm');
+
+      const $workDeleteModal = document.getElementById('workDeleteModal');
+      const $workDeleteBody = document.getElementById('workDeleteBody');
+      const $workDeleteClose = document.getElementById('workDeleteClose');
+      const $workDeleteCancel = document.getElementById('workDeleteCancel');
+      const $workDeleteConfirm = document.getElementById('workDeleteConfirm');
 
       const $notice = document.getElementById('noticeModal');
       const $noticeTitle = document.getElementById('noticeTitle');
@@ -1251,6 +1288,125 @@
       }
       async function apiDeleteBrand(){
         return await apiFetch("/mystuff/brand", { method:"DELETE" });
+      }
+      async function apiDeleteMyWork(workId){
+        const id = String(workId || "").trim();
+        if (!id) throw new Error("Couldn’t delete right now.");
+        return await apiFetch('/myworks/' + encodeURIComponent(id), { method: 'DELETE' });
+      }
+
+      const WORK_BUCKETS = {
+        assets: "brand_assets",
+        listings: "listings",
+        transactions: "transactions"
+      };
+      const TAB_TO_BUCKET_KEY = {
+        'tab-assets': 'assets',
+        'tab-listings': 'listings',
+        'tab-transactions': 'transactions'
+      };
+      const TAB_TO_DEST = {
+        'tab-assets': 'PRESENCE',
+        'tab-listings': 'LISTINGS',
+        'tab-transactions': 'TRANSACTIONS'
+      };
+      const worksState = {
+        assets: { items: [], loaded: false },
+        listings: { items: [], loaded: false },
+        transactions: { items: [], loaded: false }
+      };
+      let brandSettingsCount = 0;
+      let pendingDeleteWork = null;
+
+      function formatDateLike(s){
+        const d = s ? new Date(s) : null;
+        if (!d || Number.isNaN(d.getTime())) return "—";
+        return d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric' });
+      }
+
+      async function apiGetMyWorks(bucket){
+        const params = new URLSearchParams({ limit: '25', bucket: String(bucket || '') });
+        return await apiFetch('/myworks?' + params.toString(), { method: 'GET' });
+      }
+
+      function getBucketKeyFromTab(tabId){
+        return TAB_TO_BUCKET_KEY[String(tabId || '').trim()] || '';
+      }
+
+      function getBucketKeyFromPanel(panelId){
+        if (panelId === 'panel-assets') return 'assets';
+        if (panelId === 'panel-listings') return 'listings';
+        if (panelId === 'panel-transactions') return 'transactions';
+        return '';
+      }
+
+      function updateLimitsForActiveTab(){
+        const k = getBucketKeyFromTab(activeTabId);
+        if (k && worksState[k]) return setLimitsText((worksState[k].items || []).length);
+        if (activeTabId === 'tab-settings') return setLimitsText(brandSettingsCount);
+      }
+
+      function renderWorksPanel(panelId, mode, payload){
+        const panel = document.getElementById(panelId);
+        if (!panel) return;
+        const key = getBucketKeyFromPanel(panelId);
+        if (!key) return;
+        const stateHost = panel.querySelector('.list-placeholder');
+        const empty = panel.querySelector('.empty');
+        if (!stateHost || !empty) return;
+
+        if (mode === 'loading'){
+          empty.style.display = 'none';
+          stateHost.innerHTML = 'Loading…';
+          return;
+        }
+        if (mode === 'error'){
+          empty.style.display = '';
+          stateHost.innerHTML = 'We can’t load your saved works right now. Please try again. <button class="btn" type="button" data-action="retry-load" data-panel="'+escapeHtml(panelId)+'">Try again</button>';
+          return;
+        }
+
+        const list = Array.isArray(payload) ? payload : [];
+        worksState[key].items = list;
+        worksState[key].loaded = true;
+
+        if (!list.length){
+          empty.style.display = '';
+          stateHost.innerHTML = '';
+          updateLimitsForActiveTab();
+          return;
+        }
+
+        empty.style.display = 'none';
+        stateHost.innerHTML = '<div class="works-list">' + list.map((item) => {
+          const id = String(item.work_id || item.id || '');
+          const label = String(item.label || 'Untitled');
+          const usedAt = item.updated_at || item.created_at || '';
+          return '<div class="work-row">'
+            + '<div class="work-main">'
+            + '<div class="work-label">' + escapeHtml(label) + '</div>'
+            + '<div class="work-meta">Last used: ' + escapeHtml(formatDateLike(usedAt)) + '</div>'
+            + '</div>'
+            + '<div class="work-actions">'
+            + '<button class="btn" type="button" data-action="open-work" data-tab="'+escapeHtml('tab-' + key)+'" data-work-id="'+escapeHtml(id)+'" data-bucket="'+escapeHtml(WORK_BUCKETS[key])+'">Open</button>'
+            + '<button class="btn" type="button" data-action="delete-work" data-panel="'+escapeHtml(panelId)+'" data-work-id="'+escapeHtml(id)+'" data-label="'+escapeHtml(label)+'">Delete</button>'
+            + '</div>'
+            + '</div>';
+        }).join('') + '</div>';
+        updateLimitsForActiveTab();
+      }
+
+      async function loadWorksForPanel(panelId){
+        const key = getBucketKeyFromPanel(panelId);
+        if (!key) return;
+        renderWorksPanel(panelId, 'loading');
+        try{
+          const data = await apiGetMyWorks(WORK_BUCKETS[key]);
+          const list = (data && data.data && Array.isArray(data.data.list)) ? data.data.list : [];
+          renderWorksPanel(panelId, 'loaded', list);
+        }catch(_){
+          renderWorksPanel(panelId, 'error');
+        }
       }
 
       function readBrandForm(){
@@ -1568,11 +1724,13 @@ function renderBrandSaved(brand, meta){
           // - If Brand Settings exist, land on Brand Assets (saved-content first).
           if (data && data.exists) {
             renderBrandSaved(data.brand || {}, data.meta || {});
-            setLimitsText(1);
+            brandSettingsCount = 1;
+            setLimitsText(brandSettingsCount);
             activateTab('tab-assets');
           } else {
             renderBrandEmpty();
-            setLimitsText(0);
+            brandSettingsCount = 0;
+            setLimitsText(brandSettingsCount);
             activateTab('tab-settings');
           }
         }catch(_){
@@ -1617,6 +1775,28 @@ function showComing(msg){
       if ($brandDeleteCancel) $brandDeleteCancel.addEventListener('click', closeBrandDeleteModal);
       if ($brandDeleteModal) $brandDeleteModal.addEventListener('click', (e) => { if (e.target === $brandDeleteModal) closeBrandDeleteModal(); });
 
+      function closeWorkDeleteModal(){ closeModal($workDeleteModal); }
+      if ($workDeleteClose) $workDeleteClose.addEventListener('click', closeWorkDeleteModal);
+      if ($workDeleteCancel) $workDeleteCancel.addEventListener('click', closeWorkDeleteModal);
+      if ($workDeleteModal) $workDeleteModal.addEventListener('click', (e) => { if (e.target === $workDeleteModal) closeWorkDeleteModal(); });
+      if ($workDeleteConfirm) {
+        $workDeleteConfirm.addEventListener('click', async () => {
+          if (!pendingDeleteWork || !pendingDeleteWork.workId || !pendingDeleteWork.panelId) return;
+          const workId = pendingDeleteWork.workId;
+          const panelId = pendingDeleteWork.panelId;
+          try{
+            await apiDeleteMyWork(workId);
+            toast("Deleted.");
+            await loadWorksForPanel(panelId);
+            closeWorkDeleteModal();
+            pendingDeleteWork = null;
+          }catch(e){
+            const msg = (e && e.message) ? String(e.message) : "Couldn’t delete right now.";
+            toast(msg || "Couldn’t delete right now.");
+          }
+        });
+      }
+
 
       if ($comingClose) $comingClose.addEventListener('click', () => closeModal($coming));
       if ($comingOk) $comingOk.addEventListener('click', () => closeModal($coming));
@@ -1640,7 +1820,7 @@ function showComing(msg){
        * If the parent listener is missing or blocked, we open the destination in a new tab.
        * This ensures the buttons never appear "dead".
        */
-      function pawNavigate(destinationKey){
+      function pawNavigate(destinationKey, query){
         const DEST = String(destinationKey || '').toUpperCase();
         const ACK = 'paw_navigate_ack_v1';
         const REQ = 'paw_navigate_request_v1';
@@ -1666,7 +1846,7 @@ function showComing(msg){
         try{
           // Use "*" because the parent bridge validates origin; we may be embedded under
           // proagentworks.com even though the HTML is hosted on paw-tools.pages.dev.
-          window.parent.postMessage({ type: REQ, destination: DEST }, '*');
+          window.parent.postMessage({ type: REQ, destination: DEST, query: query || null }, '*');
         }catch(_){
           // If postMessage fails entirely, do nothing. (Parent bridge should exist in Circle.)
         }
@@ -1685,12 +1865,37 @@ document.addEventListener('click', (e) => {
         if (a === 'learn-brand') showComing('Next: examples + a guided setup that makes it easy to capture your voice and bio details.');
         if (a === 'create-listing') { pawNavigate('LISTINGS'); return; }
         if (a === 'create-transaction') { pawNavigate('TRANSACTIONS'); return; }
+        if (a === 'retry-load') {
+          const panelId = String(el.getAttribute('data-panel') || '');
+          if (panelId) loadWorksForPanel(panelId);
+          return;
+        }
+        if (a === 'open-work') {
+          const workId = String(el.getAttribute('data-work-id') || '').trim();
+          const bucket = String(el.getAttribute('data-bucket') || '').trim();
+          const tabId = String(el.getAttribute('data-tab') || '').trim();
+          if (!workId || !bucket || !tabId) return;
+          const dest = TAB_TO_DEST[tabId];
+          if (!dest) return;
+          pawNavigate(dest, { work_id: workId, bucket: bucket });
+          return;
+        }
+        if (a === 'delete-work') {
+          const workId = String(el.getAttribute('data-work-id') || '').trim();
+          const panelId = String(el.getAttribute('data-panel') || '').trim();
+          const label = String(el.getAttribute('data-label') || 'Untitled');
+          if (!workId || !panelId) return;
+          pendingDeleteWork = { workId, panelId, label };
+          if ($workDeleteBody) $workDeleteBody.innerHTML = 'This permanently deletes “' + escapeHtml(label) + '”. This cannot be undone.';
+          openModal($workDeleteModal);
+          return;
+        }
       });
 
       // Escape key closes whichever modal is open
       document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
-        [$tips,$coming,$brandDeleteModal,$notice].forEach(m => closeModal(m));
+        [$tips,$coming,$brandDeleteModal,$workDeleteModal,$notice].forEach(m => closeModal(m));
         /* no drawer in My Works (inline editor) */
       });
 
@@ -1703,11 +1908,20 @@ document.addEventListener('click', (e) => {
         if (window.PAWToolShell && window.PAWToolShell.authInit) {
           window.PAWToolShell.authInit(API_ENDPOINT);
         }
+        const loadAllWorks = () => {
+          loadWorksForPanel('panel-assets');
+          loadWorksForPanel('panel-listings');
+          loadWorksForPanel('panel-transactions');
+        };
         // Refresh once token is available (or immediately if already ready).
         if (window.PAWAuth && window.PAWAuth.whenReady) {
-          window.PAWAuth.whenReady().then(() => refreshBrandUI()).catch(() => {});
+          window.PAWAuth.whenReady().then(() => {
+            refreshBrandUI();
+            loadAllWorks();
+          }).catch(() => {});
         } else {
           refreshBrandUI();
+          loadAllWorks();
         }
       }catch(_){}
 
