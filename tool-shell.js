@@ -1967,6 +1967,7 @@ function ensureWorksRoot(){
             updated_at: work.updated_at
           };
           attachWork(nw);
+          setTimeout(function(){ emitWorksSave("save_updates"); }, 0);
           _touchRecent(nw);
           await reloadWorksList({ append:false });
           emitWorksSave("create");
@@ -2003,6 +2004,7 @@ function ensureWorksRoot(){
             updated_at: work.updated_at
           };
           attachWork(nw);
+          setTimeout(function(){ emitWorksSave("save_updates"); }, 0);
           _touchRecent(nw);
           await reloadWorksList({ append:false });
           emitWorksSave("save_as_new");
