@@ -2184,6 +2184,24 @@ function ensureWorksRoot(){
     return { list: list.map(_normalizeWorkRow), nextCursor: next };
   }
 
+  function _ensureWorksListLoaded(){
+    try{
+      if (__worksListLoading && !__worksListHasLoaded) __worksListLoading = false;
+      reloadWorksList({ append:false });
+    }catch(_){ }
+    try{
+      if (window.PAWAuth && typeof window.PAWAuth.whenReady === "function"){
+        window.PAWAuth.whenReady().then(function(){
+          if (!__worksModeOn) return;
+          try{
+            if (__worksListLoading && !__worksListHasLoaded) __worksListLoading = false;
+            reloadWorksList({ append:false });
+          }catch(_){ }
+        }).catch(function(){});
+      }
+    }catch(_){ }
+  }
+
   async function reloadWorksList(opts){
     opts = opts || {};
     var append = !!opts.append;
@@ -2195,6 +2213,12 @@ function ensureWorksRoot(){
       __worksListItems = [];
     } else {
       __worksListError = "";
+    }
+    var tok = "";
+    try{ tok = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : ""; }catch(_){ tok = ""; }
+    if (!tok){
+      try{ renderWorksBody(); }catch(_){ }
+      return;
     }
     __worksListLoading = true;
     try{ renderWorksBody(); }catch(_){ }
@@ -2468,7 +2492,7 @@ function ensureWorksRoot(){
               <div class="paw-works-empty__body"><button class="btn" type="button" data-paw-works-retry="1">Try again</button></div>
             </div>
         `;
-      } else if (__worksListLoading && !__worksListHasLoaded){
+      } else if ((__worksListLoading && !__worksListHasLoaded) || (!__worksListHasLoaded && !__worksListError)){
         html += `
             <div class="paw-works-empty">
               <div class="paw-works-empty__title">Loading saved works…</div>
@@ -2713,15 +2737,7 @@ function enterWorksMode(){
   // Ensure Works surface exists + show it.
   ensureWorksRoot();
   try{ renderWorksBody(); }catch(_){ }
-  try{ reloadWorksList({ append:false }); }catch(_){ }
-  try{
-    if (window.PAWAuth && typeof window.PAWAuth.whenReady === "function"){
-      window.PAWAuth.whenReady().then(function(){
-        if (!__worksModeOn) return;
-        reloadWorksList({ append:false });
-      }).catch(function(){});
-    }
-  }catch(_){ }
+  try{ _ensureWorksListLoaded(); }catch(_){ }
 
   // Mount the Work button into the Works header (same position, no duplicate controls).
   try{
