@@ -1060,6 +1060,14 @@ const shell = window.PAWToolShell.init({
           let token = "";
           try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
           if (!token) {
+            try {
+              if (window.PAWAuth && window.PAWAuth.whenReady) {
+                await window.PAWAuth.whenReady().catch(() => {});
+                token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+              }
+            } catch (_) {}
+          }
+          if (!token) {
             try { if (shell && shell.toast) shell.toast("Not signed in yet. Please try again."); } catch (_) {}
             return;
           }
@@ -1078,8 +1086,12 @@ const shell = window.PAWToolShell.init({
 
           if (!res.ok) {
             try {
-              const msg = (data && (data.error || data.message)) ? String(data.error || data.message) : "Couldn’t load this work right now.";
-              if (shell && shell.toast) shell.toast(msg);
+              if (res.status === 401 || res.status === 403) {
+                if (shell && shell.toast) shell.toast("Session expired. Please try again.");
+              } else {
+                const msg = (data && (data.error || data.message)) ? String(data.error || data.message) : "Couldn’t load this work right now.";
+                if (shell && shell.toast) shell.toast(msg);
+              }
             } catch (_) {}
             return;
           }
