@@ -1346,6 +1346,23 @@
         if (activeTabId === 'tab-settings') return setLimitsText(brandSettingsCount);
       }
 
+      function getWorkPreviewSummary(item){
+        const work = item && typeof item === 'object' ? item : {};
+        const payload = (work.payload && typeof work.payload === 'object') ? work.payload : {};
+        const pdsSummary = (((payload.pds || {}).narrative || {}).summary);
+        if (typeof pdsSummary === 'string' && pdsSummary.trim()) return pdsSummary.trim();
+
+        const portable = (payload.portable && typeof payload.portable === 'object') ? payload.portable : {};
+        const portableSummary = (typeof portable.summary === 'string' && portable.summary.trim())
+          ? portable.summary.trim()
+          : ((typeof portable.intent_text === 'string' && portable.intent_text.trim()) ? portable.intent_text.trim() : '');
+        if (portableSummary) return portableSummary;
+
+        if (typeof work.preview === 'string' && work.preview.trim()) return work.preview.trim();
+        if (typeof work.subtitle === 'string' && work.subtitle.trim()) return work.subtitle.trim();
+        return '';
+      }
+
       function renderWorksPanel(panelId, mode, payload){
         const panel = document.getElementById(panelId);
         if (!panel) return;
@@ -1382,9 +1399,11 @@
           const id = String(item.work_id || item.id || '');
           const label = String(item.label || 'Untitled');
           const usedAt = item.updated_at || item.created_at || '';
+          const previewSummary = getWorkPreviewSummary(item);
           return '<div class="work-row">'
             + '<div class="work-main">'
             + '<div class="work-label">' + escapeHtml(label) + '</div>'
+            + (previewSummary ? '<div class="work-meta">' + escapeHtml(previewSummary) + '</div>' : '')
             + '<div class="work-meta">Last used: ' + escapeHtml(formatDateLike(usedAt)) + '</div>'
             + '</div>'
             + '<div class="work-actions">'

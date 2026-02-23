@@ -2170,8 +2170,30 @@ function ensureWorksRoot(){
       label: String(w.label || "Untitled"),
       created_at: w.created_at || "",
       updated_at: w.updated_at || "",
-      subtitle: String(w.subtitle || "")
+      subtitle: String(w.subtitle || ""),
+      preview: String(w.preview || ""),
+      payload: (w.payload && typeof w.payload === "object") ? w.payload : null
     };
+  }
+
+  function _workPreviewSummary(work){
+    var w = work && typeof work === "object" ? work : {};
+    var payload = (w.payload && typeof w.payload === "object") ? w.payload : {};
+    var pdsSummary = "";
+    try{ pdsSummary = String((((payload.pds || {}).narrative || {}).summary) || "").trim(); }catch(_){ pdsSummary = ""; }
+    if (pdsSummary) return pdsSummary;
+
+    var portableSummary = "";
+    try{
+      var portable = (payload.portable && typeof payload.portable === "object") ? payload.portable : {};
+      portableSummary = String(portable.summary || portable.intent_text || "").trim();
+    }catch(_){ portableSummary = ""; }
+    if (portableSummary) return portableSummary;
+
+    if (typeof w.preview === "string" && w.preview.trim()) return w.preview.trim();
+    if (typeof w.subtitle === "string" && w.subtitle.trim()) return w.subtitle.trim();
+    if (typeof w.label === "string" && w.label.trim()) return w.label.trim();
+    return "Untitled";
   }
 
   async function fetchMyWorksList(opts){
@@ -2517,9 +2539,10 @@ function ensureWorksRoot(){
           var w = list[i];
           var type = _workTypeLabel(w.bucket);
           var when = _formatRelative(w.updated_at || w.created_at || w._last_used);
+          var preview = _workPreviewSummary(w);
           html += `
             <div class="paw-works-item paw-works-row">
-              <div class="paw-works-col paw-works-col--name">${escapeHtml(String(w.label||"Untitled"))}</div>
+              <div class="paw-works-col paw-works-col--name">${escapeHtml(String(w.label||"Untitled"))}<div class="paw-works-item__sub">${escapeHtml(preview)}</div></div>
               <div class="paw-works-col">${escapeHtml(type)}</div>
               <div class="paw-works-col">${escapeHtml(when || "—")}</div>
               <div class="paw-works-col paw-works-col--action">
