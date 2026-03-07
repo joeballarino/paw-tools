@@ -57,10 +57,6 @@
     min-width: 0;
     width: 100%;
   }
-  body.paw-ask .composer-main .messages {
-    max-height: 260px;
-    overflow-y: auto;
-  }
   .guide-mode-row .paw-seg__btn {
     height: 32px;
     padding: 0 10px;
@@ -131,6 +127,7 @@
 </div>
 </div>
 </div>
+<div class="messages" id="messages"></div>
 <div class="composer">
 <div class="composer-main">
 <div aria-label="Mode" class="guide-mode-row">
@@ -142,7 +139,6 @@
 </div>
 </div>
 <div aria-live="polite" class="guide-listing-context" id="guideListingContext"></div>
-<div class="messages" id="messages"></div>
 <textarea id="input" placeholder="e.g., Rewrite this to sound confident and friendly"></textarea>
 </div>
 <button aria-label="Send" class="send" id="send" type="button">
