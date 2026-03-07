@@ -357,7 +357,11 @@ Examples
         deliverableMode: false,
         getExtraPayload: () => {
           const ctx = (__activeListingContext && __activeListingContext.pds) ? __activeListingContext : null;
-          return ctx ? { active_listing: ctx } : {};
+          const payload = {
+            guide_mode: selectedMode
+          };
+          if (ctx) payload.active_listing = ctx;
+          return payload;
         }
       });
 
