@@ -1173,54 +1173,12 @@ const shell = window.PAWToolShell.init({
         __worksSaving = true;
         try {
           const draft = buildDraft();
-          const form = (draft && draft.form && typeof draft.form === "object") ? draft.form : {};
-          const title = String((aw && aw.label) ? aw.label : "Untitled");
-          let finalOutput = "";
-          try {
-            const bubbles = document.querySelectorAll("#messages .msg.ai .bubble");
-            if (bubbles && bubbles.length) {
-              finalOutput = String((bubbles[bubbles.length - 1] && bubbles[bubbles.length - 1].textContent) || "").trim();
-            }
-          } catch (_) {}
-
-          const tone = String(form.tone || "").trim();
-          const len = String(form.len || "").trim();
-          const poi = (draft && draft.poi && typeof draft.poi === "object") ? draft.poi : {};
-          const poiCtx = (poi && poi.poiCtx && typeof poi.poiCtx === "object") ? poi.poiCtx : {};
-          const city = String(form.city || poiCtx.city || "").trim();
-          const state = String(form.state || poiCtx.state || "").trim();
-          const location = city && state
-            ? (city + ", " + state)
-            : (city || state || "the selected location");
-          const toneLabel = tone || "default";
-          const lenLabel = len || "default";
-
-          const portable = {
-            title,
-            facts: {
-              type: String(form.type || ""),
-              tone: String(form.tone || ""),
-              len: String(form.len || ""),
-              city: city,
-              state: state,
-              beds: String(form.beds || ""),
-              baths: String(form.baths || ""),
-              sqft: String(form.sqft || ""),
-              price: String(form.price || ""),
-              pool: String(form.pool || ""),
-              porch: String(form.porch || ""),
-              compelling: String(form.compelling || "")
-            },
-            final_output: finalOutput,
-            intent_text: "Create a listing description (Tone: " + toneLabel + ", Length: " + lenLabel + ") for a property in " + location + "."
-          };
 
           const payloadToSave = {
             v: 1,
             origin_tool: "listing",
             content_kind: "listing_description",
-            tool_state: draft,
-            portable
+            tool_state: draft
           };
           const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
 
