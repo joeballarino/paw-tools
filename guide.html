@@ -71,6 +71,17 @@
     background: rgba(5,195,249,.18);
     color: rgba(15,23,42,.92);
   }
+  .guide-listing-context {
+    display: none;
+    margin: 10px 0 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(15,23,42,.72);
+    line-height: 1.35;
+  }
+  .guide-listing-context.is-visible {
+    display: block;
+  }
   @media (max-width: 560px) {
     .guide-mode-row {
       flex-direction: column;
@@ -130,6 +141,7 @@
 <button class="paw-seg__btn" data-mode="general" type="button">General</button>
 </div>
 </div>
+<div aria-live="polite" class="guide-listing-context" id="guideListingContext"></div>
 <div class="messages" id="messages"></div>
 <textarea id="input" placeholder="e.g., Rewrite this to sound confident and friendly"></textarea>
 </div>
@@ -192,6 +204,8 @@ Examples
       };
 
       let selectedMode = "guide";
+      let __activeListingContext = null;
+      let __activeListingLoadSeq = 0;
 
       function applyModeUI(){
         try {
@@ -220,6 +234,114 @@ Examples
         applyModePlaceholder();
       }
 
+      function clearActiveListingContext(){
+        __activeListingContext = null;
+        updateGuideListingIndicator();
+      }
+
+      function updateGuideListingIndicator(){
+        try {
+          const el = document.getElementById("guideListingContext");
+          if (!el) return;
+          const ctx = (__activeListingContext && __activeListingContext.pds) ? __activeListingContext : null;
+          if (!ctx) {
+            el.textContent = "";
+            el.classList.remove("is-visible");
+            return;
+          }
+          el.textContent = "Using saved listing: " + String(ctx.label || "Untitled");
+          el.classList.add("is-visible");
+        } catch (_) {}
+      }
+
+      async function loadGuideListingContext(activeWork){
+        const seq = ++__activeListingLoadSeq;
+        const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+        const bucket = aw ? String(aw.bucket || "").trim() : "";
+        if (bucket !== "listings") {
+          clearActiveListingContext();
+          return;
+        }
+
+        const workId = aw ? String(aw.id || aw.work_id || "").trim() : "";
+        if (!workId) {
+          clearActiveListingContext();
+          return;
+        }
+
+        let token = "";
+        try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
+        if (!token) {
+          try {
+            if (window.PAWAuth && window.PAWAuth.whenReady) {
+              await window.PAWAuth.whenReady().catch(() => {});
+              token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+            }
+          } catch (_) {}
+        }
+        if (!token) {
+          if (seq === __activeListingLoadSeq) clearActiveListingContext();
+          return;
+        }
+
+        const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
+
+        try {
+          let res = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + token
+            }
+          });
+
+          let data = await res.json().catch(() => ({}));
+          if ((res.status === 401 || res.status === 403)) {
+            try {
+              if (window.PAWAuth && window.PAWAuth.whenReady) {
+                await window.PAWAuth.whenReady().catch(() => {});
+              }
+              token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+            } catch (_) {}
+
+            if (token) {
+              res = await fetch(url, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + token
+                }
+              });
+              data = await res.json().catch(() => ({}));
+            }
+          }
+
+          if (seq !== __activeListingLoadSeq || !res.ok) {
+            if (seq === __activeListingLoadSeq) clearActiveListingContext();
+            return;
+          }
+
+          const work = data && data.data && data.data.work ? data.data.work : null;
+          const pds = (work && work.payload && typeof work.payload === "object" && work.payload.pds && typeof work.payload.pds === "object")
+            ? work.payload.pds
+            : null;
+
+          if (!pds) {
+            clearActiveListingContext();
+            return;
+          }
+
+          __activeListingContext = {
+            work_id: String((work && work.work_id) || aw.work_id || aw.id || ""),
+            label: String((work && work.label) || aw.label || "Untitled"),
+            pds: pds
+          };
+          updateGuideListingIndicator();
+        } catch (_) {
+          if (seq === __activeListingLoadSeq) clearActiveListingContext();
+        }
+      }
+
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "assistant",
@@ -232,7 +354,11 @@ Examples
 
         sendHistoryItems: 10,
         maxHistoryItems: 20,
-        deliverableMode: false
+        deliverableMode: false,
+        getExtraPayload: () => {
+          const ctx = (__activeListingContext && __activeListingContext.pds) ? __activeListingContext : null;
+          return ctx ? { active_listing: ctx } : {};
+        }
       });
 
       try {
@@ -410,6 +536,24 @@ Examples
       const existingDraft = storageGet(DRAFT_KEY);
       if (existingDraft) openResumeModal(existingDraft);
 
+      window.addEventListener("paw:works:active_changed", async (e) => {
+        const aw = e && e.detail ? e.detail.active_work : null;
+        await loadGuideListingContext(aw);
+      });
+
+      try {
+        const initialActiveWork = (window.__PAWWorks && window.__PAWWorks.getActiveWork)
+          ? window.__PAWWorks.getActiveWork()
+          : null;
+        if (initialActiveWork) {
+          loadGuideListingContext(initialActiveWork);
+        } else {
+          clearActiveListingContext();
+        }
+      } catch (_) {
+        clearActiveListingContext();
+      }
+
     })();
   </script>
 
@@ -510,3 +654,4 @@ Examples
 
 </body>
 </html>
+
