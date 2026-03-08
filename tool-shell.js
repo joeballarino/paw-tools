@@ -227,6 +227,21 @@
       .replaceAll("'", "&#39;");
   }
 
+  const PAW_USAGE_LIMIT_HUMAN_MESSAGE =
+    "You’ve reached your monthly usage limit for this plan. Upgrade your plan or wait until your next reset date to continue.";
+
+  function humanizeShellErrorMessage(message) {
+    const raw = safeText(message);
+    if (!raw) return "";
+    return raw.toLowerCase() === "usage_limit_reached" ? PAW_USAGE_LIMIT_HUMAN_MESSAGE : raw;
+  }
+
+  function formatAssistantErrorText(err) {
+    const msg = humanizeShellErrorMessage(err && err.message ? err.message : err);
+    if (!msg) return "Error";
+    return msg === PAW_USAGE_LIMIT_HUMAN_MESSAGE ? msg : ("Error: " + msg);
+  }
+
   // Shared auth gate for shell-managed requests.
   // Purpose:
   // - Normal AI tool POSTs should not leave the page until PAW auth has had a
@@ -388,6 +403,14 @@
       return banner;
     }
 
+    function getWarningClass(summary) {
+      if (!summary) return "";
+      if (summary.overLimit || summary.warningLevel === "over") return " is-over-limit";
+      if (summary.percentUsed >= 90 || summary.warningLevel === "90") return " is-high";
+      if (summary.percentUsed >= 75 || summary.warningLevel === "75") return " is-warning";
+      return "";
+    }
+
     function getBannerCopy(summary) {
       if (!summary) return "";
       if (summary.overLimit || summary.warningLevel === "over") {
@@ -404,12 +427,17 @@
 
     function render() {
       const pill = ensureHeaderPillMount();
+      const slot = pill && pill.parentNode ? pill.parentNode : null;
       if (pill) {
         if (_summary) {
+          if (slot) slot.hidden = false;
           pill.textContent = _summary.planName + " " + _summary.percentUsed + "% used";
           pill.hidden = false;
+          pill.className = "paw-plan-usage-pill" + getWarningClass(_summary);
         } else {
+          if (slot) slot.hidden = true;
           pill.hidden = true;
+          pill.className = "paw-plan-usage-pill";
         }
       }
 
@@ -423,11 +451,7 @@
         } else {
           banner.textContent = copy;
           banner.hidden = false;
-          banner.className =
-            "paw-plan-usage-banner" +
-            ((_summary && (_summary.overLimit || _summary.warningLevel === "over")) ? " is-over-limit" :
-             (_summary && (_summary.percentUsed >= 90 || _summary.warningLevel === "90")) ? " is-high" :
-             " is-warning");
+          banner.className = "paw-plan-usage-banner" + getWarningClass(_summary);
         }
       }
     }
@@ -1625,7 +1649,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           return data;
         } catch (err) {
           removeNode(thinkingNode);
-          appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
+          appendMessage($messages, "ai", formatAssistantErrorText(err));
         } finally {
           isSending = false;
           pawSetBusy(false);
@@ -1712,7 +1736,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           }
         } catch (err) {
           removeNode(thinkingNode);
-          appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
+          appendMessage($messages, "ai", formatAssistantErrorText(err));
         } finally {
           isSending = false;
           pawSetBusy(false);
