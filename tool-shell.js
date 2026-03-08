@@ -227,6 +227,242 @@
       .replaceAll("'", "&#39;");
   }
 
+  // Shared auth gate for shell-managed requests.
+  // Purpose:
+  // - Normal AI tool POSTs should not leave the page until PAW auth has had a
+  //   chance to finish minting the bearer token.
+  // - If auth resolves without a token (for example, outside Circle), preserve
+  //   the existing unauthenticated behavior rather than redesigning the flow.
+  async function waitForPAWAuthReady() {
+    try {
+      if (window.PAWAuth && typeof window.PAWAuth.whenReady === "function") {
+        await window.PAWAuth.whenReady();
+      }
+    } catch (_) {}
+  }
+
+  const PAWUsage = (function () {
+    let _apiEndpoint = "";
+    let _summary = null;
+    let _loadPromise = null;
+
+    function formatPlanKey(planKey) {
+      const raw = String(planKey || "").trim();
+      if (!raw) return "";
+      return raw
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\b\w/g, function (m) { return m.toUpperCase(); });
+    }
+
+    function normalizeSummary(source) {
+      const raw = source && typeof source === "object" ? source : {};
+      const planKey = String(raw.plan_key || raw.planKey || "").trim();
+      const planStatus = String(raw.plan_status || raw.planStatus || "none").trim().toLowerCase();
+      const planName = formatPlanKey(planKey);
+
+      let percentUsed = Number(
+        raw.percent_used != null ? raw.percent_used :
+        raw.percentUsed != null ? raw.percentUsed :
+        NaN
+      );
+
+      if (!Number.isFinite(percentUsed)) {
+        const used = Number(
+          raw.usage_consumed_microunits != null ? raw.usage_consumed_microunits :
+          raw.usageConsumedMicrounits != null ? raw.usageConsumedMicrounits :
+          raw.used
+        );
+        const limit = Number(
+          raw.usage_limit_microunits != null ? raw.usage_limit_microunits :
+          raw.usageLimitMicrounits != null ? raw.usageLimitMicrounits :
+          raw.limit
+        );
+        if (Number.isFinite(used) && Number.isFinite(limit) && limit > 0) {
+          percentUsed = (used / limit) * 100;
+        }
+      }
+
+      if (!Number.isFinite(percentUsed)) percentUsed = 0;
+      percentUsed = Math.max(0, Math.min(100, Math.round(percentUsed)));
+
+      const overLimit = !!(
+        raw.is_over_limit ||
+        raw.isOverLimit ||
+        raw.over_limit ||
+        raw.overLimit
+      );
+
+      let warningLevel = String(raw.warning_level || raw.warningLevel || "").trim().toLowerCase();
+      if (!warningLevel) {
+        if (overLimit) warningLevel = "over";
+        else if (percentUsed >= 90) warningLevel = "90";
+        else if (percentUsed >= 75) warningLevel = "75";
+        else warningLevel = "none";
+      }
+
+      if (!planName && planStatus === "none") return null;
+
+      return {
+        planName,
+        planStatus,
+        percentUsed,
+        overLimit,
+        warningLevel,
+        cycleEndAt: raw.cycle_end_at || raw.cycleEndAt || null
+      };
+    }
+
+    async function fetchSummary() {
+      if (!_apiEndpoint) return null;
+
+      const token = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (!token) return null;
+
+      // Assumption: backend exposes a lightweight authenticated summary endpoint
+      // at /usage-summary for the currently authenticated PAW user.
+      const url = String(_apiEndpoint || "").replace(/\/+$/, "") + "/usage-summary";
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        }
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return null;
+      if (data && data.summary) return normalizeSummary(data.summary);
+      if (data && data.ok === false && data.error === "entitlement_not_found") {
+        return normalizeSummary(data.summary || null);
+      }
+      return normalizeSummary((data && data.data) || data);
+    }
+
+    function ensureHeaderPillMount() {
+      const row = document.querySelector(".topbar-row0");
+      if (!row) return null;
+
+      let right = row.querySelector(".topbar-right");
+      if (!right) right = row;
+
+      let slot = right.querySelector(".paw-plan-usage-slot");
+      if (!slot) {
+        slot = document.createElement("div");
+        slot.className = "paw-plan-usage-slot";
+        if (right === row) slot.classList.add("is-row-fallback");
+        right.insertBefore(slot, right.firstChild || null);
+      }
+
+      let pill = slot.querySelector(".paw-plan-usage-pill");
+      if (!pill) {
+        pill = document.createElement("div");
+        pill.className = "paw-plan-usage-pill";
+        pill.setAttribute("aria-live", "polite");
+        pill.hidden = true;
+        slot.appendChild(pill);
+      }
+
+      return pill;
+    }
+
+    function ensureWarningMount() {
+      const topbar = document.querySelector(".panel-topbar");
+      if (!topbar) return null;
+
+      let banner = topbar.querySelector(".paw-plan-usage-banner");
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.className = "paw-plan-usage-banner";
+        banner.hidden = true;
+
+        const row = topbar.querySelector(".topbar-row0");
+        if (row && row.parentNode === topbar) {
+          topbar.insertBefore(banner, row.nextSibling);
+        } else {
+          topbar.appendChild(banner);
+        }
+      }
+
+      return banner;
+    }
+
+    function getBannerCopy(summary) {
+      if (!summary) return "";
+      if (summary.overLimit || summary.warningLevel === "over") {
+        return "This plan is currently over its tool usage limit.";
+      }
+      if (summary.percentUsed >= 90 || summary.warningLevel === "90") {
+        return "This plan is close to its tool usage limit.";
+      }
+      if (summary.percentUsed >= 75 || summary.warningLevel === "75") {
+        return "This plan has passed 75% of its tool usage limit.";
+      }
+      return "";
+    }
+
+    function render() {
+      const pill = ensureHeaderPillMount();
+      if (pill) {
+        if (_summary) {
+          pill.textContent = _summary.planName + " " + _summary.percentUsed + "% used";
+          pill.hidden = false;
+        } else {
+          pill.hidden = true;
+        }
+      }
+
+      const banner = ensureWarningMount();
+      if (banner) {
+        const copy = getBannerCopy(_summary);
+        if (!copy) {
+          banner.hidden = true;
+          banner.textContent = "";
+          banner.className = "paw-plan-usage-banner";
+        } else {
+          banner.textContent = copy;
+          banner.hidden = false;
+          banner.className =
+            "paw-plan-usage-banner" +
+            ((_summary && (_summary.overLimit || _summary.warningLevel === "over")) ? " is-over-limit" :
+             (_summary && (_summary.percentUsed >= 90 || _summary.warningLevel === "90")) ? " is-high" :
+             " is-warning");
+        }
+      }
+    }
+
+    async function load(apiEndpoint) {
+      if (apiEndpoint) _apiEndpoint = String(apiEndpoint || "");
+      if (_loadPromise) return _loadPromise;
+
+      _loadPromise = (async function () {
+        await waitForPAWAuthReady();
+        try {
+          _summary = await fetchSummary();
+        } catch (_) {
+          _summary = null;
+        }
+        render();
+        return _summary;
+      })();
+
+      return _loadPromise;
+    }
+
+    function scheduleRender() {
+      try {
+        requestAnimationFrame(render);
+      } catch (_) {
+        setTimeout(render, 0);
+      }
+    }
+
+    return { load, scheduleRender, getSummary: function () {
+      return _summary ? Object.assign({}, _summary) : null;
+    } };
+  })();
+
   function appendMessage($messages, role, text, meta) {
     const wrap = document.createElement("div");
     wrap.className = "msg " + (role === "user" ? "user" : "ai");
@@ -480,6 +716,10 @@ function removeNode(node) {
 
 
   async function postJSON(url, payload, csrfToken) {
+    // Wait for PAW auth before normal AI requests so bearer auth is available
+    // when Circle identity has already been handed off.
+    await waitForPAWAuthReady();
+
     const headers = { "Content-Type": "application/json" };
     try {
       const t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
@@ -560,6 +800,7 @@ function removeNode(node) {
 
       // Phase 3: initialize Circle identity + token minting (in-memory only)
       try { PAWAuth.init(apiEndpoint); } catch (_) {}
+      try { PAWUsage.load(apiEndpoint); } catch (_) {}
 
       const $messages = $("messages");
       const $input = $("input") || $("prompt");
@@ -567,6 +808,8 @@ function removeNode(node) {
       const $reset = $("reset");
       const $tips = $("tips");
       const $toolForm = $("toolForm");
+
+      try { PAWUsage.scheduleRender(); } catch (_) {}
 
 
       // -------------------------
@@ -3129,6 +3372,18 @@ function init(apiEndpoint){
   // This *only* wires the Work button toggle. It does NOT persist data,
   // does NOT call the Worker, and is safe to run multiple times because
   // init() guards with data-paw-works="1".
+  (function bootstrapPlanUsageChrome(){
+    function tryRender(){
+      try { PAWUsage.scheduleRender(); } catch (_) {}
+    }
+
+    tryRender();
+
+    try{
+      document.addEventListener("DOMContentLoaded", function(){ tryRender(); }, { once:true });
+    }catch(_){}
+  })();
+
   (function bootstrapWorksButton(){
     function tryInit(){
       try{
