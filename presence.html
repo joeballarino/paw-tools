@@ -285,13 +285,30 @@
   <script src="/tool-shell.js"></script>
   <script>
     const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+    const CONTENT_TYPE_MAP = {
+      bio: "bio_about_me",
+      authority: "authority_content",
+      local: "local_content",
+      social: "social_content",
+      guide: "guide_related_content",
+      other: "other"
+    };
+
+    function getPresenceContentType() {
+      const contentTypeSelect = document.getElementById("contentType");
+      const selectedValue = contentTypeSelect ? contentTypeSelect.value : "";
+      return CONTENT_TYPE_MAP[selectedValue] || "other";
+    }
 
     // PAW Tool Shell init (required for consistent My Works mode across tools)
     try {
       if (window.PAWToolShell && window.PAWToolShell.init) {
         window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
-          toolId: "presence"
+          toolId: "presence",
+          getPrefs: () => ({
+            content_type: getPresenceContentType()
+          })
         });
       }
     } catch (_) {}
