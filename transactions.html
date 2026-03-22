@@ -312,7 +312,7 @@ body.paw-contracts #analyzeBtn[disabled]{
     <button class="type-btn" type="button" data-review="executed" aria-pressed="false" disabled>Executed</button>
   </div>
 
-  <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled style="display:none">Analyze</button>
+  <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled style="display:none">Start review</button>
 </div>
 
 <!-- Row C: Reserved space for upload details (populates after file selection) -->
@@ -343,16 +343,159 @@ body.paw-contracts #analyzeBtn[disabled]{
   <script src="/tool-shell.js"></script>
   <script>
     const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+    const fileInput = document.getElementById("file");
+    const fileNameEl = document.getElementById("fileName");
+    const reviewSeg = document.getElementById("reviewSeg");
+    const reviewButtons = Array.from(document.querySelectorAll("#reviewSeg .type-btn"));
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const resetBtn = document.getElementById("reset");
+
+    let selectedFile = null;
+    let selectedReview = "";
+    let contractSessionId = "";
+    let shellApi = null;
+
+    function setReviewMode(nextReview) {
+      selectedReview = String(nextReview || "");
+      reviewButtons.forEach(function (button) {
+        var isActive = button.getAttribute("data-review") === selectedReview;
+        button.classList.toggle("primary", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+      syncUploadUi();
+    }
+
+    function clearContractSession() {
+      contractSessionId = "";
+    }
+
+    function resetUploadState() {
+      selectedFile = null;
+      selectedReview = "";
+      clearContractSession();
+      if (fileInput) fileInput.value = "";
+      if (fileNameEl) fileNameEl.textContent = "";
+      reviewButtons.forEach(function (button) {
+        button.classList.remove("primary");
+        button.setAttribute("aria-pressed", "false");
+      });
+      syncUploadUi();
+    }
+
+    function syncUploadUi() {
+      var hasFile = !!selectedFile;
+      if (reviewSeg) reviewSeg.style.display = hasFile ? "" : "none";
+      if (analyzeBtn) analyzeBtn.style.display = hasFile ? "" : "none";
+
+      reviewButtons.forEach(function (button) {
+        button.disabled = !hasFile;
+      });
+
+      if (analyzeBtn) {
+        analyzeBtn.disabled = !(hasFile && selectedReview);
+      }
+    }
+
+    function fileToBase64(file) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          var result = String(reader.result || "");
+          var commaIndex = result.indexOf(",");
+          resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
+        };
+        reader.onerror = function () {
+          reject(new Error("Could not read that PDF."));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function startReview() {
+      if (!selectedFile || !selectedReview || !shellApi || typeof shellApi.sendExtra !== "function") {
+        return;
+      }
+
+      analyzeBtn.disabled = true;
+
+      try {
+        clearContractSession();
+        var base64 = await fileToBase64(selectedFile);
+        await shellApi.sendExtra("Start review", {
+          action: "contract_upload",
+          contract_review: selectedReview,
+          file: {
+            base64: base64,
+            name: selectedFile.name || "contract.pdf"
+          }
+        }, {
+          echoUser: false
+        });
+      } finally {
+        syncUploadUi();
+      }
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener("change", function (event) {
+        var files = event && event.target && event.target.files ? event.target.files : [];
+        selectedFile = files && files[0] ? files[0] : null;
+        selectedReview = "";
+        clearContractSession();
+
+        if (fileNameEl) {
+          fileNameEl.textContent = selectedFile ? selectedFile.name : "";
+        }
+
+        reviewButtons.forEach(function (button) {
+          button.classList.remove("primary");
+          button.setAttribute("aria-pressed", "false");
+        });
+
+        syncUploadUi();
+      });
+    }
+
+    reviewButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        if (button.disabled) return;
+        setReviewMode(button.getAttribute("data-review"));
+      });
+    });
+
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener("click", function () {
+        startReview();
+      });
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener("click", function () {
+        resetUploadState();
+      });
+    }
 
     // PAW Tool Shell init (required for consistent My Works mode across tools)
     try {
       if (window.PAWToolShell && window.PAWToolShell.init) {
-        window.PAWToolShell.init({
+        shellApi = window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
-          toolId: "transactions"
+          toolId: "transactions",
+          getExtraPayload: function () {
+            return contractSessionId ? { contract_session_id: contractSessionId } : {};
+          },
+          onResponse: function (data) {
+            var nextSessionId = data && data.contract && data.contract.session_id;
+            if (nextSessionId) {
+              // Contract session stays in memory only for this temporary page session.
+              contractSessionId = String(nextSessionId);
+            }
+          }
         });
       }
     } catch (_) {}
+
+    syncUploadUi();
   </script>
 
   <!-- ==========================================================
