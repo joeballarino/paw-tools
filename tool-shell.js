@@ -227,6 +227,21 @@
       .replaceAll("'", "&#39;");
   }
 
+  const PAW_USAGE_LIMIT_HUMAN_MESSAGE =
+    "You’ve reached your monthly usage limit for this plan. Upgrade your plan or wait until your next reset date to continue.";
+
+  function humanizeShellErrorMessage(message) {
+    const raw = safeText(message);
+    if (!raw) return "";
+    return raw.toLowerCase() === "usage_limit_reached" ? PAW_USAGE_LIMIT_HUMAN_MESSAGE : raw;
+  }
+
+  function formatAssistantErrorText(err) {
+    const msg = humanizeShellErrorMessage(err && err.message ? err.message : err);
+    if (!msg) return "Error";
+    return msg === PAW_USAGE_LIMIT_HUMAN_MESSAGE ? msg : ("Error: " + msg);
+  }
+
   // Shared auth gate for shell-managed requests.
   // Purpose:
   // - Normal AI tool POSTs should not leave the page until PAW auth has had a
@@ -388,6 +403,14 @@
       return banner;
     }
 
+    function getWarningClass(summary) {
+      if (!summary) return "";
+      if (summary.overLimit || summary.warningLevel === "over") return " is-over-limit";
+      if (summary.percentUsed >= 90 || summary.warningLevel === "90") return " is-high";
+      if (summary.percentUsed >= 75 || summary.warningLevel === "75") return " is-warning";
+      return "";
+    }
+
     function getBannerCopy(summary) {
       if (!summary) return "";
       if (summary.overLimit || summary.warningLevel === "over") {
@@ -404,12 +427,17 @@
 
     function render() {
       const pill = ensureHeaderPillMount();
+      const slot = pill && pill.parentNode ? pill.parentNode : null;
       if (pill) {
         if (_summary) {
+          if (slot) slot.hidden = false;
           pill.textContent = _summary.planName + " " + _summary.percentUsed + "% used";
           pill.hidden = false;
+          pill.className = "paw-plan-usage-pill" + getWarningClass(_summary);
         } else {
+          if (slot) slot.hidden = true;
           pill.hidden = true;
+          pill.className = "paw-plan-usage-pill";
         }
       }
 
@@ -423,11 +451,7 @@
         } else {
           banner.textContent = copy;
           banner.hidden = false;
-          banner.className =
-            "paw-plan-usage-banner" +
-            ((_summary && (_summary.overLimit || _summary.warningLevel === "over")) ? " is-over-limit" :
-             (_summary && (_summary.percentUsed >= 90 || _summary.warningLevel === "90")) ? " is-high" :
-             " is-warning");
+          banner.className = "paw-plan-usage-banner" + getWarningClass(_summary);
         }
       }
     }
@@ -940,13 +964,15 @@ if ($input) {
       const getPrefs = typeof config.getPrefs === "function" ? config.getPrefs : null;
       const getExtraPayload =
         typeof config.getExtraPayload === "function" ? config.getExtraPayload : null;
+      const getDeliverableMeta =
+        typeof config.getDeliverableMeta === "function" ? config.getDeliverableMeta : null;
       const onResponse = typeof config.onResponse === "function" ? config.onResponse : null;
 
       // NEW: tool can gate sending (listing uses this for POI modal before write)
       const beforeSend =
         typeof config.beforeSend === "function" ? config.beforeSend : null;
 
-      let lastDeliverableText = "";
+      let lastDeliverableState = null;
 
       const deliverableMode = config.deliverableMode !== false; // default true
       const getDeliverableTitle =
@@ -1171,9 +1197,25 @@ function resetAutoGrowTextarea($ta){
           '    <button class="modal-close" data-action="close" aria-label="Close" type="button">✕</button>' +
           '  </div>' +
           '  <div class="modal-body">' +
-          '    <div class="paw-deliverable-text" style="white-space:pre-wrap; word-break:break-word;"></div>' +
+          '    <div data-deliverable-variant="text">' +
+          '      <div class="paw-deliverable-text" style="white-space:pre-wrap; word-break:break-word;"></div>' +
+          '      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">' +
+          '        <button class="btn" type="button" data-action="copy">Copy</button>' +
+          '      </div>' +
+          '    </div>' +
+          '    <div data-deliverable-variant="email" style="display:none;">' +
+          '      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;">' +
+          '        <div style="font-size:12px; font-weight:800; color:rgba(15,23,42,.68); letter-spacing:.01em; text-transform:uppercase;">Subject</div>' +
+          '        <button class="btn" type="button" data-action="copy-subject">Copy Subject</button>' +
+          '      </div>' +
+          '      <div class="paw-deliverable-email-subject paw-deliverable-text" style="max-height:none; margin-bottom:14px;"></div>' +
+          '      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;">' +
+          '        <div style="font-size:12px; font-weight:800; color:rgba(15,23,42,.68); letter-spacing:.01em; text-transform:uppercase;">Body</div>' +
+          '        <button class="btn" type="button" data-action="copy-body">Copy Body</button>' +
+          '      </div>' +
+          '      <div class="paw-deliverable-email-body paw-deliverable-text" style="white-space:pre-wrap; word-break:break-word;"></div>' +
+          '    </div>' +
           '    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">' +
-          '      <button class="btn" type="button" data-action="copy">Copy</button>' +
           '      <button class="btn primary" type="button" data-action="revise">Revise</button>' +
           '    </div>' +
           '  </div>' +
@@ -1208,6 +1250,22 @@ function resetAutoGrowTextarea($ta){
             return;
           }
 
+          if (action === "copy-subject") {
+            const subjectEl = modal.querySelector(".paw-deliverable-email-subject");
+            const txt = subjectEl ? subjectEl.textContent : "";
+            copyToClipboard(txt);
+            showToast("Subject copied");
+            return;
+          }
+
+          if (action === "copy-body") {
+            const bodyEl = modal.querySelector(".paw-deliverable-email-body");
+            const txt = bodyEl ? bodyEl.textContent : "";
+            copyToClipboard(txt);
+            showToast("Body copied");
+            return;
+          }
+
           if (action === "revise") {
             hideDeliverableModal();
 
@@ -1232,12 +1290,87 @@ function resetAutoGrowTextarea($ta){
         return modal;
       }
 
-      function showDeliverableModal(title, bodyText) {
+      function parseConnectEmailDeliverable(replyText) {
+        const text = String(replyText || "").replace(/\r\n?/g, "\n").trim();
+        if (!text) return null;
+
+        const match = text.match(/^subject:\s*(.+?)\n\s*\n([\s\S]+)$/i);
+        if (!match) return null;
+
+        const subject = String(match[1] || "").trim();
+        const body = String(match[2] || "").trim();
+        if (!subject || !body) return null;
+
+        return { subject: subject, body: body };
+      }
+
+      function stripConnectEmailSignaturePlaceholder(bodyText, deliverableMeta) {
+        const meta = deliverableMeta && typeof deliverableMeta === "object" ? deliverableMeta : {};
+        if (String(meta.use || "").toLowerCase() !== "once") return String(bodyText || "");
+
+        const normalized = String(bodyText || "").replace(/\r\n?/g, "\n");
+        const lines = normalized.split("\n");
+        let lastNonEmpty = lines.length - 1;
+        while (lastNonEmpty >= 0 && !String(lines[lastNonEmpty] || "").trim()) lastNonEmpty -= 1;
+        if (lastNonEmpty < 0) return normalized.trim();
+        if (String(lines[lastNonEmpty] || "").trim() !== "[Your Name]") return normalized.trim();
+
+        const kept = lines.slice(0, lastNonEmpty);
+        while (kept.length && !String(kept[kept.length - 1] || "").trim()) kept.pop();
+        return kept.join("\n").trim();
+      }
+
+      function buildDeliverableModalState(title, bodyText, reportMeta) {
+        const rawText = String(bodyText || "");
+        const meta =
+          reportMeta && reportMeta.deliverableMeta && typeof reportMeta.deliverableMeta === "object"
+            ? reportMeta.deliverableMeta
+            : {};
+
+        if (toolId === "connect" && String(meta.channel || "").toLowerCase() === "email") {
+          const parsed = parseConnectEmailDeliverable(rawText);
+          if (parsed) {
+            return {
+              title: String(title || "Your Deliverable"),
+              variant: "email",
+              subject: parsed.subject,
+              body: stripConnectEmailSignaturePlaceholder(parsed.body, meta)
+            };
+          }
+        }
+
+        return {
+          title: String(title || "Your Deliverable"),
+          variant: "text",
+          text: rawText
+        };
+      }
+
+      function showDeliverableModal(deliverableState) {
         const modal = ensureDeliverableModal();
         const titleEl = modal.querySelector("#pawDeliverableTitle");
-        const bodyEl = modal.querySelector(".paw-deliverable-text");
-        if (titleEl) titleEl.textContent = String(title || "Your Deliverable");
-        if (bodyEl) bodyEl.textContent = String(bodyText || "");
+        const textWrap = modal.querySelector('[data-deliverable-variant="text"]');
+        const emailWrap = modal.querySelector('[data-deliverable-variant="email"]');
+        const bodyEl = textWrap ? textWrap.querySelector(".paw-deliverable-text") : null;
+        const subjectEl = modal.querySelector(".paw-deliverable-email-subject");
+        const emailBodyEl = modal.querySelector(".paw-deliverable-email-body");
+        const state = deliverableState && typeof deliverableState === "object" ? deliverableState : {};
+
+        if (titleEl) titleEl.textContent = String(state.title || "Your Deliverable");
+
+        if (String(state.variant || "") === "email") {
+          if (textWrap) textWrap.style.display = "none";
+          if (emailWrap) emailWrap.style.display = "";
+          if (subjectEl) subjectEl.textContent = String(state.subject || "");
+          if (emailBodyEl) emailBodyEl.textContent = String(state.body || "");
+          if (bodyEl) bodyEl.textContent = "";
+        } else {
+          if (textWrap) textWrap.style.display = "";
+          if (emailWrap) emailWrap.style.display = "none";
+          if (bodyEl) bodyEl.textContent = String(state.text || "");
+          if (subjectEl) subjectEl.textContent = "";
+          if (emailBodyEl) emailBodyEl.textContent = "";
+        }
 
         modal.classList.add("show");
         modal.setAttribute("aria-hidden", "false");
@@ -1527,12 +1660,16 @@ function resetAutoGrowTextarea($ta){
         appendMessage($messages, "ai", replyText, reportMeta);
 
         // Remember the last deliverable so the user can re-open/copy it again.
-        lastDeliverableText = String(replyText || "");
+        lastDeliverableState = buildDeliverableModalState(
+          getDeliverableTitle(),
+          replyText,
+          reportMeta
+        );
 
         if (!deliverableMode) return;
 
         // Open a modal with Copy / Revise every time for deliverables.
-        showDeliverableModal(getDeliverableTitle(), replyText);
+        showDeliverableModal(lastDeliverableState);
 
         // UX: allow users to click the most recent AI message to re-open the modal.
         // This solves the common case: they closed the modal, then want to copy again.
@@ -1543,7 +1680,7 @@ function resetAutoGrowTextarea($ta){
             last.style.cursor = "pointer";
             last.title = "Click to re-open and copy";
             last.onclick = function () {
-              showDeliverableModal(getDeliverableTitle(), lastDeliverableText);
+              showDeliverableModal(lastDeliverableState);
             };
           }
         } catch (_) {}
@@ -1603,12 +1740,14 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           }
 
           const reply = safeText(data && data.reply);
+          const deliverableMeta = getDeliverableMeta ? getDeliverableMeta(reply, data) : null;
           if (reply) {
             renderDeliverable(reply, {
               toolId: toolId,
               toolTitle: getDeliverableTitle(),
               userMessage: msg,
               extraPayload: extraPayload,
+              deliverableMeta: deliverableMeta,
               historyTail: (function () {
                 try {
                   const h = getHistoryForSend();
@@ -1625,7 +1764,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           return data;
         } catch (err) {
           removeNode(thinkingNode);
-          appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
+          appendMessage($messages, "ai", formatAssistantErrorText(err));
         } finally {
           isSending = false;
           pawSetBusy(false);
@@ -1691,12 +1830,14 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           }
 
           const reply = safeText(data && data.reply);
+          const deliverableMeta = getDeliverableMeta ? getDeliverableMeta(reply, data) : null;
           if (reply) {
             renderDeliverable(reply, {
               toolId: toolId,
               toolTitle: getDeliverableTitle(),
               userMessage: trimmed,
               extraPayload: extraPayload,
+              deliverableMeta: deliverableMeta,
               historyTail: (function () {
                 try {
                   const h = getHistoryForSend();
@@ -1712,7 +1853,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           }
         } catch (err) {
           removeNode(thinkingNode);
-          appendMessage($messages, "ai", "Error: " + String(err && err.message ? err.message : err));
+          appendMessage($messages, "ai", formatAssistantErrorText(err));
         } finally {
           isSending = false;
           pawSetBusy(false);

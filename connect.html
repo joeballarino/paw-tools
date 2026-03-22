@@ -300,7 +300,6 @@
     const DRAFT_KEY = "paw:connect:draft:v1";
     const MAX_DRAFT_HISTORY_ITEMS = 30;
     const MAX_DRAFT_SHELL_INPUT_CHARS = 8000;
-
     function prefsKeyForGroup(group) {
       if (group === "type") return "connect_type";
       if (group === "channel") return "connect_channel";
@@ -342,7 +341,6 @@
     function storageDel(key) {
       try { localStorage.removeItem(key); return true; } catch (_) { return false; }
     }
-
     const INITIAL_CONNECT_STATE = {
       connect_type: readInitialConnectValue("type"),
       connect_channel: readInitialConnectValue("channel"),
@@ -420,7 +418,7 @@
         use: connectState.connect_use
       };
     }
-
+    // PAW Tool Shell init (required for consistent My Works mode across tools)
     let shell = null;
     try {
       if (window.PAWToolShell && window.PAWToolShell.init) {
@@ -546,7 +544,6 @@
       showConnectValidation = false;
       applyConnectChoiceUI();
     }
-
     try {
       Array.from(document.querySelectorAll(".connect-seg-btn[data-group][data-value]")).forEach((btn) => {
         btn.addEventListener("click", function () {
