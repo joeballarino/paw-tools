@@ -268,11 +268,38 @@
     </div>
   </div>
 
+  <div id="pawResumeModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawResumeTitle">
+      <div class="modal-head">
+        <div id="pawResumeTitle" class="modal-title">Resume draft?</div>
+        <button class="modal-close" id="pawResumeClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="pawResumeMeta" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45; margin-bottom:14px;">
+          We found a saved draft on this device.
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button id="pawResumeFresh" class="btn" type="button">Start fresh</button>
+          <button id="pawResumeGo" class="btn primary" type="button">Resume</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/tool-shell.js"></script>
   <script>
     const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
     let showConnectValidation = false;
 
+    const $resumeModal = document.getElementById("pawResumeModal");
+    const $resumeClose = document.getElementById("pawResumeClose");
+    const $resumeMeta = document.getElementById("pawResumeMeta");
+    const $resumeFresh = document.getElementById("pawResumeFresh");
+    const $resumeGo = document.getElementById("pawResumeGo");
+
+    const DRAFT_KEY = "paw:connect:draft:v1";
+    const MAX_DRAFT_HISTORY_ITEMS = 30;
+    const MAX_DRAFT_SHELL_INPUT_CHARS = 8000;
     function prefsKeyForGroup(group) {
       if (group === "type") return "connect_type";
       if (group === "channel") return "connect_channel";
@@ -293,6 +320,27 @@
       }
     }
 
+    function trunc(s, max) {
+      s = (s == null) ? "" : String(s);
+      if (!max || max <= 0) return "";
+      return s.length > max ? s.slice(0, max) : s;
+    }
+
+    function storageGet(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (_) { return null; }
+    }
+
+    function storageSet(key, val) {
+      try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (_) { return false; }
+    }
+
+    function storageDel(key) {
+      try { localStorage.removeItem(key); return true; } catch (_) { return false; }
+    }
     const INITIAL_CONNECT_STATE = {
       connect_type: readInitialConnectValue("type"),
       connect_channel: readInitialConnectValue("channel"),
@@ -360,6 +408,7 @@
         showConnectValidation = false;
       }
       applyConnectChoiceUI();
+      scheduleDraftSave();
     }
 
     function getConnectDeliverableMeta() {
@@ -392,11 +441,109 @@
               connect_use: connectState.connect_use
             };
           },
-          getDeliverableMeta: getConnectDeliverableMeta
+          getDeliverableMeta: getConnectDeliverableMeta,
+          onResponse: function () {
+            try { setTimeout(saveDraftNow, 0); } catch (_) {}
+          }
         });
       }
     } catch (_) {}
 
+    function buildDraft() {
+      const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+      const shellState = {
+        history: Array.isArray(rawShellState.history) ? rawShellState.history.slice(-MAX_DRAFT_HISTORY_ITEMS) : [],
+        input: trunc(rawShellState.input, MAX_DRAFT_SHELL_INPUT_CHARS)
+      };
+
+      return {
+        v: 1,
+        updatedAt: new Date().toISOString(),
+        toolId: "connect",
+        connect: {
+          connect_type: connectState.connect_type,
+          connect_channel: connectState.connect_channel,
+          connect_use: connectState.connect_use
+        },
+        shell: shellState
+      };
+    }
+
+    function saveDraftNow() {
+      try {
+        const d = buildDraft();
+        const hasAny =
+          (d.connect && Object.values(d.connect).some((v) => String(v || "").trim())) ||
+          (d.shell && Array.isArray(d.shell.history) && d.shell.history.length) ||
+          (d.shell && typeof d.shell.input === "string" && d.shell.input.trim().length);
+
+        if (!hasAny) {
+          storageDel(DRAFT_KEY);
+          return;
+        }
+
+        storageSet(DRAFT_KEY, d);
+      } catch (_) {}
+    }
+
+    let __draftSaveT = null;
+
+    function scheduleDraftSave() {
+      try {
+        if (__draftSaveT) clearTimeout(__draftSaveT);
+        __draftSaveT = setTimeout(saveDraftNow, 350);
+      } catch (_) {}
+    }
+
+    function openResumeModal(draft) {
+      try {
+        if (!$resumeModal) return;
+        const d = draft || {};
+        const ts = d.updatedAt ? new Date(d.updatedAt) : null;
+        const when = ts && !isNaN(ts.getTime()) ? ts.toLocaleString() : "";
+        $resumeMeta.textContent = `We found a saved Connect draft on this device.` + (when ? ` Last saved: ${when}.` : "");
+        $resumeModal.classList.add("show");
+        $resumeModal.setAttribute("aria-hidden", "false");
+      } catch (_) {}
+    }
+
+    function closeResumeModal() {
+      try {
+        if (!$resumeModal) return;
+        $resumeModal.classList.remove("show");
+        $resumeModal.setAttribute("aria-hidden", "true");
+      } catch (_) {}
+    }
+
+    function applyDraft(draft) {
+      const d = draft && typeof draft === "object" ? draft : null;
+      if (!d) return false;
+
+      try {
+        const c = d.connect || {};
+        connectState.connect_type = String(c.connect_type || INITIAL_CONNECT_STATE.connect_type || "");
+        connectState.connect_channel = String(c.connect_channel || INITIAL_CONNECT_STATE.connect_channel || "");
+        connectState.connect_use = String(c.connect_use || INITIAL_CONNECT_STATE.connect_use || "");
+        showConnectValidation = false;
+        applyConnectChoiceUI();
+        closeResumeModal();
+        if (d.shell && shell && shell.setState) shell.setState(d.shell);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function fullResetConnect() {
+      try { storageDel(DRAFT_KEY); } catch (_) {}
+      closeResumeModal();
+      try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+      connectState.connect_type = INITIAL_CONNECT_STATE.connect_type;
+      connectState.connect_channel = INITIAL_CONNECT_STATE.connect_channel;
+      connectState.connect_use = INITIAL_CONNECT_STATE.connect_use;
+      showConnectValidation = false;
+      applyConnectChoiceUI();
+    }
     try {
       Array.from(document.querySelectorAll(".connect-seg-btn[data-group][data-value]")).forEach((btn) => {
         btn.addEventListener("click", function () {
@@ -410,14 +557,15 @@
 
     applyConnectChoiceUI();
 
-    function fullResetConnect() {
-      try { if (shell && shell.reset) shell.reset(); } catch (_) {}
-      connectState.connect_type = INITIAL_CONNECT_STATE.connect_type;
-      connectState.connect_channel = INITIAL_CONNECT_STATE.connect_channel;
-      connectState.connect_use = INITIAL_CONNECT_STATE.connect_use;
-      showConnectValidation = false;
-      applyConnectChoiceUI();
-    }
+    try {
+      const $prompt = document.getElementById("prompt");
+      if ($prompt) {
+        $prompt.addEventListener("input", scheduleDraftSave);
+        $prompt.addEventListener("change", scheduleDraftSave);
+      }
+    } catch (_) {}
+
+    window.addEventListener("beforeunload", () => { try { saveDraftNow(); } catch (_) {} });
 
     try {
       const $reset = document.getElementById("reset");
@@ -428,6 +576,30 @@
         }, true);
       }
     } catch (_) {}
+
+    try { if ($resumeClose) $resumeClose.addEventListener("click", () => closeResumeModal()); } catch (_) {}
+    try {
+      if ($resumeModal) $resumeModal.addEventListener("click", (e) => { if (e.target === $resumeModal) closeResumeModal(); });
+    } catch (_) {}
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeResumeModal(); } });
+
+    try {
+      if ($resumeFresh) $resumeFresh.addEventListener("click", () => {
+        closeResumeModal();
+        fullResetConnect();
+      });
+    } catch (_) {}
+
+    try {
+      if ($resumeGo) $resumeGo.addEventListener("click", () => {
+        const d = storageGet(DRAFT_KEY);
+        closeResumeModal();
+        if (d) applyDraft(d);
+      });
+    } catch (_) {}
+
+    const existingDraft = storageGet(DRAFT_KEY);
+    if (existingDraft) openResumeModal(existingDraft);
   </script>
 
   <!-- ==========================================================
