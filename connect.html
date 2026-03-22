@@ -134,6 +134,12 @@
       white-space:nowrap;
     }
 
+    .connect-seg-btn.is-selected,
+    .connect-seg-btn[aria-pressed="true"]{
+      background:rgba(5,195,249,.18);
+      color:rgba(15,23,42,.92);
+    }
+
     .connect-controls .connect-block { flex: 0 0 auto; }
 
     @media (max-width: 1040px){
@@ -243,13 +249,102 @@
   <script>
     const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
 
+    function readInitialConnectValue(group) {
+      try {
+        const buttons = Array.from(document.querySelectorAll('.connect-seg-btn[data-group="' + String(group || "") + '"][data-value]'));
+        const active = buttons.find((btn) => (
+          btn.getAttribute("aria-pressed") === "true" ||
+          btn.classList.contains("is-selected") ||
+          btn.classList.contains("primary")
+        ));
+        return active ? String(active.getAttribute("data-value") || "") : "";
+      } catch (_) {
+        return "";
+      }
+    }
+
+    const INITIAL_CONNECT_STATE = {
+      connect_type: readInitialConnectValue("type"),
+      connect_channel: readInitialConnectValue("channel"),
+      connect_use: readInitialConnectValue("use")
+    };
+
+    const connectState = {
+      connect_type: INITIAL_CONNECT_STATE.connect_type,
+      connect_channel: INITIAL_CONNECT_STATE.connect_channel,
+      connect_use: INITIAL_CONNECT_STATE.connect_use
+    };
+
+    function applyConnectChoiceUI() {
+      try {
+        Array.from(document.querySelectorAll(".connect-seg-btn[data-group][data-value]")).forEach((btn) => {
+          const group = String(btn.getAttribute("data-group") || "");
+          const value = String(btn.getAttribute("data-value") || "");
+          const selected =
+            (group === "type" && value === connectState.connect_type) ||
+            (group === "channel" && value === connectState.connect_channel) ||
+            (group === "use" && value === connectState.connect_use);
+
+          btn.classList.toggle("is-selected", selected);
+          btn.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+      } catch (_) {}
+    }
+
+    function setConnectChoice(group, value) {
+      const nextValue = String(value || "");
+      if (group === "type") connectState.connect_type = nextValue;
+      else if (group === "channel") connectState.connect_channel = nextValue;
+      else if (group === "use") connectState.connect_use = nextValue;
+      applyConnectChoiceUI();
+    }
+
     // PAW Tool Shell init (required for consistent My Works mode across tools)
+    let shell = null;
     try {
       if (window.PAWToolShell && window.PAWToolShell.init) {
-        window.PAWToolShell.init({
+        shell = window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
-          toolId: "connect"
+          toolId: "connect",
+          getPrefs: function () {
+            return {
+              connect_type: connectState.connect_type,
+              connect_channel: connectState.connect_channel,
+              connect_use: connectState.connect_use
+            };
+          }
         });
+      }
+    } catch (_) {}
+
+    try {
+      Array.from(document.querySelectorAll(".connect-seg-btn[data-group][data-value]")).forEach((btn) => {
+        btn.addEventListener("click", function () {
+          setConnectChoice(
+            String(btn.getAttribute("data-group") || ""),
+            String(btn.getAttribute("data-value") || "")
+          );
+        });
+      });
+    } catch (_) {}
+
+    applyConnectChoiceUI();
+
+    function fullResetConnect() {
+      try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+      connectState.connect_type = INITIAL_CONNECT_STATE.connect_type;
+      connectState.connect_channel = INITIAL_CONNECT_STATE.connect_channel;
+      connectState.connect_use = INITIAL_CONNECT_STATE.connect_use;
+      applyConnectChoiceUI();
+    }
+
+    try {
+      const $reset = document.getElementById("reset");
+      if ($reset) {
+        $reset.addEventListener("click", function (e) {
+          try { e.preventDefault(); e.stopImmediatePropagation(); } catch (_) {}
+          fullResetConnect();
+        }, true);
       }
     } catch (_) {}
   </script>
