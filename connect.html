@@ -362,6 +362,13 @@
       applyConnectChoiceUI();
     }
 
+    function getConnectDeliverableMeta() {
+      return {
+        type: connectState.connect_type,
+        channel: connectState.connect_channel,
+        use: connectState.connect_use
+      };
+    }
     // PAW Tool Shell init (required for consistent My Works mode across tools)
     let shell = null;
     try {
@@ -384,7 +391,8 @@
               connect_channel: connectState.connect_channel,
               connect_use: connectState.connect_use
             };
-          }
+          },
+          getDeliverableMeta: getConnectDeliverableMeta
         });
       }
     } catch (_) {}
