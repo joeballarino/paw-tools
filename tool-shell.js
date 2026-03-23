@@ -1659,14 +1659,23 @@ function resetAutoGrowTextarea($ta){
         // Always render in-flow for a clean chat experience.
         appendMessage($messages, "ai", replyText, reportMeta);
 
+        const deliverableMeta =
+          reportMeta && reportMeta.deliverableMeta && typeof reportMeta.deliverableMeta === "object"
+            ? reportMeta.deliverableMeta
+            : null;
+        const shouldOpenModal = deliverableMode && (!deliverableMeta || deliverableMeta.openModal !== false);
+
+        if (!shouldOpenModal) {
+          $messages.scrollTop = $messages.scrollHeight;
+          return;
+        }
+
         // Remember the last deliverable so the user can re-open/copy it again.
         lastDeliverableState = buildDeliverableModalState(
           getDeliverableTitle(),
           replyText,
           reportMeta
         );
-
-        if (!deliverableMode) return;
 
         // Open a modal with Copy / Revise every time for deliverables.
         showDeliverableModal(lastDeliverableState);
