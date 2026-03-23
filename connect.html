@@ -483,18 +483,20 @@
       if (!raw) return false;
       if (/^subject:\s*\S+/i.test(raw)) return false;
 
-      const normalized = raw.replace(/\s+/g, " ").trim().toLowerCase();
+      const normalized = raw.replace(/[’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
       if (!normalized) return false;
 
       const clarificationPatterns = [
+        /^what(?:'s| is) (?:the )?(?:email|text|message) about\??$/,
         /\bwhat kind of message (do|would) you (want|like) to send\b/,
+        /^who(?:'s| is) (?:it|this) for\??$/,
         /\bwho (is|are) (this|the message|it) for\b/,
         /\bwho (do|would) you (want|like) to send (this|it|the message) to\b/,
         /\bto whom\b/,
         /\bwho is the recipient\b/,
         /\bwhat (do|would) you (want|like) (the message )?to say\b/,
         /\bwhat should (the )?message say\b/,
-        /\bwhat('?s| is) the goal of the message\b/,
+        /\bwhat(?:'s| is) the goal of the message\b/,
         /\bwhat details should i include\b/,
         /\bi need (just )?(one|a little|a bit|more) (detail|info|information)\b/,
         /\bneed (just )?(one|a little|a bit|more) (detail|info|information)\b/
