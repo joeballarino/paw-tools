@@ -162,6 +162,63 @@
       color:rgba(153,27,27,.84);
     }
 
+    .connect-attached-summary{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      padding:9px 11px;
+      border:1px solid rgba(15,23,42,.08);
+      border-radius:14px;
+      background:rgba(248,250,252,.92);
+    }
+
+    .connect-attached-summary[hidden]{
+      display:none !important;
+    }
+
+    .connect-attached-summary__top{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+    }
+
+    .connect-attached-summary__type{
+      display:inline-flex;
+      align-items:center;
+      min-height:20px;
+      padding:0 8px;
+      border-radius:999px;
+      background:rgba(5,195,249,.14);
+      color:rgba(15,23,42,.84);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.02em;
+      white-space:nowrap;
+    }
+
+    .connect-attached-summary__kicker{
+      min-width:0;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:rgba(15,23,42,.52);
+    }
+
+    .connect-attached-summary__title{
+      font-size:13px;
+      font-weight:800;
+      line-height:1.25;
+      color:rgba(15,23,42,.92);
+    }
+
+    .connect-attached-summary__copy{
+      font-size:12px;
+      line-height:1.35;
+      color:rgba(15,23,42,.66);
+    }
+
     .connect-controls .connect-block { flex: 0 0 auto; }
 
     @media (max-width: 1040px){
@@ -256,6 +313,14 @@
           
           <div class="composer-main">
             <div class="composer-help">Paste their message + tell PAW what you want to happen.</div>
+            <div id="connectAttachedSummary" class="connect-attached-summary" aria-live="polite" hidden>
+              <div class="connect-attached-summary__top">
+                <span id="connectAttachedType" class="connect-attached-summary__type" hidden></span>
+                <span class="connect-attached-summary__kicker">Attached data in use</span>
+              </div>
+              <div id="connectAttachedTitle" class="connect-attached-summary__title"></div>
+              <div id="connectAttachedCopy" class="connect-attached-summary__copy"></div>
+            </div>
             <textarea id="prompt" class="prompt" placeholder="Example: Reply to “we’re waiting” and book a quick call"></textarea>
           </div>
 
@@ -418,6 +483,88 @@
         use: connectState.connect_use
       };
     }
+
+    function normalizeAttachedWorkText(value) {
+      return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    }
+
+    function humanizeAttachedWorkBucket(bucket) {
+      const raw = normalizeAttachedWorkText(bucket).toLowerCase();
+      if (!raw) return "";
+      if (raw === "brand" || raw === "brand_assets") return "Brand";
+      if (raw === "listings" || raw === "listing") return "Listing";
+      if (raw === "transactions" || raw === "transaction" || raw === "deals" || raw === "deal") return "Transaction";
+      return raw
+        .replace(/[_-]+/g, " ")
+        .replace(/\b\w/g, (m) => m.toUpperCase());
+    }
+
+    function getAttachedWorkSummaryText(activeWork) {
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      const payload = (aw.payload && typeof aw.payload === "object") ? aw.payload : {};
+
+      let summary = "";
+      try {
+        summary = normalizeAttachedWorkText((((payload.pds || {}).narrative || {}).summary));
+      } catch (_) {}
+      if (summary) return trunc(summary, 160);
+
+      try {
+        const portable = (payload.portable && typeof payload.portable === "object") ? payload.portable : {};
+        summary = normalizeAttachedWorkText(portable.summary || portable.intent_text);
+      } catch (_) {}
+      if (summary) return trunc(summary, 160);
+
+      summary = normalizeAttachedWorkText(aw.preview);
+      if (summary) return trunc(summary, 160);
+
+      summary = normalizeAttachedWorkText(aw.subtitle);
+      if (summary) return trunc(summary, 160);
+
+      return "";
+    }
+
+    function renderAttachedWorkSummary(activeWork) {
+      const root = document.getElementById("connectAttachedSummary");
+      const typeEl = document.getElementById("connectAttachedType");
+      const titleEl = document.getElementById("connectAttachedTitle");
+      const copyEl = document.getElementById("connectAttachedCopy");
+      if (!root || !typeEl || !titleEl || !copyEl) return;
+
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+      const label = aw ? normalizeAttachedWorkText(aw.label || aw.name) : "";
+
+      if (!aw || !label) {
+        root.hidden = true;
+        typeEl.hidden = true;
+        typeEl.textContent = "";
+        titleEl.textContent = "";
+        copyEl.textContent = "";
+        return;
+      }
+
+      const typeLabel = humanizeAttachedWorkBucket(aw.bucket);
+      const summaryText = getAttachedWorkSummaryText(aw);
+
+      root.hidden = false;
+      typeEl.hidden = !typeLabel;
+      typeEl.textContent = typeLabel;
+      titleEl.textContent = label;
+      copyEl.textContent = summaryText && summaryText !== label
+        ? summaryText
+        : (typeLabel ? (typeLabel + " attached and ready to use.") : "Attached data ready to use.");
+    }
+
+    function syncAttachedWorkSummary() {
+      try {
+        const activeWork = (window.__PAWWorks && window.__PAWWorks.getActiveWork)
+          ? window.__PAWWorks.getActiveWork()
+          : null;
+        renderAttachedWorkSummary(activeWork);
+      } catch (_) {
+        renderAttachedWorkSummary(null);
+      }
+    }
     // PAW Tool Shell init (required for consistent My Works mode across tools)
     let shell = null;
     try {
@@ -448,6 +595,13 @@
         });
       }
     } catch (_) {}
+
+    window.addEventListener("paw:works:active_changed", function (e) {
+      const activeWork = (e && e.detail) ? e.detail.active_work : null;
+      renderAttachedWorkSummary(activeWork);
+    });
+
+    syncAttachedWorkSummary();
 
     function buildDraft() {
       const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
