@@ -517,12 +517,9 @@
       const meta = {
         type: connectState.connect_type,
         channel: connectState.connect_channel,
-        use: connectState.connect_use
+        use: connectState.connect_use,
+        openModal: false
       };
-
-      if (shouldSuppressConnectDeliverableModal(reply)) {
-        meta.openModal = false;
-      }
 
       return meta;
     }

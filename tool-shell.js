@@ -1664,11 +1664,7 @@ function resetAutoGrowTextarea($ta){
             ? reportMeta.deliverableMeta
             : null;
         const shouldOpenModal = deliverableMode && (!deliverableMeta || deliverableMeta.openModal !== false);
-
-        if (!shouldOpenModal) {
-          $messages.scrollTop = $messages.scrollHeight;
-          return;
-        }
+        const isConnectDeliverable = toolId === "connect";
 
         // Remember the last deliverable so the user can re-open/copy it again.
         lastDeliverableState = buildDeliverableModalState(
@@ -1676,6 +1672,47 @@ function resetAutoGrowTextarea($ta){
           replyText,
           reportMeta
         );
+
+        const openLatestDeliverable = function () {
+          showDeliverableModal(lastDeliverableState);
+        };
+
+        if (isConnectDeliverable) {
+          try {
+            const aiMessages = $messages.querySelectorAll(".msg.ai");
+            const lastMessage = aiMessages[aiMessages.length - 1];
+            const bubble = lastMessage ? lastMessage.querySelector(".bubble") : null;
+            const block = bubble && bubble.closest ? bubble.closest(".paw-message-block") : null;
+            const row = block && block.querySelector ? block.querySelector(".paw-report-row") : null;
+
+            if (bubble) {
+              bubble.style.cursor = "pointer";
+              bubble.title = "Click to open copy options";
+              bubble.onclick = function () {
+                openLatestDeliverable();
+              };
+            }
+
+            if (row && !row.querySelector(".paw-inline-copy-link")) {
+              const copyLink = document.createElement("a");
+              copyLink.href = "#";
+              copyLink.className = "paw-inline-copy-link";
+              copyLink.textContent = "Copy";
+              copyLink.style.textDecoration = "none";
+              copyLink.style.opacity = "0.75";
+              copyLink.addEventListener("click", function (e) {
+                try { e.preventDefault(); } catch (_) {}
+                openLatestDeliverable();
+              });
+              row.insertBefore(copyLink, row.firstChild);
+            }
+          } catch (_) {}
+        }
+
+        if (!shouldOpenModal) {
+          $messages.scrollTop = $messages.scrollHeight;
+          return;
+        }
 
         // Open a modal with Copy / Revise every time for deliverables.
         showDeliverableModal(lastDeliverableState);
