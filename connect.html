@@ -538,6 +538,11 @@
       try { storageDel(DRAFT_KEY); } catch (_) {}
       closeResumeModal();
       try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+      try {
+        if (window.__PAWWorks && window.__PAWWorks.detachWork) {
+          window.__PAWWorks.detachWork();
+        }
+      } catch (_) {}
       connectState.connect_type = INITIAL_CONNECT_STATE.connect_type;
       connectState.connect_channel = INITIAL_CONNECT_STATE.connect_channel;
       connectState.connect_use = INITIAL_CONNECT_STATE.connect_use;
