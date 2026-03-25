@@ -1694,6 +1694,13 @@ function resetAutoGrowTextarea($ta){
             }
 
             if (row && !row.querySelector(".paw-inline-copy-link")) {
+              let leftActions = row.querySelector(".paw-report-row__left");
+              if (!leftActions) {
+                leftActions = document.createElement("div");
+                leftActions.className = "paw-report-row__left";
+                row.insertBefore(leftActions, row.firstChild);
+              }
+
               const copyLink = document.createElement("a");
               copyLink.href = "#";
               copyLink.className = "paw-inline-copy-link";
@@ -1704,7 +1711,7 @@ function resetAutoGrowTextarea($ta){
                 try { e.preventDefault(); } catch (_) {}
                 openLatestDeliverable();
               });
-              row.insertBefore(copyLink, row.firstChild);
+              leftActions.appendChild(copyLink);
             }
           } catch (_) {}
         }
