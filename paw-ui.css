@@ -946,8 +946,14 @@ body.paw-works-mode{
   width:100%;
 }
 
+.paw-report-row__left{
+  display:inline-flex;
+  align-items:center;
+}
 
 .paw-inline-copy-link{
+  display:inline-flex;
+  align-items:center;
   font-size:12px;
   font-weight:700;
   color: rgba(15,23,42,.55);
