@@ -1657,7 +1657,7 @@ function resetAutoGrowTextarea($ta){
 
       function renderDeliverable(replyText, reportMeta) {
         // Always render in-flow for a clean chat experience.
-        appendMessage($messages, "ai", replyText, reportMeta);
+        const messageWrap = appendMessage($messages, "ai", replyText, reportMeta);
 
         const deliverableMeta =
           reportMeta && reportMeta.deliverableMeta && typeof reportMeta.deliverableMeta === "object"
@@ -1679,10 +1679,8 @@ function resetAutoGrowTextarea($ta){
 
         if (isConnectDeliverable) {
           try {
-            const aiMessages = $messages.querySelectorAll(".msg.ai");
-            const lastMessage = aiMessages[aiMessages.length - 1];
-            const bubble = lastMessage ? lastMessage.querySelector(".bubble") : null;
-            const block = bubble && bubble.closest ? bubble.closest(".paw-message-block") : null;
+            const bubble = messageWrap ? messageWrap.querySelector(".bubble") : null;
+            const block = messageWrap ? messageWrap.querySelector(".paw-message-block") : null;
             const row = block && block.querySelector ? block.querySelector(".paw-report-row") : null;
 
             if (bubble) {
