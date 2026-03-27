@@ -596,6 +596,10 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   flex-direction:column;
   gap:10px;
 }
+body.connect-tool .messages{
+  padding-left:var(--connect-column-inset, 18px);
+  padding-right:var(--connect-column-inset, 18px);
+}
 .msg{ display:flex; gap:10px; align-items:flex-start; }
 .msg .bubble{
   max-width: 860px;
@@ -635,6 +639,10 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   gap:14px;
   align-items:flex-end;
 }
+body.connect-tool .composer{
+  padding-left:var(--connect-column-inset, 18px);
+  padding-right:var(--connect-column-inset, 18px);
+}
 
 
 /* ==========================================================
@@ -670,6 +678,10 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
 @media (max-width: 520px){
   .composer{
     padding:14px 14px 26px;
+  }
+  body.connect-tool .composer{
+    padding-left:var(--connect-column-inset, 12px);
+    padding-right:var(--connect-column-inset, 12px);
   }
   .composer-main{ gap:6px; }
   .composer textarea{
@@ -944,6 +956,11 @@ body.paw-works-mode{
   align-items:center;
   gap:10px;
   width:100%;
+}
+body.connect-tool .paw-report-row{
+  padding-left:var(--connect-response-content-inset, 12px);
+  padding-right:var(--connect-response-content-inset, 12px);
+  box-sizing:border-box;
 }
 
 .paw-inline-copy-link{
