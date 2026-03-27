@@ -1692,13 +1692,7 @@ function resetAutoGrowTextarea($ta){
             }
 
             if (row && !row.querySelector(".paw-inline-copy-link")) {
-              let leftActions = row.querySelector(".paw-report-row__left");
-              if (!leftActions) {
-                leftActions = document.createElement("div");
-                leftActions.className = "paw-report-row__left";
-                row.insertBefore(leftActions, row.firstChild);
-              }
-
+              const feedbackLink = row.querySelector(".paw-report-link");
               const copyLink = document.createElement("a");
               copyLink.href = "#";
               copyLink.className = "paw-inline-copy-link";
@@ -1709,7 +1703,20 @@ function resetAutoGrowTextarea($ta){
                 try { e.preventDefault(); } catch (_) {}
                 openLatestDeliverable();
               });
-              leftActions.appendChild(copyLink);
+
+              const separator = document.createElement("span");
+              separator.className = "paw-report-separator";
+              separator.setAttribute("aria-hidden", "true");
+              separator.textContent = "|";
+
+              row.classList.add("paw-report-row--connect-copy");
+              if (feedbackLink) {
+                row.insertBefore(separator, feedbackLink);
+                row.insertBefore(copyLink, separator);
+              } else {
+                row.appendChild(copyLink);
+                row.appendChild(separator);
+              }
             }
           } catch (_) {}
         }
