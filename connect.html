@@ -844,6 +844,7 @@
       const payload = (aw.payload && typeof aw.payload === "object") ? aw.payload : {};
       const toolState = getAttachedWorkToolState(aw);
       const form = (toolState.form && typeof toolState.form === "object") ? toolState.form : {};
+      const shell = (toolState.shell && typeof toolState.shell === "object") ? toolState.shell : {};
       const portable = (payload.portable && typeof payload.portable === "object") ? payload.portable : {};
       const cached = getAttachedListingContext(aw);
       const pds = (cached && cached.pds && typeof cached.pds === "object")
@@ -855,7 +856,7 @@
           ? pds.listing
           : ((pds.property && typeof pds.property === "object") ? pds.property : {}));
 
-      return { aw, form, portable, pds, listing };
+      return { aw, form, shell, portable, pds, listing };
     }
 
     function pickAttachedWorkText(sources, keys) {
@@ -892,8 +893,76 @@
     function extractListingAddressLikeText(value) {
       const text = normalizeAttachedWorkText(value);
       if (!text) return "";
-      const match = text.match(/\b\d{1,6}\s+[A-Za-z0-9.'#/-]+(?:\s+[A-Za-z0-9.'#/-]+){0,8},\s*[A-Za-z .'-]+,\s*[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?/);
-      return match ? normalizeAttachedWorkText(match[0]) : "";
+      const patterns = [
+        /\b\d{1,6}\s+(?:[NSEW]\.?\s+)?(?:[A-Za-z0-9.'#/-]+\s+){0,8}(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Court|Ct|Circle|Cir|Way|Parkway|Pkwy|Place|Pl|Terrace|Ter|Trail|Trl)\b(?:,?\s+[A-Za-z .'-]+,\s*[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?)?/i,
+        /\b\d{1,6}\s+[A-Za-z0-9.'#/-]+(?:\s+[A-Za-z0-9.'#/-]+){0,8},\s*[A-Za-z .'-]+,\s*[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?/i
+      ];
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match) return normalizeAttachedWorkText(String(match[0] || "").replace(/[.,;:]+$/, ""));
+      }
+      return "";
+    }
+
+    function getAttachedWorkListingTextSources(activeWork) {
+      const ctx = getAttachedWorkListingContext(activeWork);
+      const history = (ctx.shell.history && Array.isArray(ctx.shell.history)) ? ctx.shell.history : [];
+      const texts = [
+        normalizeAttachedWorkText((((ctx.pds || {}).narrative || {}).summary)),
+        normalizeAttachedWorkText(ctx.portable.summary || ctx.portable.intent_text),
+        normalizeAttachedWorkText(ctx.form.input),
+        normalizeAttachedWorkText(ctx.aw.preview),
+        normalizeAttachedWorkText(ctx.aw.subtitle)
+      ];
+
+      for (const item of history) {
+        const content = normalizeAttachedWorkText(item && item.content);
+        if (content) texts.push(content);
+      }
+
+      return texts.filter(Boolean).filter(function (text, index, arr) {
+        return arr.indexOf(text) === index;
+      });
+    }
+
+    function findListingMatchInTexts(texts, extractor) {
+      for (const text of texts) {
+        const value = extractor(text);
+        if (value) return value;
+      }
+      return "";
+    }
+
+    function extractListingPriceLikeText(value) {
+      const text = normalizeAttachedWorkText(value);
+      if (!text) return "";
+
+      const dollarMatch = text.match(/\$\s?\d{1,3}(?:,\d{3})+(?:\.\d+)?|\$\s?\d{3,}(?:\.\d+)?/);
+      if (dollarMatch) return formatAttachedWorkPrice(dollarMatch[0]);
+
+      const keywordMatch = text.match(/\b(?:price|list(?:ed)? price|asking|offered at|listed at)\b\s*[:\-]?\s*\$?\s*(\d{1,3}(?:,\d{3})+|\d{6,7})(?:\.\d+)?/i);
+      return keywordMatch ? formatAttachedWorkPrice(keywordMatch[1]) : "";
+    }
+
+    function extractListingBedsLikeText(value) {
+      const text = normalizeAttachedWorkText(value);
+      if (!text) return "";
+      const match = text.match(/\b(\d+(?:\.\d+)?)\s*(?:bd|beds?|bedrooms?|br)\b/i);
+      return match ? formatAttachedWorkFact(match[1], "bd") : "";
+    }
+
+    function extractListingBathsLikeText(value) {
+      const text = normalizeAttachedWorkText(value);
+      if (!text) return "";
+      const match = text.match(/\b(\d+(?:\.\d+)?)\s*(?:ba|baths?|bathrooms?)\b/i);
+      return match ? formatAttachedWorkFact(match[1], "ba") : "";
+    }
+
+    function extractListingSqftLikeText(value) {
+      const text = normalizeAttachedWorkText(value);
+      if (!text) return "";
+      const match = text.match(/\b(\d[\d,]{2,})\s*(?:sq\.?\s*ft\.?|sqft|sf|square feet)\b/i);
+      return match ? formatAttachedWorkFact(match[1], "sqft") : "";
     }
 
     function getAttachedWorkListingAddress(activeWork) {
@@ -926,16 +995,8 @@
       const location = pickAttachedWorkText(sources, ["location"]);
       if (location) return trunc(location, 120);
 
-      const summaryCandidates = [
-        getAttachedWorkSummaryText(activeWork),
-        normalizeAttachedWorkText(ctx.form.input),
-        normalizeAttachedWorkText(ctx.aw.preview),
-        normalizeAttachedWorkText(ctx.aw.subtitle)
-      ];
-      for (const candidate of summaryCandidates) {
-        const extracted = extractListingAddressLikeText(candidate);
-        if (extracted) return trunc(extracted, 120);
-      }
+      const extracted = findListingMatchInTexts(getAttachedWorkListingTextSources(activeWork), extractListingAddressLikeText);
+      if (extracted) return trunc(extracted, 120);
 
       return "";
     }
@@ -946,22 +1007,25 @@
 
       const ctx = getAttachedWorkListingContext(activeWork);
       const sources = [ctx.listing, ctx.portable, ctx.pds, ctx.form, ctx.aw];
+      const textSources = getAttachedWorkListingTextSources(activeWork);
       const price = formatAttachedWorkPrice(pickAttachedWorkText(sources, [
         "price",
         "list_price",
         "listPrice",
         "asking_price",
         "askingPrice"
-      ]));
-      const beds = formatAttachedWorkFact(pickAttachedWorkText(sources, ["beds", "bedrooms", "bed"]), "bd");
-      const baths = formatAttachedWorkFact(pickAttachedWorkText(sources, ["baths", "bathrooms", "bath"]), "ba");
+      ])) || findListingMatchInTexts(textSources, extractListingPriceLikeText);
+      const beds = formatAttachedWorkFact(pickAttachedWorkText(sources, ["beds", "bedrooms", "bed"]), "bd")
+        || findListingMatchInTexts(textSources, extractListingBedsLikeText);
+      const baths = formatAttachedWorkFact(pickAttachedWorkText(sources, ["baths", "bathrooms", "bath"]), "ba")
+        || findListingMatchInTexts(textSources, extractListingBathsLikeText);
       const sqft = formatAttachedWorkFact(pickAttachedWorkText(sources, [
         "sqft",
         "square_feet",
         "squareFeet",
         "living_area",
         "livingArea"
-      ]), "sqft");
+      ]), "sqft") || findListingMatchInTexts(textSources, extractListingSqftLikeText);
 
       return [price, beds, baths, sqft].filter(Boolean).join(" · ");
     }
