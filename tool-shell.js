@@ -836,6 +836,52 @@ function removeNode(node) {
       try { PAWUsage.scheduleRender(); } catch (_) {}
 
 
+      function ensureConnectInlineCopyLink(bubble) {
+        if (toolId !== "connect" || !bubble) return;
+
+        try {
+          const block = bubble.closest && bubble.closest(".paw-message-block");
+          const row = block && block.querySelector ? block.querySelector(".paw-report-row") : null;
+          if (!row) return;
+
+          bubble.style.cursor = "pointer";
+          bubble.title = "Click to open copy options";
+          bubble.onclick = function () {
+            if (lastDeliverableState) showDeliverableModal(lastDeliverableState);
+          };
+
+          if (row.querySelector(".paw-inline-copy-link")) return;
+
+          const feedbackLink = row.querySelector(".paw-report-link");
+          const copyLink = document.createElement("a");
+          copyLink.href = "#";
+          copyLink.className = "paw-inline-copy-link";
+          copyLink.textContent = "Copy";
+          copyLink.style.textDecoration = "none";
+          copyLink.style.opacity = "0.75";
+          copyLink.addEventListener("click", function (e) {
+            try { e.preventDefault(); } catch (_) {}
+            if (lastDeliverableState) showDeliverableModal(lastDeliverableState);
+          });
+
+          const separator = document.createElement("span");
+          separator.className = "paw-report-separator";
+          separator.setAttribute("aria-hidden", "true");
+          separator.textContent = "|";
+
+          row.classList.add("paw-report-row--connect-copy");
+          if (feedbackLink) {
+            row.insertBefore(separator, feedbackLink);
+            row.insertBefore(copyLink, separator);
+          } else {
+            row.appendChild(copyLink);
+            row.appendChild(separator);
+          }
+        } catch (_) {}
+      }
+
+      var lastDeliverableState = null;
+
       // -------------------------
       // PAW: Ensure "Give feedback" link exists under every AI bubble.
       // Why: Some tools (or future tools) may re-render/rehydrate message DOM
@@ -867,6 +913,7 @@ function removeNode(node) {
           try {
             const aiBubbles = $messages.querySelectorAll(".msg.ai .bubble");
             if (!aiBubbles || !aiBubbles.length) return;
+            const lastAiBubble = aiBubbles[aiBubbles.length - 1];
 
             const toolTitle = (typeof getDeliverableTitle === "function") ? getDeliverableTitle() : "";
             const historyTail = (typeof getHistoryForSend === "function") ? (function () {
@@ -878,18 +925,21 @@ function removeNode(node) {
 
             aiBubbles.forEach(function (bubble) {
               // If link row already exists, do nothing.
-              const hasRow = bubble && bubble.querySelector && bubble.querySelector(".paw-report-row");
-              if (hasRow) return;
+              const block = bubble && bubble.closest ? bubble.closest(".paw-message-block") : null;
+              const hasRow = block && block.querySelector && block.querySelector(".paw-report-row");
+              if (!hasRow) {
+                attachBadResponseLink(bubble, {
+                  toolId: toolId,
+                  toolTitle: toolTitle,
+                  userMessage: getLastUserBubbleText(),
+                  historyTail: historyTail,
+                  aiOutput: getAiBubbleText(bubble),
+                  createdAt: new Date().toISOString(),
+                  pageUrl: (typeof location !== "undefined" ? location.href : ""),
+                });
+              }
 
-              attachBadResponseLink(bubble, {
-                toolId: toolId,
-                toolTitle: toolTitle,
-                userMessage: getLastUserBubbleText(),
-                historyTail: historyTail,
-                aiOutput: getAiBubbleText(bubble),
-                createdAt: new Date().toISOString(),
-                pageUrl: (typeof location !== "undefined" ? location.href : ""),
-              });
+              if (bubble === lastAiBubble) ensureConnectInlineCopyLink(bubble);
             });
           } catch (_) {}
         }
@@ -971,8 +1021,6 @@ if ($input) {
       // NEW: tool can gate sending (listing uses this for POI modal before write)
       const beforeSend =
         typeof config.beforeSend === "function" ? config.beforeSend : null;
-
-      let lastDeliverableState = null;
 
       const deliverableMode = config.deliverableMode !== false; // default true
       const getDeliverableTitle =
@@ -1657,18 +1705,14 @@ function resetAutoGrowTextarea($ta){
 
       function renderDeliverable(replyText, reportMeta) {
         // Always render in-flow for a clean chat experience.
-        appendMessage($messages, "ai", replyText, reportMeta);
+        const messageWrap = appendMessage($messages, "ai", replyText, reportMeta);
 
         const deliverableMeta =
           reportMeta && reportMeta.deliverableMeta && typeof reportMeta.deliverableMeta === "object"
             ? reportMeta.deliverableMeta
             : null;
         const shouldOpenModal = deliverableMode && (!deliverableMeta || deliverableMeta.openModal !== false);
-
-        if (!shouldOpenModal) {
-          $messages.scrollTop = $messages.scrollHeight;
-          return;
-        }
+        const isConnectDeliverable = toolId === "connect";
 
         // Remember the last deliverable so the user can re-open/copy it again.
         lastDeliverableState = buildDeliverableModalState(
@@ -1676,6 +1720,22 @@ function resetAutoGrowTextarea($ta){
           replyText,
           reportMeta
         );
+
+        const openLatestDeliverable = function () {
+          showDeliverableModal(lastDeliverableState);
+        };
+
+        if (isConnectDeliverable) {
+          try {
+            const bubble = messageWrap ? messageWrap.querySelector(".bubble") : null;
+            if (bubble) ensureConnectInlineCopyLink(bubble);
+          } catch (_) {}
+        }
+
+        if (!shouldOpenModal) {
+          $messages.scrollTop = $messages.scrollHeight;
+          return;
+        }
 
         // Open a modal with Copy / Revise every time for deliverables.
         showDeliverableModal(lastDeliverableState);

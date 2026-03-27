@@ -941,12 +941,38 @@ body.paw-works-mode{
 .paw-report-row{
   margin-top:8px;
   display:flex;
-  justify-content:flex-end;
+  align-items:center;
+  gap:10px;
   width:100%;
 }
 
+.paw-inline-copy-link{
+  display:inline-flex;
+  align-items:center;
+  font-size:12px;
+  font-weight:700;
+  color: rgba(15,23,42,.55);
+  text-decoration: none;
+}
+.paw-inline-copy-link:hover{
+  text-decoration: underline;
+  color: rgba(15,23,42,.75);
+}
+
+.paw-report-separator{
+  color: rgba(15,23,42,.38);
+}
+
+.paw-report-row--connect-copy{
+  gap:8px;
+}
+
+.paw-report-row--connect-copy .paw-report-link{
+  margin-left:0;
+}
 
 .paw-report-link{
+  margin-left:auto;
   font-size:12px;
   font-weight:700;
   color: rgba(15,23,42,.55);
