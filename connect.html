@@ -206,6 +206,13 @@
       color:rgba(15,23,42,.52);
     }
 
+    .connect-attached-summary__saved{
+      font-size:12px;
+      font-weight:700;
+      line-height:1.25;
+      color:rgba(15,23,42,.62);
+    }
+
     .connect-attached-summary__title{
       font-size:13px;
       font-weight:800;
@@ -213,10 +220,24 @@
       color:rgba(15,23,42,.92);
     }
 
+    .connect-attached-summary__facts{
+      font-size:12px;
+      font-weight:700;
+      line-height:1.3;
+      color:rgba(15,23,42,.76);
+    }
+
     .connect-attached-summary__copy{
       font-size:12px;
       line-height:1.35;
       color:rgba(15,23,42,.66);
+    }
+
+    .connect-attached-summary__saved[hidden],
+    .connect-attached-summary__title[hidden],
+    .connect-attached-summary__facts[hidden],
+    .connect-attached-summary__copy[hidden]{
+      display:none !important;
     }
 
     .connect-controls .connect-block { flex: 0 0 auto; }
@@ -318,8 +339,10 @@
                 <span id="connectAttachedType" class="connect-attached-summary__type" hidden></span>
                 <span class="connect-attached-summary__kicker">Attached data in use</span>
               </div>
+              <div id="connectAttachedSaved" class="connect-attached-summary__saved" hidden></div>
               <div id="connectAttachedTitle" class="connect-attached-summary__title"></div>
-              <div id="connectAttachedCopy" class="connect-attached-summary__copy"></div>
+              <div id="connectAttachedFacts" class="connect-attached-summary__facts" hidden></div>
+              <div id="connectAttachedCopy" class="connect-attached-summary__copy" hidden></div>
             </div>
             <textarea id="prompt" class="prompt" placeholder="Example: Reply to “we’re waiting” and book a quick call"></textarea>
           </div>
@@ -524,12 +547,165 @@
       return "";
     }
 
+    function getAttachedWorkToolState(activeWork) {
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      const payload = (aw.payload && typeof aw.payload === "object") ? aw.payload : {};
+      if (payload.tool_state && typeof payload.tool_state === "object") return payload.tool_state;
+      if (payload.form && typeof payload.form === "object") return payload;
+      return {};
+    }
+
+    function getAttachedWorkListingContext(activeWork) {
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      const payload = (aw.payload && typeof aw.payload === "object") ? aw.payload : {};
+      const toolState = getAttachedWorkToolState(aw);
+      const form = (toolState.form && typeof toolState.form === "object") ? toolState.form : {};
+      const portable = (payload.portable && typeof payload.portable === "object") ? payload.portable : {};
+      const pds = (payload.pds && typeof payload.pds === "object") ? payload.pds : {};
+      const listing = (portable.listing && typeof portable.listing === "object")
+        ? portable.listing
+        : ((pds.listing && typeof pds.listing === "object")
+          ? pds.listing
+          : ((pds.property && typeof pds.property === "object") ? pds.property : {}));
+
+      return { aw, form, portable, pds, listing };
+    }
+
+    function pickAttachedWorkText(sources, keys) {
+      const keyList = Array.isArray(keys) ? keys : [keys];
+      for (const source of sources) {
+        if (!source || typeof source !== "object") continue;
+        for (const key of keyList) {
+          const value = normalizeAttachedWorkText(source[key]);
+          if (value) return value;
+        }
+      }
+      return "";
+    }
+
+    function formatAttachedWorkPrice(value) {
+      const text = normalizeAttachedWorkText(value);
+      if (!text) return "";
+      if (/^\$\s*\d/.test(text)) return text.replace(/\s+/g, " ");
+      const digits = text.replace(/[^\d.]/g, "");
+      if (!digits) return text;
+      const num = Number(digits);
+      if (!Number.isFinite(num)) return text;
+      return "$" + num.toLocaleString("en-US", {
+        maximumFractionDigits: digits.indexOf(".") >= 0 ? 2 : 0
+      });
+    }
+
+    function formatAttachedWorkFact(value, suffix) {
+      const text = normalizeAttachedWorkText(value);
+      if (!text) return "";
+      return new RegExp("\\b" + suffix + "\\b", "i").test(text) ? text : (text + " " + suffix);
+    }
+
+    function extractListingAddressLikeText(value) {
+      const text = normalizeAttachedWorkText(value);
+      if (!text) return "";
+      const match = text.match(/\b\d{1,6}\s+[A-Za-z0-9.'#/-]+(?:\s+[A-Za-z0-9.'#/-]+){0,8},\s*[A-Za-z .'-]+,\s*[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?/);
+      return match ? normalizeAttachedWorkText(match[0]) : "";
+    }
+
+    function getAttachedWorkListingAddress(activeWork) {
+      const ctx = getAttachedWorkListingContext(activeWork);
+      const sources = [ctx.listing, ctx.portable, ctx.pds, ctx.form, ctx.aw];
+      const direct = pickAttachedWorkText(sources, [
+        "address",
+        "full_address",
+        "fullAddress",
+        "property_address",
+        "propertyAddress",
+        "street_address",
+        "streetAddress",
+        "listing_address",
+        "listingAddress"
+      ]);
+      if (direct) return trunc(direct, 120);
+
+      const street = pickAttachedWorkText(sources, ["street", "street1", "address1", "line1"]);
+      const city = pickAttachedWorkText(sources, ["city", "market_city", "market"]);
+      const state = pickAttachedWorkText(sources, ["state", "province", "region"]);
+      const zip = pickAttachedWorkText(sources, ["zip", "zip_code", "postal_code", "postalCode"]);
+      const cityState = city && state ? (city + ", " + state) : (city || state);
+      const line = [street, cityState, zip].filter(Boolean).join(" ");
+      if (line) return trunc(line, 120);
+
+      const location = pickAttachedWorkText(sources, ["location"]);
+      if (location) return trunc(location, 120);
+
+      const summaryCandidates = [
+        getAttachedWorkSummaryText(activeWork),
+        normalizeAttachedWorkText(ctx.form.input),
+        normalizeAttachedWorkText(ctx.aw.preview),
+        normalizeAttachedWorkText(ctx.aw.subtitle)
+      ];
+      for (const candidate of summaryCandidates) {
+        const extracted = extractListingAddressLikeText(candidate);
+        if (extracted) return trunc(extracted, 120);
+      }
+
+      return "";
+    }
+
+    function getAttachedWorkListingFacts(activeWork) {
+      const ctx = getAttachedWorkListingContext(activeWork);
+      const sources = [ctx.listing, ctx.portable, ctx.pds, ctx.form, ctx.aw];
+      const price = formatAttachedWorkPrice(pickAttachedWorkText(sources, [
+        "price",
+        "list_price",
+        "listPrice",
+        "asking_price",
+        "askingPrice"
+      ]));
+      const beds = formatAttachedWorkFact(pickAttachedWorkText(sources, ["beds", "bedrooms", "bed"]), "bd");
+      const baths = formatAttachedWorkFact(pickAttachedWorkText(sources, ["baths", "bathrooms", "bath"]), "ba");
+      const sqft = formatAttachedWorkFact(pickAttachedWorkText(sources, [
+        "sqft",
+        "square_feet",
+        "squareFeet",
+        "living_area",
+        "livingArea"
+      ]), "sqft");
+
+      return [price, beds, baths, sqft].filter(Boolean).join(" · ");
+    }
+
+    function getAttachedWorkListingDescriptor(activeWork, identityText, label) {
+      let summary = getAttachedWorkSummaryText(activeWork);
+      if (!summary) {
+        const ctx = getAttachedWorkListingContext(activeWork);
+        summary = normalizeAttachedWorkText(ctx.form.input);
+      }
+      if (!summary) return "";
+
+      const normalizedLabel = normalizeAttachedWorkText(label).toLowerCase();
+      const normalizedIdentity = normalizeAttachedWorkText(identityText).toLowerCase();
+      const lowerSummary = summary.toLowerCase();
+
+      if (normalizedLabel && lowerSummary === normalizedLabel) return "";
+
+      if (normalizedIdentity && lowerSummary.indexOf(normalizedIdentity) === 0) {
+        summary = normalizeAttachedWorkText(summary.slice(identityText.length).replace(/^[\s,.;:-]+/, ""));
+      }
+
+      if (!summary) return "";
+      if (normalizedIdentity && summary.toLowerCase() === normalizedIdentity) return "";
+      if (normalizedLabel && summary.toLowerCase() === normalizedLabel) return "";
+
+      return trunc(summary, 140);
+    }
+
     function renderAttachedWorkSummary(activeWork) {
       const root = document.getElementById("connectAttachedSummary");
       const typeEl = document.getElementById("connectAttachedType");
+      const savedEl = document.getElementById("connectAttachedSaved");
       const titleEl = document.getElementById("connectAttachedTitle");
+      const factsEl = document.getElementById("connectAttachedFacts");
       const copyEl = document.getElementById("connectAttachedCopy");
-      if (!root || !typeEl || !titleEl || !copyEl) return;
+      if (!root || !typeEl || !savedEl || !titleEl || !factsEl || !copyEl) return;
 
       const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
       const label = aw ? normalizeAttachedWorkText(aw.label || aw.name) : "";
@@ -538,18 +714,55 @@
         root.hidden = true;
         typeEl.hidden = true;
         typeEl.textContent = "";
+        savedEl.hidden = true;
+        savedEl.textContent = "";
+        titleEl.hidden = false;
         titleEl.textContent = "";
+        factsEl.hidden = true;
+        factsEl.textContent = "";
+        copyEl.hidden = true;
         copyEl.textContent = "";
         return;
       }
 
       const typeLabel = humanizeAttachedWorkBucket(aw.bucket);
-      const summaryText = getAttachedWorkSummaryText(aw);
+      const bucket = normalizeAttachedWorkText(aw.bucket).toLowerCase();
+      const isListing = bucket === "listing" || bucket === "listings";
 
       root.hidden = false;
       typeEl.hidden = !typeLabel;
       typeEl.textContent = typeLabel;
+
+      if (isListing) {
+        const identityText = getAttachedWorkListingAddress(aw);
+        const factsText = getAttachedWorkListingFacts(aw);
+        const descriptorText = getAttachedWorkListingDescriptor(aw, identityText, label);
+        const primaryText = identityText || label;
+        const showSavedTitle = !!label && !!identityText && label.toLowerCase() !== identityText.toLowerCase();
+
+        savedEl.hidden = !showSavedTitle;
+        savedEl.textContent = showSavedTitle ? label : "";
+        titleEl.hidden = !primaryText;
+        titleEl.textContent = primaryText;
+        factsEl.hidden = !factsText;
+        factsEl.textContent = factsText;
+
+        const fallbackCopy = (!identityText && !factsText && !descriptorText)
+          ? (typeLabel ? (typeLabel + " attached and ready to use.") : "Attached data ready to use.")
+          : "";
+        copyEl.hidden = !(descriptorText || fallbackCopy);
+        copyEl.textContent = descriptorText || fallbackCopy;
+        return;
+      }
+
+      const summaryText = getAttachedWorkSummaryText(aw);
+      savedEl.hidden = true;
+      savedEl.textContent = "";
+      titleEl.hidden = false;
       titleEl.textContent = label;
+      factsEl.hidden = true;
+      factsEl.textContent = "";
+      copyEl.hidden = false;
       copyEl.textContent = summaryText && summaryText !== label
         ? summaryText
         : (typeLabel ? (typeLabel + " attached and ready to use.") : "Attached data ready to use.");
