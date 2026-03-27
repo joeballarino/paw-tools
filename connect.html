@@ -90,11 +90,16 @@
          styles into paw-ui.css as a reusable component (e.g. .paw-seg2).
        ========================================================== */
 
+    body.connect-tool{
+      --connect-column-inset:18px;
+      --connect-response-content-inset:12px;
+    }
+
     .connect-controls{
       display:flex;
       flex-direction:column;
       gap:10px;
-      padding:12px 18px 12px;
+      padding:12px var(--connect-column-inset) 12px;
       border-bottom:1px solid var(--border-soft);
     }
 
@@ -155,7 +160,7 @@
       font-size:12px;
       font-weight:700;
       color:rgba(15,23,42,.62);
-      padding:0 18px 12px;
+      padding:0 var(--connect-column-inset) 12px;
     }
 
     .connect-helper.is-error{
@@ -229,7 +234,11 @@
 
     /* Mobile: stack each block, full-width segmented control */
     @media (max-width: 560px){
-      .connect-controls{ padding:10px 12px 12px; }
+      body.connect-tool{
+        --connect-column-inset:12px;
+      }
+
+      .connect-controls{ padding:10px var(--connect-column-inset) 12px; }
       .connect-row{
         flex-direction:column;
         align-items:stretch;
@@ -247,7 +256,7 @@
 </style>
 </head>
 
-<body>
+<body class="connect-tool">
   <div class="app">
     <div class="frame">
       <div class="panel">
