@@ -1680,7 +1680,7 @@ function resetAutoGrowTextarea($ta){
         if (isConnectDeliverable) {
           try {
             const bubble = messageWrap ? messageWrap.querySelector(".bubble") : null;
-            const block = messageWrap ? messageWrap.querySelector(".paw-message-block") : null;
+            const block = bubble && bubble.closest ? bubble.closest(".paw-message-block") : null;
             const row = block && block.querySelector ? block.querySelector(".paw-report-row") : null;
 
             if (bubble) {
