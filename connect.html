@@ -449,6 +449,8 @@
       connect_channel: INITIAL_CONNECT_STATE.connect_channel,
       connect_use: INITIAL_CONNECT_STATE.connect_use
     };
+    let __activeListingContext = null;
+    let __activeListingLoadSeq = 0;
 
     function getMissingConnectGroups() {
       return ["type", "channel", "use"].filter(function (group) {
@@ -556,6 +558,97 @@
 
     function normalizeAttachedWorkText(value) {
       return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    }
+
+    function clearActiveListingContext() {
+      __activeListingContext = null;
+    }
+
+    async function loadConnectListingContext(activeWork) {
+      const seq = ++__activeListingLoadSeq;
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+      const bucket = normalizeAttachedWorkText(aw && aw.bucket).toLowerCase();
+      if (bucket !== "listings" && bucket !== "listing") {
+        clearActiveListingContext();
+        return;
+      }
+
+      const workId = normalizeAttachedWorkText(aw && (aw.id || aw.work_id));
+      if (!workId) {
+        clearActiveListingContext();
+        return;
+      }
+
+      let token = "";
+      try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
+      if (!token) {
+        try {
+          if (window.PAWAuth && window.PAWAuth.whenReady) {
+            await window.PAWAuth.whenReady().catch(() => {});
+            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+          }
+        } catch (_) {}
+      }
+      if (!token) {
+        if (seq === __activeListingLoadSeq) clearActiveListingContext();
+        return;
+      }
+
+      const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
+
+      try {
+        let res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          }
+        });
+
+        let data = await res.json().catch(() => ({}));
+        if (res.status === 401 || res.status === 403) {
+          try {
+            if (window.PAWAuth && window.PAWAuth.whenReady) {
+              await window.PAWAuth.whenReady().catch(() => {});
+            }
+            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+          } catch (_) {}
+
+          if (token) {
+            res = await fetch(url, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+              }
+            });
+            data = await res.json().catch(() => ({}));
+          }
+        }
+
+        if (seq !== __activeListingLoadSeq || !res.ok) {
+          if (seq === __activeListingLoadSeq) clearActiveListingContext();
+          return;
+        }
+
+        const work = data && data.data && data.data.work ? data.data.work : null;
+        const pds = (work && work.payload && typeof work.payload === "object" && work.payload.pds && typeof work.payload.pds === "object")
+          ? work.payload.pds
+          : null;
+
+        if (!pds) {
+          clearActiveListingContext();
+          return;
+        }
+
+        __activeListingContext = {
+          work_id: String((work && work.work_id) || aw.work_id || aw.id || ""),
+          label: String((work && work.label) || aw.label || "Untitled"),
+          pds: pds
+        };
+      } catch (_) {
+        if (seq === __activeListingLoadSeq) clearActiveListingContext();
+      }
     }
 
     function humanizeAttachedWorkBucket(bucket) {
@@ -961,6 +1054,10 @@
               connect_use: connectState.connect_use
             };
           },
+          getExtraPayload: function () {
+            const ctx = (__activeListingContext && __activeListingContext.pds) ? __activeListingContext : null;
+            return ctx ? { active_listing: ctx } : {};
+          },
           getDeliverableMeta: getConnectDeliverableMeta,
           onResponse: function () {
             try { setTimeout(saveDraftNow, 0); } catch (_) {}
@@ -972,9 +1069,18 @@
     window.addEventListener("paw:works:active_changed", function (e) {
       const activeWork = (e && e.detail) ? e.detail.active_work : null;
       renderAttachedWorkSummary(activeWork);
+      loadConnectListingContext(activeWork);
     });
 
     syncAttachedWorkSummary();
+    try {
+      const activeWork = (window.__PAWWorks && window.__PAWWorks.getActiveWork)
+        ? window.__PAWWorks.getActiveWork()
+        : null;
+      loadConnectListingContext(activeWork);
+    } catch (_) {
+      clearActiveListingContext();
+    }
 
     function buildDraft() {
       const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
