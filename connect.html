@@ -417,6 +417,8 @@
       connect_channel: INITIAL_CONNECT_STATE.connect_channel,
       connect_use: INITIAL_CONNECT_STATE.connect_use
     };
+    let __activeListingLoadSeq = 0;
+    let __activeListingContext = null;
 
     function getMissingConnectGroups() {
       return ["type", "channel", "use"].filter(function (group) {
@@ -499,7 +501,128 @@
         .replace(/\b\w/g, (m) => m.toUpperCase());
     }
 
-    function getAttachedWorkSummaryText(activeWork) {
+    function getAttachedWorkId(activeWork) {
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      return normalizeAttachedWorkText(aw.id || aw.work_id);
+    }
+
+    function getAttachedListingContext(activeWork) {
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+      if (!aw) return null;
+
+      const bucket = normalizeAttachedWorkText(aw.bucket).toLowerCase();
+      if (bucket !== "listings" && bucket !== "listing") return null;
+
+      const workId = getAttachedWorkId(aw);
+      if (__activeListingContext && __activeListingContext.pds && __activeListingContext.work_id === workId) {
+        return __activeListingContext;
+      }
+
+      const payload = (aw.payload && typeof aw.payload === "object") ? aw.payload : {};
+      const pds = (payload.pds && typeof payload.pds === "object") ? payload.pds : null;
+      if (!pds) return null;
+
+      return {
+        work_id: workId,
+        label: normalizeAttachedWorkText(aw.label || aw.name || "Untitled"),
+        pds: pds
+      };
+    }
+
+    function getAttachedListingProperty(activeWork) {
+      const ctx = getAttachedListingContext(activeWork);
+      const pds = (ctx && ctx.pds && typeof ctx.pds === "object") ? ctx.pds : {};
+      const facts = (pds.facts && typeof pds.facts === "object") ? pds.facts : {};
+      return (facts.property && typeof facts.property === "object") ? facts.property : {};
+    }
+
+    function readAttachedListingFact(facts, keys) {
+      const source = facts && typeof facts === "object" ? facts : {};
+      const names = Array.isArray(keys) ? keys : [];
+      for (let i = 0; i < names.length; i += 1) {
+        const value = normalizeAttachedWorkText(source[names[i]]);
+        if (value) return value;
+      }
+      return "";
+    }
+
+    function readAttachedListingNumeric(value) {
+      const raw = normalizeAttachedWorkText(value);
+      if (!raw) return NaN;
+      const numeric = Number(raw.replace(/,/g, ""));
+      return Number.isFinite(numeric) ? numeric : NaN;
+    }
+
+    function formatAttachedListingCount(value, suffix) {
+      const raw = normalizeAttachedWorkText(value);
+      if (!raw) return "";
+      const numeric = Number(raw.replace(/,/g, ""));
+      if (Number.isFinite(numeric)) {
+        const rounded = Math.abs(numeric - Math.round(numeric)) < 0.001 ? String(Math.round(numeric)) : String(numeric);
+        return rounded + " " + suffix;
+      }
+      return raw + " " + suffix;
+    }
+
+    function formatAttachedListingSqft(value) {
+      const raw = normalizeAttachedWorkText(value);
+      if (!raw) return "";
+      const numeric = Number(raw.replace(/[^\d.]/g, ""));
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return Math.round(numeric).toLocaleString() + " sqft";
+      }
+      return /\bsq\.?\s*ft\b|\bsqft\b/i.test(raw) ? raw : (raw + " sqft");
+    }
+
+    function getAttachedListingAddress(activeWork) {
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      const ctx = getAttachedListingContext(aw);
+      const property = getAttachedListingProperty(aw);
+      const address = (property.address && typeof property.address === "object")
+        ? property.address
+        : {};
+
+      const richAddress = normalizeAttachedWorkText(
+        (typeof property.address === "string" ? property.address : "") ||
+        address.single_line ||
+        address.display ||
+        address.full ||
+        address.one_line ||
+        address.address ||
+        address.line1
+      );
+
+      if (richAddress) return richAddress;
+      return normalizeAttachedWorkText((ctx && ctx.label) || aw.label || aw.name);
+    }
+
+    function getAttachedListingFactsLine(activeWork) {
+      const property = getAttachedListingProperty(activeWork);
+
+      const beds = formatAttachedListingCount(
+        readAttachedListingFact(property, ["bedrooms"]),
+        "bd"
+      );
+      const fullBaths = readAttachedListingNumeric(readAttachedListingFact(property, ["bathrooms_full"]));
+      const halfBaths = readAttachedListingNumeric(readAttachedListingFact(property, ["bathrooms_half"]));
+      let baths = "";
+      if (Number.isFinite(fullBaths) || Number.isFinite(halfBaths)) {
+        const totalBaths = (Number.isFinite(fullBaths) ? fullBaths : 0) + ((Number.isFinite(halfBaths) ? halfBaths : 0) * 0.5);
+        baths = formatAttachedListingCount(String(totalBaths), "ba");
+      } else {
+        baths = formatAttachedListingCount(
+          readAttachedListingFact(property, ["bathrooms_full", "bathrooms_half"]),
+          "ba"
+        );
+      }
+      const sqft = formatAttachedListingSqft(
+        readAttachedListingFact(property, ["sqft_living"])
+      );
+
+      return [beds, baths, sqft].filter(Boolean).join(" | ");
+    }
+
+    function getAttachedWorkFallbackSummaryText(activeWork) {
       const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
       const payload = (aw.payload && typeof aw.payload === "object") ? aw.payload : {};
 
@@ -524,6 +647,124 @@
       return "";
     }
 
+    function getAttachedWorkSummaryText(activeWork) {
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      const factsLine = getAttachedListingFactsLine(aw);
+
+      let summary = "";
+      const listingCtx = getAttachedListingContext(aw);
+      if (listingCtx && listingCtx.pds) {
+        try {
+          summary = normalizeAttachedWorkText((((listingCtx.pds || {}).narrative || {}).summary));
+        } catch (_) {}
+      }
+      if (!summary) {
+        summary = getAttachedWorkFallbackSummaryText(aw);
+      }
+
+      if (factsLine && summary) return trunc(factsLine + " | " + summary, 220);
+      if (factsLine) return trunc(factsLine, 160);
+      return summary;
+    }
+
+    function clearActiveListingContext() {
+      __activeListingContext = null;
+    }
+
+    async function loadActiveListingContext(activeWork) {
+      const seq = ++__activeListingLoadSeq;
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+      const bucket = normalizeAttachedWorkText(aw && aw.bucket).toLowerCase();
+      if (bucket !== "listings" && bucket !== "listing") {
+        clearActiveListingContext();
+        renderAttachedWorkSummary(aw);
+        return;
+      }
+
+      const workId = getAttachedWorkId(aw);
+      if (!workId) {
+        clearActiveListingContext();
+        renderAttachedWorkSummary(aw);
+        return;
+      }
+
+      let token = "";
+      try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
+      if (!token) {
+        try {
+          if (window.PAWAuth && window.PAWAuth.whenReady) {
+            await window.PAWAuth.whenReady().catch(() => {});
+            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+          }
+        } catch (_) {}
+      }
+      if (!token) {
+        if (seq === __activeListingLoadSeq) {
+          clearActiveListingContext();
+          renderAttachedWorkSummary(aw);
+        }
+        return;
+      }
+
+      const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
+
+      try {
+        let res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          }
+        });
+
+        let data = await res.json().catch(() => ({}));
+        if ((res.status === 401 || res.status === 403)) {
+          try {
+            if (window.PAWAuth && window.PAWAuth.whenReady) {
+              await window.PAWAuth.whenReady().catch(() => {});
+            }
+            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+          } catch (_) {}
+
+          if (token) {
+            res = await fetch(url, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+              }
+            });
+            data = await res.json().catch(() => ({}));
+          }
+        }
+
+        if (seq !== __activeListingLoadSeq) return;
+
+        const work = data && data.data && data.data.work ? data.data.work : null;
+        const pds = (work && work.payload && typeof work.payload === "object" && work.payload.pds && typeof work.payload.pds === "object")
+          ? work.payload.pds
+          : null;
+
+        if (!res.ok || !pds) {
+          clearActiveListingContext();
+          renderAttachedWorkSummary(aw);
+          return;
+        }
+
+        __activeListingContext = {
+          work_id: String((work && work.work_id) || workId),
+          label: normalizeAttachedWorkText((work && work.label) || aw.label || aw.name || "Untitled"),
+          pds: pds
+        };
+        renderAttachedWorkSummary(aw);
+      } catch (_) {
+        if (seq === __activeListingLoadSeq) {
+          clearActiveListingContext();
+          renderAttachedWorkSummary(aw);
+        }
+      }
+    }
+
     function renderAttachedWorkSummary(activeWork) {
       const root = document.getElementById("connectAttachedSummary");
       const typeEl = document.getElementById("connectAttachedType");
@@ -532,7 +773,9 @@
       if (!root || !typeEl || !titleEl || !copyEl) return;
 
       const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
-      const label = aw ? normalizeAttachedWorkText(aw.label || aw.name) : "";
+      const label = aw
+        ? (getAttachedListingAddress(aw) || normalizeAttachedWorkText(aw.label || aw.name))
+        : "";
 
       if (!aw || !label) {
         root.hidden = true;
@@ -561,7 +804,9 @@
           ? window.__PAWWorks.getActiveWork()
           : null;
         renderAttachedWorkSummary(activeWork);
+        loadActiveListingContext(activeWork);
       } catch (_) {
+        clearActiveListingContext();
         renderAttachedWorkSummary(null);
       }
     }
@@ -599,6 +844,7 @@
     window.addEventListener("paw:works:active_changed", function (e) {
       const activeWork = (e && e.detail) ? e.detail.active_work : null;
       renderAttachedWorkSummary(activeWork);
+      loadActiveListingContext(activeWork);
     });
 
     syncAttachedWorkSummary();
