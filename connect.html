@@ -560,6 +560,29 @@
       return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
     }
 
+    function formatAttachedWorkAddressLine(value) {
+      if (!value || typeof value !== "object") return normalizeAttachedWorkText(value);
+
+      const direct = pickAttachedWorkText([value], [
+        "full_address",
+        "fullAddress",
+        "formatted_address",
+        "formattedAddress",
+        "unparsed_address",
+        "unparsedAddress",
+        "one_line",
+        "oneLine"
+      ]);
+      if (direct) return direct;
+
+      const street = pickAttachedWorkText([value], ["street", "street1", "address1", "line1"]);
+      const city = pickAttachedWorkText([value], ["city"]);
+      const state = pickAttachedWorkText([value], ["state", "province", "region"]);
+      const zip = pickAttachedWorkText([value], ["zip", "zip_code", "postal_code", "postalCode"]);
+      const cityState = city && state ? (city + ", " + state) : (city || state);
+      return [street, cityState, zip].filter(Boolean).join(" ").trim();
+    }
+
     function clearActiveListingContext() {
       __activeListingContext = null;
       syncAttachedWorkSummary();
@@ -920,11 +943,10 @@
 
     function getAttachedWorkListingAddress(activeWork) {
       const ctx = getAttachedWorkListingContext(activeWork);
-      const richAddress = normalizeAttachedWorkText(ctx.propertyFacts && ctx.propertyFacts.address);
+      const richAddress = formatAttachedWorkAddressLine(ctx.propertyFacts && ctx.propertyFacts.address);
       if (richAddress) return trunc(richAddress, 120);
 
-      const sources = [ctx.propertyFacts, ctx.listing, ctx.portable, ctx.pds, ctx.form, ctx.aw];
-      const direct = pickAttachedWorkText(sources, [
+      const direct = pickAttachedWorkText([ctx.listing, ctx.portable, ctx.pds, ctx.form, ctx.aw], [
         "address",
         "full_address",
         "fullAddress",
