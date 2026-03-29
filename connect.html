@@ -564,18 +564,20 @@
       __activeListingContext = null;
     }
 
-    async function loadConnectListingContext(activeWork) {
+    async function loadActiveListingContext(activeWork) {
       const seq = ++__activeListingLoadSeq;
       const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
       const bucket = normalizeAttachedWorkText(aw && aw.bucket).toLowerCase();
       if (bucket !== "listings" && bucket !== "listing") {
         clearActiveListingContext();
+        renderAttachedWorkSummary(aw);
         return;
       }
 
       const workId = normalizeAttachedWorkText(aw && (aw.id || aw.work_id));
       if (!workId) {
         clearActiveListingContext();
+        renderAttachedWorkSummary(aw);
         return;
       }
 
@@ -590,7 +592,10 @@
         } catch (_) {}
       }
       if (!token) {
-        if (seq === __activeListingLoadSeq) clearActiveListingContext();
+        if (seq === __activeListingLoadSeq) {
+          clearActiveListingContext();
+          renderAttachedWorkSummary(aw);
+        }
         return;
       }
 
@@ -627,7 +632,10 @@
         }
 
         if (seq !== __activeListingLoadSeq || !res.ok) {
-          if (seq === __activeListingLoadSeq) clearActiveListingContext();
+          if (seq === __activeListingLoadSeq) {
+            clearActiveListingContext();
+            renderAttachedWorkSummary(aw);
+          }
           return;
         }
 
@@ -638,6 +646,7 @@
 
         if (!pds) {
           clearActiveListingContext();
+          renderAttachedWorkSummary(aw);
           return;
         }
 
@@ -646,8 +655,12 @@
           label: String((work && work.label) || aw.label || "Untitled"),
           pds: pds
         };
+        renderAttachedWorkSummary(aw);
       } catch (_) {
-        if (seq === __activeListingLoadSeq) clearActiveListingContext();
+        if (seq === __activeListingLoadSeq) {
+          clearActiveListingContext();
+          renderAttachedWorkSummary(aw);
+        }
       }
     }
 
@@ -822,104 +835,6 @@
         summary = getAttachedWorkFallbackSummaryText(aw);
       }
       return summary ? trunc(summary, 160) : "";
-    }
-
-    function clearActiveListingContext() {
-      __activeListingContext = null;
-    }
-
-    async function loadActiveListingContext(activeWork) {
-      const seq = ++__activeListingLoadSeq;
-      const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
-      const bucket = normalizeAttachedWorkText(aw && aw.bucket).toLowerCase();
-      if (bucket !== "listings" && bucket !== "listing") {
-        clearActiveListingContext();
-        renderAttachedWorkSummary(aw);
-        return;
-      }
-
-      const workId = getAttachedWorkId(aw);
-      if (!workId) {
-        clearActiveListingContext();
-        renderAttachedWorkSummary(aw);
-        return;
-      }
-
-      let token = "";
-      try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
-      if (!token) {
-        try {
-          if (window.PAWAuth && window.PAWAuth.whenReady) {
-            await window.PAWAuth.whenReady().catch(() => {});
-            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
-          }
-        } catch (_) {}
-      }
-      if (!token) {
-        if (seq === __activeListingLoadSeq) {
-          clearActiveListingContext();
-          renderAttachedWorkSummary(aw);
-        }
-        return;
-      }
-
-      const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
-
-      try {
-        let res = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
-          }
-        });
-
-        let data = await res.json().catch(() => ({}));
-        if ((res.status === 401 || res.status === 403)) {
-          try {
-            if (window.PAWAuth && window.PAWAuth.whenReady) {
-              await window.PAWAuth.whenReady().catch(() => {});
-            }
-            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
-          } catch (_) {}
-
-          if (token) {
-            res = await fetch(url, {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-              }
-            });
-            data = await res.json().catch(() => ({}));
-          }
-        }
-
-        if (seq !== __activeListingLoadSeq) return;
-
-        const work = data && data.data && data.data.work ? data.data.work : null;
-        const pds = (work && work.payload && typeof work.payload === "object" && work.payload.pds && typeof work.payload.pds === "object")
-          ? work.payload.pds
-          : null;
-
-        if (!res.ok || !pds) {
-          clearActiveListingContext();
-          renderAttachedWorkSummary(aw);
-          return;
-        }
-
-        __activeListingContext = {
-          work_id: String((work && work.work_id) || workId),
-          label: normalizeAttachedWorkText((work && work.label) || aw.label || aw.name || "Untitled"),
-          pds: pds
-        };
-        renderAttachedWorkSummary(aw);
-      } catch (_) {
-        if (seq === __activeListingLoadSeq) {
-          clearActiveListingContext();
-          renderAttachedWorkSummary(aw);
-        }
-      }
     }
 
     function getAttachedWorkToolState(activeWork) {
