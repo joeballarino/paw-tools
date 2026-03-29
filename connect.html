@@ -562,6 +562,7 @@
 
     function clearActiveListingContext() {
       __activeListingContext = null;
+      syncAttachedWorkSummary();
     }
 
     async function loadConnectListingContext(activeWork) {
@@ -632,8 +633,11 @@
         }
 
         const work = data && data.data && data.data.work ? data.data.work : null;
-        const pds = (work && work.payload && typeof work.payload === "object" && work.payload.pds && typeof work.payload.pds === "object")
-          ? work.payload.pds
+        const payload = (work && work.payload && typeof work.payload === "object")
+          ? work.payload
+          : {};
+        const pds = (payload.pds && typeof payload.pds === "object")
+          ? payload.pds
           : null;
 
         if (!pds) {
@@ -641,11 +645,14 @@
           return;
         }
 
-        __activeListingContext = {
-          work_id: String((work && work.work_id) || aw.work_id || aw.id || ""),
-          label: String((work && work.label) || aw.label || "Untitled"),
+        __activeListingContext = Object.assign({}, (work && typeof work === "object") ? work : {}, {
+          id: String((work && (work.id || work.work_id)) || aw.id || aw.work_id || ""),
+          work_id: String((work && (work.work_id || work.id)) || aw.work_id || aw.id || ""),
+          label: String((work && work.label) || aw.label || aw.name || "Untitled"),
+          payload: payload,
           pds: pds
-        };
+        });
+        renderAttachedWorkSummary(aw);
       } catch (_) {
         if (seq === __activeListingLoadSeq) clearActiveListingContext();
       }
@@ -664,11 +671,12 @@
 
     function getAttachedWorkSummaryText(activeWork) {
       const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      const ctx = getAttachedWorkListingContext(aw);
       const payload = (aw.payload && typeof aw.payload === "object") ? aw.payload : {};
 
       let summary = "";
       try {
-        summary = normalizeAttachedWorkText((((payload.pds || {}).narrative || {}).summary));
+        summary = normalizeAttachedWorkText((((ctx.pds || {}).narrative || {}).summary));
       } catch (_) {}
       if (summary) return trunc(summary, 160);
 
@@ -687,29 +695,86 @@
       return "";
     }
 
+    function getSavedAttachedWorkListingContext(activeWork) {
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+      const ctx = (__activeListingContext && typeof __activeListingContext === "object") ? __activeListingContext : null;
+      const awId = normalizeAttachedWorkText(aw && (aw.id || aw.work_id));
+      const ctxId = normalizeAttachedWorkText(ctx && (ctx.id || ctx.work_id));
+      if (!ctx || !awId || !ctxId || awId !== ctxId) return null;
+      return ctx;
+    }
+
+    function parseAttachedWorkNumber(value) {
+      const text = normalizeAttachedWorkText(value).replace(/,/g, "");
+      if (!text) return null;
+      const match = text.match(/-?\d+(?:\.\d+)?/);
+      if (!match) return null;
+      const num = Number(match[0]);
+      return Number.isFinite(num) ? num : null;
+    }
+
+    function formatAttachedWorkNumber(value) {
+      if (!Number.isFinite(value)) return "";
+      const rounded = Math.round(value * 10) / 10;
+      return Math.abs(rounded - Math.round(rounded)) < 0.001 ? String(Math.round(rounded)) : String(rounded);
+    }
+
+    function formatAttachedWorkNumericFact(value, suffix, extractor) {
+      const text = normalizeAttachedWorkText(value);
+      if (!text) return "";
+      return extractor(text) || formatAttachedWorkFact(text, suffix);
+    }
+
+    function formatAttachedWorkBathFact(propertyFacts) {
+      const facts = propertyFacts && typeof propertyFacts === "object" ? propertyFacts : null;
+      if (!facts) return "";
+      const full = parseAttachedWorkNumber(facts.bathrooms_full);
+      const half = parseAttachedWorkNumber(facts.bathrooms_half);
+      if (full == null && half == null) return "";
+      const total = (full || 0) + ((half || 0) * 0.5);
+      if (!Number.isFinite(total) || total <= 0) return "";
+      return formatAttachedWorkFact(formatAttachedWorkNumber(total), "ba");
+    }
+
     function getAttachedWorkToolState(activeWork) {
       const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
-      const payload = (aw.payload && typeof aw.payload === "object") ? aw.payload : {};
-      if (payload.tool_state && typeof payload.tool_state === "object") return payload.tool_state;
-      if (payload.form && typeof payload.form === "object") return payload;
+      const saved = getSavedAttachedWorkListingContext(aw);
+      const payloads = [
+        (saved && saved.payload && typeof saved.payload === "object") ? saved.payload : null,
+        (aw.payload && typeof aw.payload === "object") ? aw.payload : null
+      ];
+      for (const payload of payloads) {
+        if (!payload || typeof payload !== "object") continue;
+        if (payload.tool_state && typeof payload.tool_state === "object") return payload.tool_state;
+        if (payload.form && typeof payload.form === "object") return payload;
+      }
       return {};
     }
 
     function getAttachedWorkListingContext(activeWork) {
       const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      const saved = getSavedAttachedWorkListingContext(aw);
       const payload = (aw.payload && typeof aw.payload === "object") ? aw.payload : {};
+      const savedPayload = (saved && saved.payload && typeof saved.payload === "object") ? saved.payload : {};
       const toolState = getAttachedWorkToolState(aw);
       const form = (toolState.form && typeof toolState.form === "object") ? toolState.form : {};
       const shell = (toolState.shell && typeof toolState.shell === "object") ? toolState.shell : {};
-      const portable = (payload.portable && typeof payload.portable === "object") ? payload.portable : {};
-      const pds = (payload.pds && typeof payload.pds === "object") ? payload.pds : {};
+      const portable = (savedPayload.portable && typeof savedPayload.portable === "object")
+        ? savedPayload.portable
+        : ((payload.portable && typeof payload.portable === "object") ? payload.portable : {});
+      const pds = (savedPayload.pds && typeof savedPayload.pds === "object")
+        ? savedPayload.pds
+        : ((payload.pds && typeof payload.pds === "object") ? payload.pds : {});
+      const propertyFacts = (((pds || {}).facts || {}).property && typeof ((pds || {}).facts || {}).property === "object")
+        ? ((pds || {}).facts || {}).property
+        : {};
       const listing = (portable.listing && typeof portable.listing === "object")
         ? portable.listing
         : ((pds.listing && typeof pds.listing === "object")
           ? pds.listing
           : ((pds.property && typeof pds.property === "object") ? pds.property : {}));
 
-      return { aw, form, shell, portable, pds, listing };
+      return { aw, saved, form, shell, portable, pds, propertyFacts, listing };
     }
 
     function pickAttachedWorkText(sources, keys) {
@@ -855,7 +920,10 @@
 
     function getAttachedWorkListingAddress(activeWork) {
       const ctx = getAttachedWorkListingContext(activeWork);
-      const sources = [ctx.listing, ctx.portable, ctx.pds, ctx.form, ctx.aw];
+      const richAddress = normalizeAttachedWorkText(ctx.propertyFacts && ctx.propertyFacts.address);
+      if (richAddress) return trunc(richAddress, 120);
+
+      const sources = [ctx.propertyFacts, ctx.listing, ctx.portable, ctx.pds, ctx.form, ctx.aw];
       const direct = pickAttachedWorkText(sources, [
         "address",
         "full_address",
@@ -897,11 +965,14 @@
         "asking_price",
         "askingPrice"
       ])) || findListingMatchInTexts(textSources, extractListingPriceLikeText);
-      const beds = formatAttachedWorkFact(pickAttachedWorkText(sources, ["beds", "bedrooms", "bed"]), "bd")
+      const beds = formatAttachedWorkNumericFact(ctx.propertyFacts && ctx.propertyFacts.bedrooms, "bd", extractListingBedsLikeText)
+        || formatAttachedWorkFact(pickAttachedWorkText(sources, ["beds", "bedrooms", "bed"]), "bd")
         || findListingMatchInTexts(textSources, extractListingBedsLikeText);
-      const baths = formatAttachedWorkFact(pickAttachedWorkText(sources, ["baths", "bathrooms", "bath"]), "ba")
+      const baths = formatAttachedWorkBathFact(ctx.propertyFacts)
+        || formatAttachedWorkFact(pickAttachedWorkText(sources, ["baths", "bathrooms", "bath"]), "ba")
         || findListingMatchInTexts(textSources, extractListingBathsLikeText);
-      const sqft = formatAttachedWorkFact(pickAttachedWorkText(sources, [
+      const sqft = formatAttachedWorkNumericFact(ctx.propertyFacts && ctx.propertyFacts.sqft_living, "sqft", extractListingSqftLikeText)
+        || formatAttachedWorkFact(pickAttachedWorkText(sources, [
         "sqft",
         "square_feet",
         "squareFeet",
@@ -989,7 +1060,6 @@
       if (isListing) {
         const identityText = getAttachedWorkListingAddress(aw);
         const factsText = getAttachedWorkListingFacts(aw);
-        const descriptorText = getAttachedWorkListingDescriptor(aw, identityText, label, factsText);
         const primaryText = identityText || label;
         const showSavedTitle = !!label && !!identityText && label.toLowerCase() !== identityText.toLowerCase();
 
@@ -999,12 +1069,8 @@
         titleEl.textContent = primaryText;
         factsEl.hidden = !factsText;
         factsEl.textContent = factsText;
-
-        const fallbackCopy = (!identityText && !factsText && !descriptorText)
-          ? (typeLabel ? (typeLabel + " attached and ready to use.") : "Attached data ready to use.")
-          : "";
-        copyEl.hidden = !(descriptorText || fallbackCopy);
-        copyEl.textContent = descriptorText || fallbackCopy;
+        copyEl.hidden = true;
+        copyEl.textContent = "";
         return;
       }
 
@@ -1055,7 +1121,9 @@
             };
           },
           getExtraPayload: function () {
-            const ctx = (__activeListingContext && __activeListingContext.pds) ? __activeListingContext : null;
+            const ctx = (__activeListingContext && ((__activeListingContext.payload && __activeListingContext.payload.pds) || __activeListingContext.pds))
+              ? __activeListingContext
+              : null;
             return ctx ? { active_listing: ctx } : {};
           },
           getDeliverableMeta: getConnectDeliverableMeta,
