@@ -91,7 +91,7 @@
     body.paw-presence .presence-row{
       display:flex;
       flex-wrap:wrap;
-      align-items:flex-end;
+      align-items:flex-start;
       gap:12px;
     }
 
@@ -176,6 +176,17 @@
 
     body.paw-presence .presence-block[hidden]{
       display:none !important;
+    }
+
+    body.paw-presence .presence-block[data-presence-group="primary"]{
+      flex:1 1 100%;
+      min-width:0;
+    }
+
+    body.paw-presence .presence-block[data-presence-group="secondary"],
+    body.paw-presence .presence-block[data-presence-group="other"]{
+      flex:0 1 auto;
+      min-width:0;
     }
 
     body.paw-presence .presence-input{
