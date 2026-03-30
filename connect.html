@@ -100,7 +100,6 @@
       flex-direction:column;
       gap:10px;
       padding:12px var(--connect-column-inset) 12px;
-      border-bottom:1px solid var(--border-soft);
     }
 
     .connect-row{
@@ -156,21 +155,11 @@
       background:rgba(254,242,242,.85);
     }
 
-    .connect-helper{
-      font-size:12px;
-      font-weight:700;
-      color:rgba(15,23,42,.62);
-      padding:0 var(--connect-column-inset) 12px;
-    }
-
-    .connect-helper.is-error{
-      color:rgba(153,27,27,.84);
-    }
-
     .connect-attached-summary{
       display:flex;
       flex-direction:column;
       gap:4px;
+      margin:0 var(--connect-column-inset) 12px;
       padding:9px 11px;
       border:1px solid rgba(15,23,42,.08);
       border-radius:14px;
@@ -334,7 +323,16 @@
 
   </div>
 </div>
-<div id="connectHelper" class="connect-helper" aria-live="polite">Choose type, channel, and use before sending.</div>
+<div id="connectAttachedSummary" class="connect-attached-summary" aria-live="polite" hidden>
+  <div class="connect-attached-summary__top">
+    <span id="connectAttachedType" class="connect-attached-summary__type" hidden></span>
+    <span class="connect-attached-summary__kicker">Attached data in use</span>
+  </div>
+  <div id="connectAttachedSaved" class="connect-attached-summary__saved" hidden></div>
+  <div id="connectAttachedTitle" class="connect-attached-summary__title"></div>
+  <div id="connectAttachedFacts" class="connect-attached-summary__facts" hidden></div>
+  <div id="connectAttachedCopy" class="connect-attached-summary__copy" hidden></div>
+</div>
 <!-- Message feed (same structure as Listing/Ask so tool-shell can manage it later) -->
         <div id="messages" class="messages" aria-live="polite"></div>
 
@@ -343,16 +341,6 @@
           
           <div class="composer-main">
             <div class="composer-help">Paste their message + tell PAW what you want to happen.</div>
-            <div id="connectAttachedSummary" class="connect-attached-summary" aria-live="polite" hidden>
-              <div class="connect-attached-summary__top">
-                <span id="connectAttachedType" class="connect-attached-summary__type" hidden></span>
-                <span class="connect-attached-summary__kicker">Attached data in use</span>
-              </div>
-              <div id="connectAttachedSaved" class="connect-attached-summary__saved" hidden></div>
-              <div id="connectAttachedTitle" class="connect-attached-summary__title"></div>
-              <div id="connectAttachedFacts" class="connect-attached-summary__facts" hidden></div>
-              <div id="connectAttachedCopy" class="connect-attached-summary__copy" hidden></div>
-            </div>
             <textarea id="prompt" class="prompt" placeholder="Example: Reply to “we’re waiting” and book a quick call"></textarea>
           </div>
 
