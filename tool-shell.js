@@ -892,6 +892,33 @@ function removeNode(node) {
 
       var lastDeliverableState = null;
 
+      function getCurrentSaveSnapshot() {
+        var shellState = null;
+        var prefs = {};
+        var extraPayload = {};
+
+        try { shellState = getState(); } catch (_) { shellState = null; }
+        try { prefs = getPrefs ? getPrefs() : {}; } catch (_) { prefs = {}; }
+        try {
+          var currentInput = $input ? String($input.value || "") : "";
+          extraPayload = getExtraPayload ? getExtraPayload(currentInput) : {};
+        } catch (_) {
+          extraPayload = {};
+        }
+
+        return {
+          toolId: toolId,
+          shellState: shellState && typeof shellState === "object" ? shellState : { history: [], input: "" },
+          prefs: prefs && typeof prefs === "object" ? prefs : {},
+          extraPayload: extraPayload && typeof extraPayload === "object" ? extraPayload : {},
+          deliverable: lastDeliverableState && typeof lastDeliverableState === "object" ? lastDeliverableState : null
+        };
+      }
+
+      try {
+        window.PAWToolShell._getCurrentSaveSnapshot = getCurrentSaveSnapshot;
+      } catch (_) {}
+
       // -------------------------
       // PAW: Ensure "Give feedback" link exists under every AI bubble.
       // Why: Some tools (or future tools) may re-render/rehydrate message DOM
@@ -2629,6 +2656,55 @@ function ensureWorksRoot(){
     return text;
   }
 
+  function _cloneCreateData(value){
+    if (!value || typeof value !== "object") return null;
+    try{
+      return JSON.parse(JSON.stringify(value));
+    }catch(_){
+      return null;
+    }
+  }
+
+  function _hasCreateData(value){
+    if (!value || typeof value !== "object") return false;
+    for (var key in value){
+      if (Object.prototype.hasOwnProperty.call(value, key)) return true;
+    }
+    return false;
+  }
+
+  function _normalizeCreateBucket(bucket){
+    var normalized = String(bucket || "").trim().toLowerCase();
+    if (normalized === "brand") return "brand_assets";
+    if (normalized === "listing") return "listings";
+    if (normalized === "transaction" || normalized === "deal" || normalized === "deals") return "transactions";
+    return normalized;
+  }
+
+  function _getCurrentSaveSnapshot(){
+    try{
+      if (window.PAWToolShell && typeof window.PAWToolShell._getCurrentSaveSnapshot === "function"){
+        var snapshot = window.PAWToolShell._getCurrentSaveSnapshot();
+        return snapshot && typeof snapshot === "object" ? snapshot : null;
+      }
+    }catch(_){ }
+    return null;
+  }
+
+  function _getSnapshotActiveListing(snapshot){
+    try{
+      var extraPayload = snapshot && snapshot.extraPayload && typeof snapshot.extraPayload === "object"
+        ? snapshot.extraPayload
+        : null;
+      var listing = extraPayload && extraPayload.active_listing && typeof extraPayload.active_listing === "object"
+        ? extraPayload.active_listing
+        : null;
+      return listing || null;
+    }catch(_){
+      return null;
+    }
+  }
+
   function _extractCreateSummary(state){
     var deliverable = state && typeof state === "object" ? state : null;
     if (!deliverable) return "";
@@ -2651,23 +2727,197 @@ function ensureWorksRoot(){
     };
   }
 
-  function _resolveCreateWorkBucket(){
+  function _extractCreateSummaryFromWork(work){
+    if (!work || typeof work !== "object") return "";
+    var summary = "";
+    try{ summary = _workPreviewSummary(work); }catch(_){ summary = ""; }
+    summary = _normalizeCreateSummary(summary);
+    if (!summary || summary === "Untitled") return "";
+    return summary;
+  }
+
+  function _extractCreateSummaryFromShellState(snapshot){
+    var shellState = snapshot && snapshot.shellState && typeof snapshot.shellState === "object"
+      ? snapshot.shellState
+      : null;
+    if (!shellState) return "";
+
+    var input = _normalizeCreateSummary(shellState.input);
+    if (input) return input;
+
+    var history = Array.isArray(shellState.history) ? shellState.history : [];
+    for (var i = history.length - 1; i >= 0; i--){
+      var item = history[i];
+      var content = _normalizeCreateSummary(item && item.content);
+      if (content) return content;
+    }
+
+    return "";
+  }
+
+  function _resolveCreateSummary(snapshot, activeWork){
+    var deliverableSummary = _extractCreateSummary(snapshot && snapshot.deliverable);
+    if (deliverableSummary) return deliverableSummary;
+
+    var activeListing = _getSnapshotActiveListing(snapshot);
+    if (activeListing){
+      var listingSummary = _extractCreateSummaryFromWork({
+        label: activeListing.label || "",
+        payload: (activeListing.pds && typeof activeListing.pds === "object") ? { pds: activeListing.pds } : null
+      });
+      if (listingSummary) return listingSummary;
+    }
+
+    var attachedSummary = _extractCreateSummaryFromWork(activeWork);
+    if (attachedSummary) return attachedSummary;
+
+    var shellSummary = _extractCreateSummaryFromShellState(snapshot);
+    if (shellSummary) return shellSummary;
+
+    return _normalizeCreateSummary(__worksCreateContext.summary);
+  }
+
+  function _resolveCreateWorkBucket(snapshot){
     try{
-      if (__pawActiveWork && __pawActiveWork.bucket) return String(__pawActiveWork.bucket || "");
+      if (__pawActiveWork && __pawActiveWork.bucket){
+        var activeBucket = _normalizeCreateBucket(__pawActiveWork.bucket);
+        if (activeBucket === "listings" || activeBucket === "transactions") return activeBucket;
+      }
     }catch(_){ }
-    return _inferWorkBucketFromPage() || "brand_assets";
+
+    if (_getSnapshotActiveListing(snapshot)) return "listings";
+
+    try{
+      if (__pawActiveWork && __pawActiveWork.bucket){
+        var fallbackActiveBucket = _normalizeCreateBucket(__pawActiveWork.bucket);
+        if (fallbackActiveBucket) return fallbackActiveBucket;
+      }
+    }catch(_){ }
+
+    var fallbackBucket = _normalizeCreateBucket(_inferWorkBucketFromPage());
+    return fallbackBucket || "brand_assets";
+  }
+
+  function _inferContentKindFromSaveSnapshot(snapshot, originTool){
+    var deliverable = snapshot && snapshot.deliverable && typeof snapshot.deliverable === "object"
+      ? snapshot.deliverable
+      : null;
+    var variant = deliverable ? String(deliverable.variant || "").trim().toLowerCase() : "";
+    if (variant === "email") return "email";
+
+    var prefs = snapshot && snapshot.prefs && typeof snapshot.prefs === "object" ? snapshot.prefs : null;
+    var contentType = prefs ? String(prefs.content_type || "").trim() : "";
+    if (contentType) return contentType;
+
+    return _inferContentKindFromPage(originTool) || String(__worksCreateContext.contentKind || "").trim();
+  }
+
+  function _buildCreatePayload(snapshot, activeWork, originTool, contentKind, summary){
+    var payload = {};
+    var activePayload = activeWork && activeWork.payload && typeof activeWork.payload === "object"
+      ? _cloneCreateData(activeWork.payload)
+      : null;
+
+    if (activePayload && _hasCreateData(activePayload)){
+      payload = activePayload;
+    }
+
+    var activeListing = _getSnapshotActiveListing(snapshot);
+    if (activeListing && activeListing.pds && typeof activeListing.pds === "object" && !payload.pds){
+      var listingPds = _cloneCreateData(activeListing.pds);
+      if (listingPds) payload.pds = listingPds;
+    }
+
+    var portable = payload.portable && typeof payload.portable === "object"
+      ? Object.assign({}, payload.portable)
+      : {};
+    var deliverable = snapshot && snapshot.deliverable && typeof snapshot.deliverable === "object"
+      ? snapshot.deliverable
+      : null;
+    var shellState = snapshot && snapshot.shellState && typeof snapshot.shellState === "object"
+      ? snapshot.shellState
+      : null;
+
+    if (originTool && !portable.origin_tool) portable.origin_tool = originTool;
+    if (contentKind && !portable.content_kind) portable.content_kind = contentKind;
+    if (summary) portable.summary = summary;
+
+    var intentText = _normalizeCreateSummary(shellState && shellState.input);
+    if (intentText && !portable.intent_text) portable.intent_text = intentText;
+
+    if (deliverable){
+      var variant = String(deliverable.variant || "").trim().toLowerCase();
+      if (variant) portable.variant = variant;
+      if (variant === "email"){
+        if (deliverable.subject) portable.subject = String(deliverable.subject || "");
+        if (deliverable.body) portable.body = String(deliverable.body || "");
+      } else if (deliverable.text) {
+        portable.text = String(deliverable.text || "");
+      }
+    }
+
+    if (_hasCreateData(portable)) payload.portable = portable;
+
+    var toolState = payload.tool_state && typeof payload.tool_state === "object"
+      ? Object.assign({}, payload.tool_state)
+      : {};
+    var prefs = snapshot && snapshot.prefs && typeof snapshot.prefs === "object"
+      ? _cloneCreateData(snapshot.prefs)
+      : null;
+    var toolId = snapshot && snapshot.toolId ? String(snapshot.toolId || "") : "";
+    var hasShellHistory = !!(shellState && Array.isArray(shellState.history) && shellState.history.length);
+    var hasShellInput = !!(shellState && typeof shellState.input === "string" && shellState.input.trim());
+
+    toolState.v = toolState.v || 1;
+    if (toolId) toolState.toolId = toolId;
+    if (hasShellHistory || hasShellInput){
+      toolState.shell = {
+        history: hasShellHistory ? shellState.history : [],
+        input: hasShellInput ? String(shellState.input || "") : ""
+      };
+    }
+    if (prefs && _hasCreateData(prefs)) toolState.prefs = prefs;
+    if (_hasCreateData(toolState)) payload.tool_state = toolState;
+
+    return _hasCreateData(payload) ? payload : {};
+  }
+
+  function _resolveCreateOriginTool(snapshot){
+    var toolId = snapshot && snapshot.toolId ? String(snapshot.toolId || "") : "";
+    if (!toolId) toolId = String(__worksCreateContext.toolId || "");
+    return _inferOriginToolFromPage(toolId) || String(__worksCreateContext.originTool || "").trim();
+  }
+
+  function _resolveCreatePrimaryEntityType(snapshot, bucket, originTool){
+    if (_getSnapshotActiveListing(snapshot)) return "property";
+    return _inferPrimaryEntityType(bucket, originTool);
   }
 
   function _buildCreateMyWorkRequest(bucket, label){
-    var resolvedBucket = String(bucket || "").trim() || _resolveCreateWorkBucket();
-    var originTool = String(__worksCreateContext.originTool || "").trim() || _inferOriginToolFromPage(__worksCreateContext.toolId);
-    var contentKind = String(__worksCreateContext.contentKind || "").trim() || _inferContentKindFromPage(originTool);
-    var primaryEntityType = String(__worksCreateContext.primaryEntityType || "").trim() || _inferPrimaryEntityType(resolvedBucket, originTool);
-    var summary = _normalizeCreateSummary(__worksCreateContext.summary);
+    var snapshot = _getCurrentSaveSnapshot();
+    var activeWork = null;
+    try{ activeWork = getActiveWork(); }catch(_){ activeWork = null; }
+    var resolvedBucket = String(bucket || "").trim() || _resolveCreateWorkBucket(snapshot);
+    var normalizedBucket = _normalizeCreateBucket(resolvedBucket) || "brand_assets";
+    var originTool = _resolveCreateOriginTool(snapshot);
+    var contentKind = _inferContentKindFromSaveSnapshot(snapshot, originTool);
+    var primaryEntityType = _resolveCreatePrimaryEntityType(snapshot, normalizedBucket, originTool);
+    var summary = _resolveCreateSummary(snapshot, activeWork);
+    try{
+      if (snapshot && snapshot.toolId){
+        _setWorksCreateContext({
+          toolId: snapshot.toolId,
+          originTool: originTool,
+          contentKind: contentKind,
+          primaryEntityType: primaryEntityType,
+          summary: summary
+        });
+      }
+    }catch(_){ }
     var body = {
-      bucket: resolvedBucket,
+      bucket: normalizedBucket,
       label: String(label || ""),
-      payload: {}
+      payload: _buildCreatePayload(snapshot, activeWork, originTool, contentKind, summary)
     };
 
     if (originTool) body.origin_tool = originTool;
