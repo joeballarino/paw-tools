@@ -157,44 +157,6 @@
     /* Mobile: keep the banner full-width so it reads as "important" */
     body.paw-mystuff .paw-savedworks-banner{ width:100%; }
 
-    /* Tabs: reuse the shared segmented pill aesthetic */
-    body.paw-mystuff .tabs-row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-top: 16px; /* added space between header band and tabs */
-    }
-
-    body.paw-mystuff .tabs{
-      display:flex;
-      width: fit-content;
-      min-width: min(520px, 100%);
-    }
-
-    body.paw-mystuff .tabs .tab-btn{
-      flex:1 1 0;
-      height: 40px;
-      padding: 0 14px;
-      border: 0;
-      background: transparent;
-      color: rgba(15,23,42,.82);
-      font-weight: 900;
-      font-size: 13.5px;
-      cursor:pointer;
-      white-space:nowrap;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      transition: background .15s ease, color .15s ease;
-    }
-    body.paw-mystuff .tabs .tab-btn:hover{ background: rgba(15,23,42,.05); }
-    body.paw-mystuff .tabs .tab-btn + .tab-btn{ border-left:1px solid rgba(15,23,42,.08); }
-    body.paw-mystuff .tabs .tab-btn[aria-selected="true"]{
-      background: rgba(5,195,249,.24);
-      color: rgba(15,23,42,.92);
-    }
-
     body.paw-mystuff .limits{
       font-size:12px;
       font-weight:650;
@@ -204,10 +166,84 @@
 
     /* Content area */
     body.paw-mystuff .tab-panel{
-      display:none;
+      display:block;
       padding-top: 14px;
     }
     body.paw-mystuff .tab-panel.active{ display:block; }
+    body.paw-mystuff .mystuff-wrap > .tab-panel{ display:none !important; }
+
+    body.paw-mystuff .mw-page{
+      display:grid;
+      gap: 18px;
+      padding-top: 14px;
+    }
+
+    body.paw-mystuff .mw-pane{
+      max-width: 980px;
+    }
+
+    body.paw-mystuff .mw-pane-head{
+      width: 100%;
+      min-height: 52px;
+      border: 1px solid rgba(15,23,42,.10);
+      border-radius: 16px;
+      background:
+        radial-gradient(620px 220px at 92px 10px,
+          rgba(0,150,220,.18) 0%,
+          rgba(5,195,249,.14) 30%,
+          rgba(255,255,255,0) 72%),
+        linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.94));
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 13px 16px;
+      text-align:left;
+    }
+
+    body.paw-mystuff button.mw-pane-head{
+      cursor:pointer;
+    }
+
+    body.paw-mystuff .mw-pane-head[aria-expanded="true"]{
+      border-color: rgba(14,165,233,.26);
+    }
+
+    body.paw-mystuff .mw-pane-heading{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    body.paw-mystuff .mw-pane-arrow{
+      font-size: 16px;
+      font-weight: 900;
+      color: rgba(15,23,42,.72);
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+
+    body.paw-mystuff .mw-pane-title{
+      font-size: 14px;
+      font-weight: 950;
+      color: rgba(15,23,42,.92);
+      letter-spacing:-0.01em;
+    }
+
+    body.paw-mystuff .mw-pane-copy{
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(15,23,42,.58);
+    }
+
+    body.paw-mystuff .mw-pane-body{
+      padding-top: 14px;
+    }
+
+    body.paw-mystuff .mw-pane.is-collapsed .mw-pane-body{
+      display:none;
+    }
 
     body.paw-mystuff .empty{
       /*
@@ -513,45 +549,203 @@
       line-height: 1.35;
       max-width: 980px;
     }
-    body.paw-mystuff .works-list{ margin-top:14px; display:grid; gap:10px; }
-    body.paw-mystuff .work-row{
-      border:1px solid rgba(15,23,42,.10);
-      border-radius:12px;
-      background:#fff;
-      padding:10px 12px;
+    body.paw-mystuff .mw-works-controls{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex-wrap:wrap;
+      margin-bottom: 14px;
+    }
+
+    body.paw-mystuff .mw-filter-row{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex-wrap:wrap;
+      flex: 1 1 520px;
+      min-width: 0;
+    }
+
+    body.paw-mystuff .mw-filter-chip{
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid rgba(15,23,42,.10);
+      border-radius: 999px;
+      background: rgba(255,255,255,.96);
+      color: rgba(15,23,42,.78);
+      font-size: 12.5px;
+      font-weight: 850;
+      cursor:pointer;
+      transition: border-color .15s ease, background .15s ease, color .15s ease;
+    }
+
+    body.paw-mystuff .mw-filter-chip.is-active{
+      border-color: rgba(14,165,233,.30);
+      background: rgba(5,195,249,.14);
+      color: rgba(15,23,42,.92);
+    }
+
+    body.paw-mystuff .mw-search{
+      flex: 0 1 240px;
+      min-width: 220px;
+    }
+
+    body.paw-mystuff .mw-search input{
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid rgba(15,23,42,.12);
+      border-radius: 12px;
+      padding: 0 12px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(255,255,255,.96);
+      color: rgba(15,23,42,.88);
+      outline: none;
+    }
+
+    body.paw-mystuff .mw-search input:focus{
+      border-color: rgba(14,165,233,.30);
+    }
+
+    body.paw-mystuff .mw-works-status{
+      margin: 4px 0 0;
+      font-size: 13px;
+      font-weight: 650;
+      color: rgba(15,23,42,.64);
+      line-height: 1.45;
+    }
+
+    body.paw-mystuff .works-list{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    body.paw-mystuff .work-card{
+      border: 1px solid rgba(15,23,42,.08);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.99), rgba(248,250,252,.96));
+      padding: 14px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      min-height: 198px;
+    }
+
+    body.paw-mystuff .work-origin{
+      display:inline-flex;
+      align-items:center;
+      width: fit-content;
+      min-height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: rgba(5,195,249,.12);
+      color: rgba(15,23,42,.80);
+      font-size: 11.5px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    body.paw-mystuff .work-main{
+      display:grid;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    body.paw-mystuff .work-label{
+      font-size: 14px;
+      font-weight: 850;
+      color: var(--text-strong);
+      line-height: 1.35;
+    }
+
+    body.paw-mystuff .work-summary{
+      font-size: 12.5px;
+      font-weight: 600;
+      color: rgba(15,23,42,.68);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 56px;
+    }
+
+    body.paw-mystuff .work-time{
+      font-size: 12px;
+      font-weight: 750;
+      color: rgba(15,23,42,.54);
+    }
+
+    body.paw-mystuff .work-actions{
+      margin-top: auto;
+      display:flex;
+      align-items:flex-start;
+      gap: 8px;
+      flex-wrap:wrap;
+    }
+
+    body.paw-mystuff .work-actions .btn{
+      min-width: 90px;
+    }
+
+    body.paw-mystuff .mw-works-footer{
+      margin-top: 16px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:12px;
+      gap: 12px;
       flex-wrap:wrap;
     }
-    body.paw-mystuff .work-main{ min-width:220px; }
-    body.paw-mystuff .work-label{ font-size:14px; font-weight:800; color:var(--text-strong); }
-    body.paw-mystuff .work-meta{ margin-top:2px; font-size:12px; color:rgba(15,23,42,.62); }
-    body.paw-mystuff .work-actions{ display:flex; gap:8px; }
-    body.paw-mystuff .work-actions .btn{ min-width:78px; }
+
+    body.paw-mystuff .mw-works-count{
+      font-size: 12.5px;
+      font-weight: 800;
+      color: rgba(15,23,42,.60);
+    }
+
+    body.paw-mystuff .mw-pagination{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex-wrap:wrap;
+    }
+
+    body.paw-mystuff .mw-pagination-text{
+      font-size: 12px;
+      font-weight: 750;
+      color: rgba(15,23,42,.54);
+    }
+
+    @media (max-width: 860px){
+      body.paw-mystuff .works-list{
+        grid-template-columns: 1fr;
+      }
+
+      body.paw-mystuff .mw-search{
+        flex-basis: 100%;
+        min-width: 0;
+      }
+    }
 
     @media (max-width: 560px){
-  body.paw-mystuff .tool-head{ width:100%; }
-  body.paw-mystuff .paw-savedworks-banner{ width:100%; }
-
-  body.paw-mystuff .tabs-row{ flex-direction:column; align-items:stretch; gap:10px; }
-  body.paw-mystuff .tabs{ width:100%; min-width:0; flex-direction:column; }
-
-  /* Mobile: tabs become primary stacked actions */
-  body.paw-mystuff .tabs .tab-btn{
-    width:100%;
-    justify-content:center;
-    border-left: 0 !important;
-  }
-  body.paw-mystuff .tabs .tab-btn + .tab-btn{
-    border-left:0;
-    border-top:1px solid rgba(15,23,42,.10);
-  }
-
-  body.paw-mystuff .limits{ white-space:normal; text-align:left; }
-}body.paw-mystuff .tabs{ width:100%; min-width:0; }
-      body.paw-mystuff .limits{ white-space:normal; }
+      body.paw-mystuff .tool-head{ width:100%; }
+      body.paw-mystuff .paw-savedworks-banner{ width:100%; }
+      body.paw-mystuff .limits{ white-space:normal; text-align:left; }
+      body.paw-mystuff .mw-pane-head{
+        padding: 12px 14px;
+      }
+      body.paw-mystuff .mw-works-controls{
+        gap: 12px;
+      }
+      body.paw-mystuff .mw-filter-row{
+        flex-basis: 100%;
+      }
+      body.paw-mystuff .work-actions{
+        width: 100%;
+      }
     }
   
     /* ------------------------------------------------------------
@@ -758,12 +952,12 @@
       color: rgba(15,23,42,.58);
     }
 
-    /* Ensure tabs row doesn't collide with the pinned limits */
+    /* Keep the header utilities clear of the pinned limits text */
     body.paw-mystuff .panel-topbar.myworks-topbar .myworks-hero{
       padding-bottom: 6px;
     }
 
-    /* Mobile: convert tabs into clean stacked buttons (no giant capsule) */
+    /* Mobile: let the limits text wrap cleanly in the header */
     @media (max-width: 560px){
       body.paw-mystuff .panel-topbar.myworks-topbar{ padding-bottom: 34px; }
 
@@ -772,26 +966,6 @@
         bottom: 10px;
         white-space: normal; /* allow wrap if ultra narrow */
         max-width: calc(100% - 28px);
-      }
-
-      /* Override shared segmented pill styling on mobile */
-      body.paw-mystuff .tabs.paw-seg{
-        background: rgba(255,255,255,.92) !important;
-        border: 1px solid rgba(15,23,42,.12) !important;
-        border-radius: 14px !important;
-        padding: 0 !important;
-        overflow: hidden;
-        box-shadow: none !important;
-      }
-
-      body.paw-mystuff .tabs .tab-btn{
-        min-height: 44px;
-        font-size: 14px;
-        border-radius: 0 !important;
-      }
-
-      body.paw-mystuff .tabs .tab-btn[aria-selected="true"]{
-        background: rgba(5,195,249,.18);
       }
     }
 
@@ -823,24 +997,66 @@
 
           <div class="myworks-hero">
             <div class="mystuff-head">
-<div class="tabs-row">
-                          <div class="tabs paw-seg" role="tablist" aria-label="My Works tabs">
-                            <button class="tab-btn" id="tab-assets" role="tab" aria-selected="true" aria-controls="panel-assets" type="button">Brand Assets</button>
-                            <button class="tab-btn" id="tab-listings" role="tab" aria-selected="false" aria-controls="panel-listings" type="button">Listings</button>
-                            <button class="tab-btn" id="tab-transactions" role="tab" aria-selected="false" aria-controls="panel-transactions" type="button">Transactions</button>
-                            <button class="tab-btn" id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" type="button">Brand Settings</button>
-                          </div>
-
-                          <!-- Phase 1: placeholder usage meter (non-technical, mocked) -->
-                          <div class="limits" aria-label="Storage usage">
-                            You’ve saved 0 of your available items.
-                          </div>
-                        </div>
-                      </div>
+              <div class="limits" aria-label="Storage usage">You've saved 0 of your available items.</div>
+            </div>
           </div>
-        </div>
 
         <div class="mystuff-wrap">
+          <div class="mw-page">
+            <section class="mw-pane is-collapsed" id="brandSettingsSection">
+              <button class="mw-pane-head" id="brandSettingsToggle" type="button" aria-expanded="false" aria-controls="brandSettingsBody">
+                <span class="mw-pane-heading">
+                  <span class="mw-pane-arrow" aria-hidden="true">></span>
+                  <span class="mw-pane-title">Brand Settings</span>
+                </span>
+                <span class="mw-pane-copy">Saved profile, voice, and contact details.</span>
+              </button>
+
+              <div class="mw-pane-body" id="brandSettingsBody">
+                <div id="brandSettingsMount"></div>
+              </div>
+            </section>
+
+            <section class="mw-pane is-open" id="savedWorksSection">
+              <div class="mw-pane-head" id="savedWorksToggle" aria-expanded="true" aria-controls="savedWorksBody">
+                <span class="mw-pane-heading">
+                  <span class="mw-pane-arrow" aria-hidden="true">v</span>
+                  <span class="mw-pane-title">Saved Works</span>
+                </span>
+                <span class="mw-pane-copy">Your saved work across Guide, Connect, Presence, Listings, and Transactions.</span>
+              </div>
+
+              <div class="mw-pane-body" id="savedWorksBody">
+                <div class="mw-works-controls">
+                  <div class="mw-filter-row" id="savedWorksFilters" role="group" aria-label="Filter saved works by origin">
+                    <button class="mw-filter-chip is-active" type="button" data-action="filter-origin" data-origin="all">All</button>
+                    <button class="mw-filter-chip" type="button" data-action="filter-origin" data-origin="guide">Guide</button>
+                    <button class="mw-filter-chip" type="button" data-action="filter-origin" data-origin="connect">Connect</button>
+                    <button class="mw-filter-chip" type="button" data-action="filter-origin" data-origin="presence">Presence</button>
+                    <button class="mw-filter-chip" type="button" data-action="filter-origin" data-origin="listings">Listings</button>
+                    <button class="mw-filter-chip" type="button" data-action="filter-origin" data-origin="transactions">Transactions</button>
+                    <button class="btn" id="savedWorksReset" type="button" data-action="reset-works-filters">Reset</button>
+                  </div>
+
+                  <label class="mw-search" for="savedWorksSearch">
+                    <input id="savedWorksSearch" type="search" placeholder="Search saved works">
+                  </label>
+                </div>
+
+                <div class="mw-works-status" id="savedWorksStatus">Loading saved works...</div>
+                <div class="works-list" id="savedWorksGrid" aria-live="polite"></div>
+
+                <div class="mw-works-footer">
+                  <div class="mw-works-count" id="savedWorksCount">Showing 0 of 0 works</div>
+                  <div class="mw-pagination" id="savedWorksPagination">
+                    <button class="btn" id="savedWorksPrev" type="button" data-action="saved-works-prev">Previous</button>
+                    <span class="mw-pagination-text" id="savedWorksPageText">Page 1 of 1</span>
+                    <button class="btn" id="savedWorksNext" type="button" data-action="saved-works-next">Next</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
 
           
 
@@ -991,6 +1207,28 @@
     </div>
   </div>
 
+  <div id="workUseModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="workUseTitle">
+      <div class="modal-head">
+        <div id="workUseTitle" class="modal-title">Use in...</div>
+        <button class="modal-close" id="workUseClose" aria-label="Close" type="button">âœ•</button>
+      </div>
+      <div class="modal-body">
+        <div id="workUseBody" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45;">Choose where to use this saved work.</div>
+        <div style="display:grid; gap:10px; margin-top:14px;">
+          <button class="btn" type="button" data-action="confirm-use-work" data-destination="GUIDE">Guide</button>
+          <button class="btn" type="button" data-action="confirm-use-work" data-destination="CONNECT">Connect</button>
+          <button class="btn" type="button" data-action="confirm-use-work" data-destination="PRESENCE">Presence</button>
+          <button class="btn" type="button" data-action="confirm-use-work" data-destination="LISTINGS">Listings</button>
+          <button class="btn" type="button" data-action="confirm-use-work" data-destination="TRANSACTIONS">Transactions</button>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px; flex-wrap:wrap;">
+          <button class="btn" id="workUseCancel" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Notice modal (fallback for messages when toast shell isn't available; avoid browser-native alert) -->
   <div id="noticeModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="noticeTitle">
@@ -1040,30 +1278,41 @@
       }catch(_){}
 
       // ------------------------------------------------------------
-      // Tabs (Phase 1)
+      // Section layout
       // ------------------------------------------------------------
-      const tabs = [
-        { btn: document.getElementById('tab-assets'), panel: document.getElementById('panel-assets') },
-        { btn: document.getElementById('tab-listings'), panel: document.getElementById('panel-listings') },
-        { btn: document.getElementById('tab-transactions'), panel: document.getElementById('panel-transactions') },
-        { btn: document.getElementById('tab-settings'), panel: document.getElementById('panel-settings') },
-      ];
+      const $brandSettingsSection = document.getElementById('brandSettingsSection');
+      const $savedWorksSection = document.getElementById('savedWorksSection');
+      const $brandSettingsToggle = document.getElementById('brandSettingsToggle');
+      const $savedWorksToggle = document.getElementById('savedWorksToggle');
+      const $brandSettingsMount = document.getElementById('brandSettingsMount');
+      const $panelSettings = document.getElementById('panel-settings');
+      if ($brandSettingsMount && $panelSettings) $brandSettingsMount.appendChild($panelSettings);
+      if ($panelSettings) $panelSettings.setAttribute('aria-labelledby', 'brandSettingsToggle');
 
-      let activeTabId = 'tab-assets';
-      function activateTab(btnId){
-        activeTabId = btnId;
-        tabs.forEach(t => {
-          const on = t.btn && t.btn.id === btnId;
-          if (t.btn) t.btn.setAttribute('aria-selected', on ? 'true' : 'false');
-          if (t.panel) t.panel.classList.toggle('active', !!on);
-        });
-        try{ updateLimitsForActiveTab(); }catch(_){ }
+      let activeSection = 'saved';
+      function setActiveSection(sectionKey){
+        activeSection = sectionKey === 'brand' ? 'brand' : 'saved';
+        const brandOpen = activeSection === 'brand';
+        const savedOpen = !brandOpen;
+        if ($brandSettingsSection) $brandSettingsSection.classList.toggle('is-collapsed', !brandOpen);
+        if ($brandSettingsSection) $brandSettingsSection.classList.toggle('is-open', brandOpen);
+        if ($savedWorksSection) $savedWorksSection.classList.toggle('is-collapsed', !savedOpen);
+        if ($savedWorksSection) $savedWorksSection.classList.toggle('is-open', savedOpen);
+        if ($brandSettingsToggle) {
+          $brandSettingsToggle.setAttribute('aria-expanded', brandOpen ? 'true' : 'false');
+          const arrow = $brandSettingsToggle.querySelector('.mw-pane-arrow');
+          if (arrow) arrow.textContent = brandOpen ? 'v' : '>';
+        }
+        if ($savedWorksToggle) {
+          $savedWorksToggle.setAttribute('aria-expanded', savedOpen ? 'true' : 'false');
+          const arrow = $savedWorksToggle.querySelector('.mw-pane-arrow');
+          if (arrow) arrow.textContent = savedOpen ? 'v' : '>';
+        }
+        try{ syncLimitsText(); }catch(_){ }
       }
 
-      tabs.forEach(t => {
-        if (!t.btn) return;
-        t.btn.addEventListener('click', () => activateTab(t.btn.id));
-      });
+      if ($brandSettingsToggle) $brandSettingsToggle.addEventListener('click', () => setActiveSection('brand'));
+      setActiveSection('saved');
 
       // ------------------------------------------------------------
       // Modal helpers (reuse shared .modal styles from paw-ui.css)
@@ -1113,6 +1362,10 @@
       const $workDeleteClose = document.getElementById('workDeleteClose');
       const $workDeleteCancel = document.getElementById('workDeleteCancel');
       const $workDeleteConfirm = document.getElementById('workDeleteConfirm');
+      const $workUseModal = document.getElementById('workUseModal');
+      const $workUseBody = document.getElementById('workUseBody');
+      const $workUseClose = document.getElementById('workUseClose');
+      const $workUseCancel = document.getElementById('workUseCancel');
 
       const $notice = document.getElementById('noticeModal');
       const $noticeTitle = document.getElementById('noticeTitle');
@@ -1234,9 +1487,8 @@
                 await apiSaveBrand(brand);
                 await refreshBrandUI();
                 // After an explicit save, keep the user in Brand Settings so they
-                // immediately see the saved-state snapshot (prevents confusion
-                // that it "didn't save" when we auto-land on Brand Assets).
-                try{ activateTab('tab-settings'); }catch(_){}
+                // immediately see the saved-state snapshot.
+                try{ setActiveSection('brand'); }catch(_){}
                 toast('Brand Settings saved.');
               }catch(e){
                 toast('Couldn’t save Brand Settings. Please try again.');
@@ -1300,23 +1552,44 @@
         listings: "listings",
         transactions: "transactions"
       };
-      const TAB_TO_BUCKET_KEY = {
-        'tab-assets': 'assets',
-        'tab-listings': 'listings',
-        'tab-transactions': 'transactions'
+      const ORIGIN_ORDER = ['all', 'guide', 'connect', 'presence', 'listings', 'transactions'];
+      const ORIGIN_META = {
+        all: { label: 'All', destination: '' },
+        guide: { label: 'Guide', destination: 'GUIDE' },
+        connect: { label: 'Connect', destination: 'CONNECT' },
+        presence: { label: 'Presence', destination: 'PRESENCE' },
+        listings: { label: 'Listings', destination: 'LISTINGS' },
+        transactions: { label: 'Transactions', destination: 'TRANSACTIONS' }
       };
-      const TAB_TO_DEST = {
-        'tab-assets': 'PRESENCE',
-        'tab-listings': 'LISTINGS',
-        'tab-transactions': 'TRANSACTIONS'
-      };
+      const SAVED_WORKS_PAGE_SIZE = 6;
       const worksState = {
-        assets: { items: [], loaded: false },
-        listings: { items: [], loaded: false },
-        transactions: { items: [], loaded: false }
+        assets: { items: [], loaded: false, status: 'idle' },
+        listings: { items: [], loaded: false, status: 'idle' },
+        transactions: { items: [], loaded: false, status: 'idle' }
       };
+      const savedWorksState = {
+        origin: 'all',
+        search: '',
+        page: 1
+      };
+      const $savedWorksGrid = document.getElementById('savedWorksGrid');
+      const $savedWorksStatus = document.getElementById('savedWorksStatus');
+      const $savedWorksCount = document.getElementById('savedWorksCount');
+      const $savedWorksPageText = document.getElementById('savedWorksPageText');
+      const $savedWorksPrev = document.getElementById('savedWorksPrev');
+      const $savedWorksNext = document.getElementById('savedWorksNext');
+      const $savedWorksSearch = document.getElementById('savedWorksSearch');
       let brandSettingsCount = 0;
       let pendingDeleteWork = null;
+      let pendingUseWork = null;
+
+      if ($savedWorksSearch) {
+        $savedWorksSearch.addEventListener('input', (e) => {
+          savedWorksState.search = String((e && e.target && e.target.value) || '');
+          savedWorksState.page = 1;
+          renderSavedWorks();
+        });
+      }
 
       function formatDateLike(s){
         const d = s ? new Date(s) : null;
@@ -1329,10 +1602,6 @@
         return await apiFetch('/myworks?' + params.toString(), { method: 'GET' });
       }
 
-      function getBucketKeyFromTab(tabId){
-        return TAB_TO_BUCKET_KEY[String(tabId || '').trim()] || '';
-      }
-
       function getBucketKeyFromPanel(panelId){
         if (panelId === 'panel-assets') return 'assets';
         if (panelId === 'panel-listings') return 'listings';
@@ -1340,10 +1609,16 @@
         return '';
       }
 
-      function updateLimitsForActiveTab(){
-        const k = getBucketKeyFromTab(activeTabId);
-        if (k && worksState[k]) return setLimitsText((worksState[k].items || []).length);
-        if (activeTabId === 'tab-settings') return setLimitsText(brandSettingsCount);
+      function getPanelIdFromBucketKey(key){
+        if (key === 'assets') return 'panel-assets';
+        if (key === 'listings') return 'panel-listings';
+        if (key === 'transactions') return 'panel-transactions';
+        return '';
+      }
+
+      function syncLimitsText(){
+        const totalWorks = Object.keys(worksState).reduce((sum, key) => sum + ((worksState[key].items || []).length), 0);
+        setLimitsText(activeSection === 'brand' ? brandSettingsCount : totalWorks);
       }
 
       function getWorkPreviewSummary(item){
@@ -1363,56 +1638,197 @@
         return '';
       }
 
+      function formatTimeAgo(s){
+        const d = s ? new Date(s) : null;
+        if (!d || Number.isNaN(d.getTime())) return 'Recently updated';
+        const diff = Date.now() - d.getTime();
+        if (diff < 0) return 'Recently updated';
+        const minute = 60 * 1000;
+        const hour = 60 * minute;
+        const day = 24 * hour;
+        const week = 7 * day;
+        const month = 30 * day;
+        const year = 365 * day;
+        if (diff < minute) return 'Just now';
+        if (diff < hour) return Math.max(1, Math.round(diff / minute)) + 'm ago';
+        if (diff < day) return Math.max(1, Math.round(diff / hour)) + 'h ago';
+        if (diff < week) return Math.max(1, Math.round(diff / day)) + 'd ago';
+        if (diff < month) return Math.max(1, Math.round(diff / week)) + 'w ago';
+        if (diff < year) return Math.max(1, Math.round(diff / month)) + 'mo ago';
+        return Math.max(1, Math.round(diff / year)) + 'y ago';
+      }
+
+      function normalizeOriginKey(raw, bucketKey){
+        const value = String(raw || '').trim().toLowerCase();
+        if (!value) return bucketKey === 'listings' ? 'listings' : (bucketKey === 'transactions' ? 'transactions' : '');
+        if (value.includes('guide')) return 'guide';
+        if (value.includes('connect')) return 'connect';
+        if (value.includes('presence') || value.includes('brand')) return 'presence';
+        if (value.includes('listing')) return 'listings';
+        if (value.includes('transaction')) return 'transactions';
+        return '';
+      }
+
+      function inferWorkOriginKey(item, bucketKey){
+        const work = item && typeof item === 'object' ? item : {};
+        const payload = (work.payload && typeof work.payload === 'object') ? work.payload : {};
+        const portable = (payload.portable && typeof payload.portable === 'object') ? payload.portable : {};
+        const metadata = (work.metadata && typeof work.metadata === 'object') ? work.metadata : {};
+        const tags = Array.isArray(work.tags) ? work.tags : [];
+        const candidates = [
+          work.origin_tool,
+          work.origin,
+          metadata.origin_tool,
+          metadata.origin,
+          metadata.source_tool,
+          metadata.tool,
+          metadata.tool_name,
+          payload.origin_tool,
+          payload.origin,
+          payload.source_tool,
+          payload.tool,
+          payload.tool_name,
+          portable.origin_tool,
+          portable.origin,
+          portable.source_tool,
+          portable.tool,
+          portable.tool_name
+        ].concat(tags);
+        for (const candidate of candidates){
+          const normalized = normalizeOriginKey(candidate, bucketKey);
+          if (normalized) return normalized;
+        }
+        if (bucketKey === 'listings') return 'listings';
+        if (bucketKey === 'transactions') return 'transactions';
+        return 'presence';
+      }
+
+      function buildSavedWorkRecord(item, bucketKey){
+        const work = item && typeof item === 'object' ? item : {};
+        const id = String(work.work_id || work.id || '').trim();
+        const label = String(work.label || 'Untitled');
+        const usedAt = work.updated_at || work.created_at || '';
+        const originKey = inferWorkOriginKey(work, bucketKey);
+        return {
+          id: id,
+          panelId: getPanelIdFromBucketKey(bucketKey),
+          bucket: WORK_BUCKETS[bucketKey],
+          title: label,
+          summary: safePreview(getWorkPreviewSummary(work) || label, 180),
+          usedAt: usedAt,
+          timeAgo: formatTimeAgo(usedAt),
+          originKey: originKey,
+          originLabel: 'From ' + ((ORIGIN_META[originKey] || ORIGIN_META.presence).label)
+        };
+      }
+
+      function getAllSavedWorks(){
+        const rows = [];
+        Object.keys(worksState).forEach((bucketKey) => {
+          (worksState[bucketKey].items || []).forEach((item) => {
+            rows.push(buildSavedWorkRecord(item, bucketKey));
+          });
+        });
+        rows.sort((a, b) => {
+          const aTime = a.usedAt ? new Date(a.usedAt).getTime() : 0;
+          const bTime = b.usedAt ? new Date(b.usedAt).getTime() : 0;
+          return bTime - aTime;
+        });
+        return rows;
+      }
+
+      function updateOriginFilterChips(){
+        document.querySelectorAll('[data-action="filter-origin"]').forEach((btn) => {
+          const on = btn.getAttribute('data-origin') === savedWorksState.origin;
+          btn.classList.toggle('is-active', on);
+          btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+      }
+
+      function setSavedWorksStatus(html){
+        if (!$savedWorksStatus) return;
+        $savedWorksStatus.innerHTML = html || '';
+        $savedWorksStatus.style.display = html ? '' : 'none';
+      }
+
+      function renderSavedWorks(){
+        if (!$savedWorksGrid) return;
+        updateOriginFilterChips();
+
+        const allWorks = getAllSavedWorks();
+        const search = String(savedWorksState.search || '').trim().toLowerCase();
+        const filtered = allWorks.filter((work) => {
+          if (savedWorksState.origin !== 'all' && work.originKey !== savedWorksState.origin) return false;
+          if (!search) return true;
+          const haystack = (work.title + ' ' + work.summary + ' ' + work.originLabel).toLowerCase();
+          return haystack.includes(search);
+        });
+
+        const pageCount = Math.max(1, Math.ceil(filtered.length / SAVED_WORKS_PAGE_SIZE));
+        if (savedWorksState.page > pageCount) savedWorksState.page = pageCount;
+        const start = (savedWorksState.page - 1) * SAVED_WORKS_PAGE_SIZE;
+        const pageItems = filtered.slice(start, start + SAVED_WORKS_PAGE_SIZE);
+
+        const allLoaded = Object.keys(worksState).every((key) => worksState[key].loaded || worksState[key].status === 'error');
+        const hasLoading = Object.keys(worksState).some((key) => worksState[key].status === 'loading');
+        const hasError = Object.keys(worksState).some((key) => worksState[key].status === 'error');
+
+        if (!allWorks.length && hasLoading) {
+          setSavedWorksStatus('Loading saved works...');
+        } else if (!allWorks.length && hasError) {
+          setSavedWorksStatus('We cannot load your saved works right now. Please try again.');
+        } else if (!allWorks.length && allLoaded) {
+          setSavedWorksStatus('No saved works yet.');
+        } else if (!filtered.length) {
+          setSavedWorksStatus('No works match the current filters.');
+        } else {
+          setSavedWorksStatus('');
+        }
+
+        $savedWorksGrid.innerHTML = pageItems.map((work) => {
+          return '<article class="work-card">'
+            + '<div class="work-origin">' + escapeHtml(work.originLabel) + '</div>'
+            + '<div class="work-main">'
+            + '<div class="work-label">' + escapeHtml(work.title) + '</div>'
+            + '<div class="work-summary">' + escapeHtml(work.summary || 'Saved work ready to reuse.') + '</div>'
+            + '<div class="work-time">' + escapeHtml(work.timeAgo) + '</div>'
+            + '</div>'
+            + '<div class="work-actions">'
+            + '<button class="btn primary" type="button" data-action="open-use-modal" data-work-id="' + escapeHtml(work.id) + '" data-bucket="' + escapeHtml(work.bucket) + '" data-label="' + escapeHtml(work.title) + '">Use in...</button>'
+            + '<button class="btn" type="button" data-action="delete-work" data-panel="' + escapeHtml(work.panelId) + '" data-work-id="' + escapeHtml(work.id) + '" data-label="' + escapeHtml(work.title) + '">Delete</button>'
+            + '</div>'
+            + '</article>';
+        }).join('');
+
+        if ($savedWorksCount) $savedWorksCount.textContent = 'Showing ' + String(pageItems.length) + ' of ' + String(filtered.length) + ' works';
+        if ($savedWorksPageText) $savedWorksPageText.textContent = 'Page ' + String(savedWorksState.page) + ' of ' + String(pageCount);
+        if ($savedWorksPrev) $savedWorksPrev.disabled = savedWorksState.page <= 1;
+        if ($savedWorksNext) $savedWorksNext.disabled = savedWorksState.page >= pageCount;
+        syncLimitsText();
+      }
+
       function renderWorksPanel(panelId, mode, payload){
-        const panel = document.getElementById(panelId);
-        if (!panel) return;
         const key = getBucketKeyFromPanel(panelId);
         if (!key) return;
-        const stateHost = panel.querySelector('.list-placeholder');
-        const empty = panel.querySelector('.empty');
-        if (!stateHost || !empty) return;
 
         if (mode === 'loading'){
-          empty.style.display = 'none';
-          stateHost.innerHTML = 'Loading…';
+          worksState[key].status = 'loading';
+          renderSavedWorks();
           return;
         }
         if (mode === 'error'){
-          empty.style.display = '';
-          stateHost.innerHTML = 'We can’t load your saved works right now. Please try again. <button class="btn" type="button" data-action="retry-load" data-panel="'+escapeHtml(panelId)+'">Try again</button>';
+          worksState[key].status = 'error';
+          worksState[key].loaded = true;
+          worksState[key].items = [];
+          renderSavedWorks();
           return;
         }
 
         const list = Array.isArray(payload) ? payload : [];
         worksState[key].items = list;
         worksState[key].loaded = true;
-
-        if (!list.length){
-          empty.style.display = '';
-          stateHost.innerHTML = '';
-          updateLimitsForActiveTab();
-          return;
-        }
-
-        empty.style.display = 'none';
-        stateHost.innerHTML = '<div class="works-list">' + list.map((item) => {
-          const id = String(item.work_id || item.id || '');
-          const label = String(item.label || 'Untitled');
-          const usedAt = item.updated_at || item.created_at || '';
-          const previewSummary = getWorkPreviewSummary(item);
-          return '<div class="work-row">'
-            + '<div class="work-main">'
-            + '<div class="work-label">' + escapeHtml(label) + '</div>'
-            + (previewSummary ? '<div class="work-meta">' + escapeHtml(previewSummary) + '</div>' : '')
-            + '<div class="work-meta">Last used: ' + escapeHtml(formatDateLike(usedAt)) + '</div>'
-            + '</div>'
-            + '<div class="work-actions">'
-            + '<button class="btn" type="button" data-action="open-work" data-tab="'+escapeHtml('tab-' + key)+'" data-work-id="'+escapeHtml(id)+'" data-bucket="'+escapeHtml(WORK_BUCKETS[key])+'">Open</button>'
-            + '<button class="btn" type="button" data-action="delete-work" data-panel="'+escapeHtml(panelId)+'" data-work-id="'+escapeHtml(id)+'" data-label="'+escapeHtml(label)+'">Delete</button>'
-            + '</div>'
-            + '</div>';
-        }).join('') + '</div>';
-        updateLimitsForActiveTab();
+        worksState[key].status = 'loaded';
+        renderSavedWorks();
       }
 
       async function loadWorksForPanel(panelId){
@@ -1481,7 +1897,7 @@
       function setLimitsText(n){
         const el = document.querySelector('.limits');
         if (!el) return;
-        el.textContent = "You’ve saved " + String(n||0) + " of your available items.";
+        el.textContent = "Saved items: " + String(n||0) + " of your available items.";
       }
 
       
@@ -1737,21 +2153,16 @@ function renderBrandSaved(brand, meta){
         try{
           const data = await apiGetBrand();
 
-          // Landing behavior (approved):
-          // - If Brand Settings do NOT exist yet, land the user on Brand Settings
-          //   so they see the setup prompt immediately.
-          // - If Brand Settings exist, land on Brand Assets (saved-content first).
+          const nextSection = activeSection === 'brand' ? 'brand' : 'saved';
           if (data && data.exists) {
             renderBrandSaved(data.brand || {}, data.meta || {});
             brandSettingsCount = 1;
-            setLimitsText(brandSettingsCount);
-            activateTab('tab-assets');
           } else {
             renderBrandEmpty();
             brandSettingsCount = 0;
-            setLimitsText(brandSettingsCount);
-            activateTab('tab-settings');
           }
+          syncLimitsText();
+          setActiveSection(nextSection);
         }catch(_){
           // If auth isn't ready yet, keep the existing UI.
         }
@@ -1816,6 +2227,14 @@ function showComing(msg){
         });
       }
 
+      function closeWorkUseModal(){
+        pendingUseWork = null;
+        closeModal($workUseModal);
+      }
+      if ($workUseClose) $workUseClose.addEventListener('click', closeWorkUseModal);
+      if ($workUseCancel) $workUseCancel.addEventListener('click', closeWorkUseModal);
+      if ($workUseModal) $workUseModal.addEventListener('click', (e) => { if (e.target === $workUseModal) closeWorkUseModal(); });
+
 
       if ($comingClose) $comingClose.addEventListener('click', () => closeModal($coming));
       if ($comingOk) $comingOk.addEventListener('click', () => closeModal($coming));
@@ -1873,29 +2292,62 @@ function showComing(msg){
       }
 
 
-document.addEventListener('click', (e) => {
+      document.addEventListener('click', (e) => {
         const el = e.target;
         if (!el || !el.matches) return;
         if (!el.matches('[data-action]')) return;
 
         const a = el.getAttribute('data-action') || '';
-        if (a === 'create-brand-settings') { try{ activateTab('tab-settings'); renderBrandEmpty(); }catch(_){} return; }
+        if (a === 'create-brand-settings') { try{ renderBrandEmpty(); setActiveSection('brand'); }catch(_){} return; }
         if (a === 'create-brand-asset') { pawNavigate('PRESENCE'); return; }
         if (a === 'learn-brand') showComing('Next: examples + a guided setup that makes it easy to capture your voice and bio details.');
         if (a === 'create-listing') { pawNavigate('LISTINGS'); return; }
         if (a === 'create-transaction') { pawNavigate('TRANSACTIONS'); return; }
+        if (a === 'filter-origin') {
+          savedWorksState.origin = String(el.getAttribute('data-origin') || 'all');
+          savedWorksState.page = 1;
+          renderSavedWorks();
+          return;
+        }
+        if (a === 'reset-works-filters') {
+          savedWorksState.origin = 'all';
+          savedWorksState.search = '';
+          savedWorksState.page = 1;
+          if ($savedWorksSearch) $savedWorksSearch.value = '';
+          renderSavedWorks();
+          return;
+        }
+        if (a === 'saved-works-prev') {
+          if (savedWorksState.page > 1) savedWorksState.page -= 1;
+          renderSavedWorks();
+          return;
+        }
+        if (a === 'saved-works-next') {
+          savedWorksState.page += 1;
+          renderSavedWorks();
+          return;
+        }
         if (a === 'retry-load') {
           const panelId = String(el.getAttribute('data-panel') || '');
           if (panelId) loadWorksForPanel(panelId);
           return;
         }
-        if (a === 'open-work') {
+        if (a === 'open-use-modal') {
           const workId = String(el.getAttribute('data-work-id') || '').trim();
           const bucket = String(el.getAttribute('data-bucket') || '').trim();
-          const tabId = String(el.getAttribute('data-tab') || '').trim();
-          if (!workId || !bucket || !tabId) return;
-          const dest = TAB_TO_DEST[tabId];
-          if (!dest) return;
+          const label = String(el.getAttribute('data-label') || 'Untitled');
+          if (!workId || !bucket) return;
+          pendingUseWork = { workId, bucket, label };
+          if ($workUseBody) $workUseBody.innerHTML = 'Choose where to use â€œ' + escapeHtml(label) + 'â€.';
+          openModal($workUseModal);
+          return;
+        }
+        if (a === 'confirm-use-work') {
+          const dest = String(el.getAttribute('data-destination') || '').trim();
+          if (!pendingUseWork || !pendingUseWork.workId || !pendingUseWork.bucket || !dest) return;
+          const workId = pendingUseWork.workId;
+          const bucket = pendingUseWork.bucket;
+          closeWorkUseModal();
           pawNavigate(dest, { work_id: workId, bucket: bucket });
           return;
         }
@@ -1914,7 +2366,8 @@ document.addEventListener('click', (e) => {
       // Escape key closes whichever modal is open
       document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
-        [$tips,$coming,$brandDeleteModal,$workDeleteModal,$notice].forEach(m => closeModal(m));
+        [$tips,$coming,$brandDeleteModal,$workDeleteModal,$workUseModal,$notice].forEach(m => closeModal(m));
+        pendingUseWork = null;
         /* no drawer in My Works (inline editor) */
       });
 
