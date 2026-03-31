@@ -821,6 +821,16 @@ function removeNode(node) {
       const apiEndpoint = safeText(config.apiEndpoint);
       try { if (window.__PAWWorks && window.__PAWWorks.init) window.__PAWWorks.init(apiEndpoint || ""); } catch (_) {}
       const toolId = safeText(config.toolId);
+      try {
+        const originTool = _inferOriginToolFromPage(toolId);
+        _setWorksCreateContext({
+          toolId: toolId,
+          originTool: originTool,
+          contentKind: _inferContentKindFromPage(originTool),
+          primaryEntityType: _inferPrimaryEntityType("", originTool),
+          summary: ""
+        });
+      } catch (_) {}
 
       // Phase 3: initialize Circle identity + token minting (in-memory only)
       try { PAWAuth.init(apiEndpoint); } catch (_) {}
@@ -1720,6 +1730,16 @@ function resetAutoGrowTextarea($ta){
           replyText,
           reportMeta
         );
+        try {
+          const originTool = _inferOriginToolFromPage(toolId);
+          _setWorksCreateContext({
+            toolId: toolId,
+            originTool: originTool,
+            contentKind: _inferContentKindFromPage(originTool),
+            primaryEntityType: _inferPrimaryEntityType("", originTool),
+            summary: _extractCreateSummary(lastDeliverableState)
+          });
+        } catch (_) {}
 
         const openLatestDeliverable = function () {
           showDeliverableModal(lastDeliverableState);
@@ -1942,6 +1962,8 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           history = [];
           if ($messages) $messages.innerHTML = "";
           if ($input) $input.value = "";
+          lastDeliverableState = null;
+          try { _setWorksCreateContext({ summary: "" }); } catch (_) {}
 
           // Hide the fixed "Working..." strip if it is visible.
           try { hideWorkingBar(); } catch (_) {}
@@ -2396,9 +2418,9 @@ function ensureWorksRoot(){
     }
 
     if (t.getAttribute("data-paw-works-save-new") === "1"){
-      openWorkNameModal("", async function(name, bucket){
+      openWorkNameModal("", async function(name){
         try{ if (window.PAWAuth && window.PAWAuth.whenReady) await window.PAWAuth.whenReady().catch(function(){}); }catch(_){ }
-        var resolvedBucket = String(bucket||"") || _inferWorkBucketFromPage() || "brand_assets";
+        var resolvedBucket = _resolveCreateWorkBucket();
         if (!_getApiEndpoint()){
           _worksToast("Saving isn’t available right now.");
           return;
@@ -2428,14 +2450,14 @@ function ensureWorksRoot(){
         }catch(err){
           _worksToast((err && err.message) ? err.message : "Couldn’t save right now.");
         }
-      }, { defaultBucket: _inferWorkBucketFromPage() });
+      });
       return;
     }
 
     if (t.getAttribute("data-paw-works-save-as-new") === "1"){
-      openWorkNameModal("", async function(name, bucket){
+      openWorkNameModal("", async function(name){
         try{ if (window.PAWAuth && window.PAWAuth.whenReady) await window.PAWAuth.whenReady().catch(function(){}); }catch(_){ }
-        var resolvedBucket = String(bucket||"") || ((__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "") || _inferWorkBucketFromPage() || "brand_assets";
+        var resolvedBucket = _resolveCreateWorkBucket();
         if (!_getApiEndpoint()){
           _worksToast("Saving isn’t available right now.");
           return;
@@ -2465,8 +2487,6 @@ function ensureWorksRoot(){
         }catch(err){
           _worksToast((err && err.message) ? err.message : "Couldn’t save right now.");
         }
-      }, {
-        defaultBucket: (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : _inferWorkBucketFromPage()
       });
       return;
     }
@@ -2533,6 +2553,13 @@ function ensureWorksRoot(){
   var __worksListLoading = false;
   var __worksListError = "";
   var __worksListHasLoaded = false;
+  var __worksCreateContext = {
+    toolId: "",
+    originTool: "",
+    contentKind: "",
+    primaryEntityType: "",
+    summary: ""
+  };
 
   function _workTypeLabel(bucket){
     if (bucket === "brand_assets") return "Brand Asset";
@@ -2550,6 +2577,105 @@ function ensureWorksRoot(){
       if (path.indexOf("guide.html") !== -1 || path.indexOf("connect.html") !== -1) return "brand_assets";
     }catch(_){ }
     return "brand_assets";
+  }
+
+  function _inferOriginToolFromPage(toolId){
+    var rawToolId = String(toolId || "").trim().toLowerCase();
+    if (rawToolId === "listing_description_writer") return "listing";
+    if (rawToolId === "assistant") return "guide";
+    if (rawToolId === "connect") return "connect";
+    if (rawToolId === "presence") return "presence";
+    if (rawToolId === "transactions" || rawToolId === "transaction") return "transaction";
+    if (rawToolId === "guide") return "guide";
+    try{
+      var path = String((window.location && window.location.pathname) || "").toLowerCase();
+      if (path.indexOf("listing.html") !== -1) return "listing";
+      if (path.indexOf("guide.html") !== -1) return "guide";
+      if (path.indexOf("connect.html") !== -1) return "connect";
+      if (path.indexOf("presence.html") !== -1) return "presence";
+      if (path.indexOf("transactions.html") !== -1) return "transaction";
+    }catch(_){ }
+    return rawToolId;
+  }
+
+  function _inferContentKindFromPage(originTool){
+    if (String(originTool || "").toLowerCase() === "listing") return "listing_description";
+    return "";
+  }
+
+  function _inferPrimaryEntityType(bucket, originTool){
+    var normalizedBucket = String(bucket || "").trim().toLowerCase();
+    if (normalizedBucket === "listings" || normalizedBucket === "listing") return "property";
+    if (normalizedBucket === "transactions" || normalizedBucket === "transaction") return "transaction";
+
+    var normalizedOriginTool = String(originTool || "").trim().toLowerCase();
+    if (normalizedOriginTool === "listing") return "property";
+    if (normalizedOriginTool === "transactions" || normalizedOriginTool === "transaction") return "transaction";
+
+    try{
+      var activeBucket = (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket || "").trim().toLowerCase() : "";
+      if (activeBucket === "listings" || activeBucket === "listing") return "property";
+      if (activeBucket === "transactions" || activeBucket === "transaction") return "transaction";
+    }catch(_){ }
+
+    return "";
+  }
+
+  function _normalizeCreateSummary(value){
+    var text = String(value || "").replace(/\r\n?/g, "\n");
+    text = text.replace(/\s+/g, " ").trim();
+    if (!text) return "";
+    if (text.length > 280) return text.slice(0, 277).trim() + "...";
+    return text;
+  }
+
+  function _extractCreateSummary(state){
+    var deliverable = state && typeof state === "object" ? state : null;
+    if (!deliverable) return "";
+    if (String(deliverable.variant || "").toLowerCase() === "email"){
+      if (deliverable.subject) return _normalizeCreateSummary(deliverable.subject);
+      if (deliverable.body) return _normalizeCreateSummary(String(deliverable.body || "").split("\n")[0]);
+      return "";
+    }
+    return _normalizeCreateSummary(String(deliverable.text || "").split("\n")[0]);
+  }
+
+  function _setWorksCreateContext(next){
+    var patch = next && typeof next === "object" ? next : {};
+    __worksCreateContext = {
+      toolId: patch.toolId != null ? String(patch.toolId || "") : String(__worksCreateContext.toolId || ""),
+      originTool: patch.originTool != null ? String(patch.originTool || "") : String(__worksCreateContext.originTool || ""),
+      contentKind: patch.contentKind != null ? String(patch.contentKind || "") : String(__worksCreateContext.contentKind || ""),
+      primaryEntityType: patch.primaryEntityType != null ? String(patch.primaryEntityType || "") : String(__worksCreateContext.primaryEntityType || ""),
+      summary: patch.summary != null ? String(patch.summary || "") : String(__worksCreateContext.summary || "")
+    };
+  }
+
+  function _resolveCreateWorkBucket(){
+    try{
+      if (__pawActiveWork && __pawActiveWork.bucket) return String(__pawActiveWork.bucket || "");
+    }catch(_){ }
+    return _inferWorkBucketFromPage() || "brand_assets";
+  }
+
+  function _buildCreateMyWorkRequest(bucket, label){
+    var resolvedBucket = String(bucket || "").trim() || _resolveCreateWorkBucket();
+    var originTool = String(__worksCreateContext.originTool || "").trim() || _inferOriginToolFromPage(__worksCreateContext.toolId);
+    var contentKind = String(__worksCreateContext.contentKind || "").trim() || _inferContentKindFromPage(originTool);
+    var primaryEntityType = String(__worksCreateContext.primaryEntityType || "").trim() || _inferPrimaryEntityType(resolvedBucket, originTool);
+    var summary = _normalizeCreateSummary(__worksCreateContext.summary);
+    var body = {
+      bucket: resolvedBucket,
+      label: String(label || ""),
+      payload: {}
+    };
+
+    if (originTool) body.origin_tool = originTool;
+    if (contentKind) body.content_kind = contentKind;
+    if (primaryEntityType) body.primary_entity_type = primaryEntityType;
+    if (summary) body.summary = summary;
+
+    return body;
   }
 
 
@@ -2595,10 +2721,11 @@ function ensureWorksRoot(){
     var ep = _getWorksApiEndpoint();
     if (!ep) throw new Error("Saving isn’t available right now.");
     var url = String(ep).replace(/\/+$/,"") + "/myworks";
+    var body = _buildCreateMyWorkRequest(bucket, label);
     var res = await fetch(url, {
       method: "POST",
       headers: _apiHeadersJsonAuth(),
-      body: JSON.stringify({ bucket: bucket, label: label, payload: {} })
+      body: JSON.stringify(body)
     });
 
     var text = await res.text();
@@ -2814,12 +2941,6 @@ function ensureWorksRoot(){
           '<div class="modal-body">' +
             '<label class="paw-workname-label" for="pawWorkNameInput">Work name</label>' +
             '<input id="pawWorkNameInput" class="paw-workname-input" type="text" placeholder="e.g., Spring listing prep" />' +
-            '<label class="paw-workname-label" for="pawWorkBucketSelect">Save to</label>' +
-            '<select id="pawWorkBucketSelect" class="paw-workname-input">' +
-              '<option value="brand_assets">Brand Assets</option>' +
-              '<option value="listings">Listings</option>' +
-              '<option value="transactions">Transactions</option>' +
-            '</select>' +
             '<div id="pawWorkNameError" class="paw-workname-error" aria-live="polite"></div>' +
             '<div class="paw-workname-actions">' +
               '<button class="btn" id="pawWorkNameCancel" type="button">Cancel</button>' +
@@ -2856,33 +2977,26 @@ function ensureWorksRoot(){
     }catch(_){ }
   }
 
-  function openWorkNameModal(initialName, onConfirm, opts){
+  function openWorkNameModal(initialName, onConfirm){
     try{
       var m = ensureWorkNameModal();
       if (!m) return;
       var input = document.getElementById("pawWorkNameInput");
-      var bucketSelect = document.getElementById("pawWorkBucketSelect");
       var err = document.getElementById("pawWorkNameError");
       var saveBtn = document.getElementById("pawWorkNameSave");
-      var inferredBucket = _inferWorkBucketFromPage();
-      var attachedBucket = (__pawActiveWork && __pawActiveWork.bucket) ? String(__pawActiveWork.bucket) : "";
-      var defaultBucket = (opts && opts.defaultBucket) ? String(opts.defaultBucket) : inferredBucket;
 
       if (err) err.textContent = "";
       if (input) input.value = String(initialName || "");
-      if (bucketSelect) bucketSelect.value = defaultBucket;
 
       function submit(){
         var v = input ? String(input.value || "").trim() : "";
-        var bucket = bucketSelect ? String(bucketSelect.value || "") : "";
-        if (!bucket) bucket = attachedBucket || inferredBucket;
         if (!v){
           if (err) err.textContent = "Please enter a name.";
           try{ if (input) input.focus(); }catch(_){ }
           return;
         }
         if (err) err.textContent = "";
-        try{ if (typeof onConfirm === "function") onConfirm(v, bucket); }catch(_){ }
+        try{ if (typeof onConfirm === "function") onConfirm(v); }catch(_){ }
         closeWorkNameModal();
       }
 
