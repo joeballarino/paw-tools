@@ -201,12 +201,23 @@
       text-align:left;
     }
 
-    body.paw-mystuff button.mw-pane-head{
-      cursor:pointer;
+    body.paw-mystuff .mw-pane.is-open .mw-pane-head{
+      border-color: rgba(14,165,233,.26);
     }
 
-    body.paw-mystuff .mw-pane-head[aria-expanded="true"]{
-      border-color: rgba(14,165,233,.26);
+    body.paw-mystuff .mw-pane-trigger{
+      flex: 1 1 auto;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      text-align:left;
+      display:grid;
+      gap: 4px;
+    }
+
+    body.paw-mystuff button.mw-pane-trigger{
+      cursor:pointer;
     }
 
     body.paw-mystuff .mw-pane-heading{
@@ -232,9 +243,27 @@
     }
 
     body.paw-mystuff .mw-pane-copy{
+      display:block;
       font-size: 12px;
       font-weight: 700;
       color: rgba(15,23,42,.58);
+    }
+
+    body.paw-mystuff .mw-pane-tools{
+      flex: 0 0 auto;
+      display:flex;
+      align-items:center;
+    }
+
+    body.paw-mystuff .mw-pane-tools .btn{
+      min-height: 32px;
+      padding: 0 12px;
+      border-color: rgba(15,23,42,.10);
+      background: rgba(255,255,255,.72);
+      color: rgba(15,23,42,.68);
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
     }
 
     body.paw-mystuff .mw-pane-body{
@@ -634,6 +663,13 @@
       min-height: 198px;
     }
 
+    body.paw-mystuff .work-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 10px;
+    }
+
     body.paw-mystuff .work-origin{
       display:inline-flex;
       align-items:center;
@@ -646,6 +682,7 @@
       font-size: 11.5px;
       font-weight: 900;
       letter-spacing: 0;
+      flex: 0 0 auto;
     }
 
     body.paw-mystuff .work-main{
@@ -659,6 +696,7 @@
       font-weight: 850;
       color: var(--text-strong);
       line-height: 1.35;
+      min-width: 0;
     }
 
     body.paw-mystuff .work-summary{
@@ -679,12 +717,22 @@
       color: rgba(15,23,42,.54);
     }
 
-    body.paw-mystuff .work-actions{
+    body.paw-mystuff .work-foot{
       margin-top: auto;
       display:flex;
-      align-items:flex-start;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap:wrap;
+    }
+
+    body.paw-mystuff .work-actions{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
       gap: 8px;
       flex-wrap:wrap;
+      margin-left:auto;
     }
 
     body.paw-mystuff .work-actions .btn{
@@ -696,8 +744,21 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap: 12px;
+      gap: 8px;
       flex-wrap:wrap;
+    }
+
+    body.paw-mystuff .mw-works-meta{
+      display:grid;
+      gap: 4px;
+    }
+
+    body.paw-mystuff .mw-works-storage{
+      font-size: 12px;
+      font-weight: 750;
+      color: rgba(15,23,42,.56);
+      text-align:left;
+      white-space:normal;
     }
 
     body.paw-mystuff .mw-works-count{
@@ -731,11 +792,12 @@
     }
 
     @media (max-width: 560px){
-      body.paw-mystuff .tool-head{ width:100%; }
-      body.paw-mystuff .paw-savedworks-banner{ width:100%; }
       body.paw-mystuff .limits{ white-space:normal; text-align:left; }
       body.paw-mystuff .mw-pane-head{
         padding: 12px 14px;
+      }
+      body.paw-mystuff .mw-pane-head{
+        align-items:flex-start;
       }
       body.paw-mystuff .mw-works-controls{
         gap: 12px;
@@ -745,6 +807,8 @@
       }
       body.paw-mystuff .work-actions{
         width: 100%;
+        margin-left: 0;
+        justify-content:flex-start;
       }
     }
   
@@ -912,39 +976,14 @@
       margin: 0 0 10px 0;
     }
 
-    /* Page-only header emphasis for My Works
-       --------------------------------------
-       FIXES:
-       1) The gradient must start near the paw + "Saved Works" (top/left),
-          then fade all the way to white across the header band.
-       2) The "You've saved..." meter belongs bottom-right of the header.
-       3) Mobile tabs must not inherit the big rounded segmented-pill shape.
-    */
     body.paw-mystuff .panel-topbar.myworks-topbar{
-      position: relative;           /* allow bottom-right limits placement */
-      padding-bottom: 28px;         /* reserve space for bottom-right limits */
-      background: #ffffff;          /* keep the full header area clean/white */
-      border-radius: 18px 18px 0 0;
-      overflow: hidden;
+      padding: 0 0 12px 0;
+      background: transparent;
+      border-radius: 0;
+      overflow: visible;
     }
 
-    /* Apply the blue anchor glow ONLY to the top header row (Saved Works + Tips).
-       This prevents the "blue slab" effect over the entire header region. */
-    body.paw-mystuff .panel-topbar.myworks-topbar .topbar-row0{
-      background:
-        radial-gradient(720px 260px at 110px 12px,
-          rgba(0,150,220,1) 0%,
-          rgba(5,195,249,.70) 30%,
-          rgba(255,255,255,0) 70%),
-        #ffffff;
-      border-radius: 18px 18px 0 0;
-    }
-
-    /* "You've saved..." meter pinned bottom-right inside the header container */
     body.paw-mystuff .panel-topbar.myworks-topbar .limits{
-      position: absolute;
-      right: 16px;
-      bottom: 10px;
       white-space: nowrap;
       text-align: right;
       font-size: 12px;
@@ -952,20 +991,10 @@
       color: rgba(15,23,42,.58);
     }
 
-    /* Keep the header utilities clear of the pinned limits text */
-    body.paw-mystuff .panel-topbar.myworks-topbar .myworks-hero{
-      padding-bottom: 6px;
-    }
-
-    /* Mobile: let the limits text wrap cleanly in the header */
     @media (max-width: 560px){
-      body.paw-mystuff .panel-topbar.myworks-topbar{ padding-bottom: 34px; }
-
       body.paw-mystuff .panel-topbar.myworks-topbar .limits{
-        right: 14px;
-        bottom: 10px;
         white-space: normal; /* allow wrap if ultra narrow */
-        max-width: calc(100% - 28px);
+        max-width: 100%;
       }
     }
 
@@ -977,40 +1006,20 @@
     <div class="frame">
       <div class="panel">
 
-        <!-- Top bar: keep the same shared structure (subtitle + utilities on right) -->
-        <div class="panel-topbar myworks-topbar">
-          <div class="topbar-row0">
-            <div class="tool-head">
-              <div class="paw-savedworks-banner is-static" aria-label="Saved works">
-                <img class="works-paw" src="https://paw-tools.pages.dev/paw.png" alt="" aria-hidden="true">
-                <span class="savedworks-label">Saved Works</span>
-              </div>
-            </div>
-
-            <div class="topbar-right">
-              <div class="utility-pair paw-seg" role="group" aria-label="My Works utilities">
-                <button id="tips" class="util-btn paw-seg__btn" type="button">Tips &amp; How To</button>
-              </div>
-            </div>
-          </div>
-
-
-          <div class="myworks-hero">
-            <div class="mystuff-head">
-              <div class="limits" aria-label="Storage usage">You've saved 0 of your available items.</div>
-            </div>
-          </div>
-
         <div class="mystuff-wrap">
           <div class="mw-page">
             <section class="mw-pane is-collapsed" id="brandSettingsSection">
-              <button class="mw-pane-head" id="brandSettingsToggle" type="button" aria-expanded="false" aria-controls="brandSettingsBody">
-                <span class="mw-pane-heading">
-                  <span class="mw-pane-arrow" aria-hidden="true">></span>
-                  <span class="mw-pane-title">Brand Settings</span>
-                </span>
-                <span class="mw-pane-copy">Saved profile, voice, and contact details.</span>
-              </button>
+              <div class="mw-pane-head">
+                <button class="mw-pane-trigger" id="brandSettingsToggle" type="button" aria-expanded="false" aria-controls="brandSettingsBody">
+                  <span class="mw-pane-heading">
+                    <span class="mw-pane-arrow" aria-hidden="true">></span>
+                    <span class="mw-pane-title">Brand Settings</span>
+                  </span>
+                </button>
+                <div class="mw-pane-tools">
+                  <button class="btn" type="button" data-action="open-tips">Tips &amp; How To</button>
+                </div>
+              </div>
 
               <div class="mw-pane-body" id="brandSettingsBody">
                 <div id="brandSettingsMount"></div>
@@ -1018,12 +1027,16 @@
             </section>
 
             <section class="mw-pane is-open" id="savedWorksSection">
-              <div class="mw-pane-head" id="savedWorksToggle" aria-expanded="true" aria-controls="savedWorksBody">
-                <span class="mw-pane-heading">
-                  <span class="mw-pane-arrow" aria-hidden="true">v</span>
-                  <span class="mw-pane-title">Saved Works</span>
-                </span>
-                <span class="mw-pane-copy">Your saved work across Guide, Connect, Presence, Listings, and Transactions.</span>
+              <div class="mw-pane-head">
+                <div class="mw-pane-trigger" id="savedWorksToggle" aria-expanded="true" aria-controls="savedWorksBody">
+                  <span class="mw-pane-heading">
+                    <span class="mw-pane-arrow" aria-hidden="true">v</span>
+                    <span class="mw-pane-title">Saved Works</span>
+                  </span>
+                </div>
+                <div class="mw-pane-tools">
+                  <button class="btn" type="button" data-action="open-tips">Tips &amp; How To</button>
+                </div>
               </div>
 
               <div class="mw-pane-body" id="savedWorksBody">
@@ -1047,7 +1060,10 @@
                 <div class="works-list" id="savedWorksGrid" aria-live="polite"></div>
 
                 <div class="mw-works-footer">
-                  <div class="mw-works-count" id="savedWorksCount">Showing 0 of 0 works</div>
+                  <div class="mw-works-meta">
+                    <div class="limits mw-works-storage" aria-label="Storage usage">You've saved 0 of your available items.</div>
+                    <div class="mw-works-count" id="savedWorksCount">Showing 0 of 0 works</div>
+                  </div>
                   <div class="mw-pagination" id="savedWorksPagination">
                     <button class="btn" id="savedWorksPrev" type="button" data-action="saved-works-prev">Previous</button>
                     <span class="mw-pagination-text" id="savedWorksPageText">Page 1 of 1</span>
@@ -1343,7 +1359,10 @@
         return $m;
       }
 
-      const $tips = wireBasicModal('tipsModal','tips','tipsClose');
+      const $tips = document.getElementById('tipsModal');
+      const $tipsClose = document.getElementById('tipsClose');
+      if ($tipsClose) $tipsClose.addEventListener('click', () => closeModal($tips));
+      if ($tips) $tips.addEventListener('click', (e) => { if (e.target === $tips) closeModal($tips); });
 
       // Coming next modal (Create CTAs)
       const $coming = document.getElementById('comingModal');
@@ -1718,7 +1737,7 @@
           usedAt: usedAt,
           timeAgo: formatTimeAgo(usedAt),
           originKey: originKey,
-          originLabel: 'From ' + ((ORIGIN_META[originKey] || ORIGIN_META.presence).label)
+          originLabel: (ORIGIN_META[originKey] || ORIGIN_META.presence).label
         };
       }
 
@@ -1787,15 +1806,19 @@
 
         $savedWorksGrid.innerHTML = pageItems.map((work) => {
           return '<article class="work-card">'
-            + '<div class="work-origin">' + escapeHtml(work.originLabel) + '</div>'
             + '<div class="work-main">'
+            + '<div class="work-head">'
             + '<div class="work-label">' + escapeHtml(work.title) + '</div>'
-            + '<div class="work-summary">' + escapeHtml(work.summary || 'Saved work ready to reuse.') + '</div>'
-            + '<div class="work-time">' + escapeHtml(work.timeAgo) + '</div>'
+            + '<div class="work-origin">' + escapeHtml(work.originLabel) + '</div>'
             + '</div>'
+            + '<div class="work-summary">' + escapeHtml(work.summary || 'Saved work ready to reuse.') + '</div>'
+            + '</div>'
+            + '<div class="work-foot">'
+            + '<div class="work-time">' + escapeHtml(work.timeAgo) + '</div>'
             + '<div class="work-actions">'
             + '<button class="btn primary" type="button" data-action="open-use-modal" data-work-id="' + escapeHtml(work.id) + '" data-bucket="' + escapeHtml(work.bucket) + '" data-label="' + escapeHtml(work.title) + '">Use in...</button>'
             + '<button class="btn" type="button" data-action="delete-work" data-panel="' + escapeHtml(work.panelId) + '" data-work-id="' + escapeHtml(work.id) + '" data-label="' + escapeHtml(work.title) + '">Delete</button>'
+            + '</div>'
             + '</div>'
             + '</article>';
         }).join('');
@@ -2298,6 +2321,7 @@ function showComing(msg){
         if (!el.matches('[data-action]')) return;
 
         const a = el.getAttribute('data-action') || '';
+        if (a === 'open-tips') { openModal($tips); return; }
         if (a === 'create-brand-settings') { try{ renderBrandEmpty(); setActiveSection('brand'); }catch(_){} return; }
         if (a === 'create-brand-asset') { pawNavigate('PRESENCE'); return; }
         if (a === 'learn-brand') showComing('Next: examples + a guided setup that makes it easy to capture your voice and bio details.');
