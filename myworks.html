@@ -595,6 +595,15 @@
       min-width: 0;
     }
 
+    body.paw-mystuff .mw-works-tools{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap: 10px;
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+
     body.paw-mystuff .mw-filter-chip{
       min-height: 34px;
       padding: 0 12px;
@@ -788,6 +797,11 @@
       body.paw-mystuff .mw-search{
         flex-basis: 100%;
         min-width: 0;
+      }
+
+      body.paw-mystuff .mw-works-tools{
+        flex-basis: 100%;
+        justify-content:flex-start;
       }
     }
 
@@ -1028,12 +1042,12 @@
 
             <section class="mw-pane is-open" id="savedWorksSection">
               <div class="mw-pane-head">
-                <div class="mw-pane-trigger" id="savedWorksToggle" aria-expanded="true" aria-controls="savedWorksBody">
+                <button class="mw-pane-trigger" id="savedWorksToggle" type="button" aria-expanded="true" aria-controls="savedWorksBody">
                   <span class="mw-pane-heading">
                     <span class="mw-pane-arrow" aria-hidden="true">v</span>
                     <span class="mw-pane-title">Saved Works</span>
                   </span>
-                </div>
+                </button>
                 <div class="mw-pane-tools">
                   <button class="btn" type="button" data-action="open-tips">Tips &amp; How To</button>
                 </div>
@@ -1048,12 +1062,14 @@
                     <button class="mw-filter-chip" type="button" data-action="filter-origin" data-origin="presence">Presence</button>
                     <button class="mw-filter-chip" type="button" data-action="filter-origin" data-origin="listings">Listings</button>
                     <button class="mw-filter-chip" type="button" data-action="filter-origin" data-origin="transactions">Transactions</button>
-                    <button class="btn" id="savedWorksReset" type="button" data-action="reset-works-filters">Reset</button>
                   </div>
 
-                  <label class="mw-search" for="savedWorksSearch">
-                    <input id="savedWorksSearch" type="search" placeholder="Search saved works">
-                  </label>
+                  <div class="mw-works-tools">
+                    <label class="mw-search" for="savedWorksSearch">
+                      <input id="savedWorksSearch" type="search" placeholder="Search saved works">
+                    </label>
+                    <button class="btn" id="savedWorksReset" type="button" data-action="reset-works-filters">Reset</button>
+                  </div>
                 </div>
 
                 <div class="mw-works-status" id="savedWorksStatus">Loading saved works...</div>
@@ -1328,6 +1344,7 @@
       }
 
       if ($brandSettingsToggle) $brandSettingsToggle.addEventListener('click', () => setActiveSection('brand'));
+      if ($savedWorksToggle) $savedWorksToggle.addEventListener('click', () => setActiveSection('saved'));
       setActiveSection('saved');
 
       // ------------------------------------------------------------
