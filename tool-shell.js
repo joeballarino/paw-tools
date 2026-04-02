@@ -2369,13 +2369,33 @@ var _touchRecent = function(){ };
 var __worksReloadWorksListFn = null;
 var __worksEnsureWorksListLoadedFn = null;
 
+function mountWorksRootIntoPanel(){
+  try{
+    if (!__worksRoot) return;
+    var panel = document.querySelector(".panel") || __toolRoot || findToolRoot() || document.body;
+    if (!panel) return;
+    var topbar = panel.querySelector ? panel.querySelector(".panel-topbar") : null;
+    if (topbar && topbar.parentNode === panel){
+      panel.insertBefore(__worksRoot, topbar.nextSibling);
+    } else {
+      panel.appendChild(__worksRoot);
+    }
+  }catch(_){ }
+}
+
 function ensureWorksRoot(){
-  if (__worksRoot && document.body.contains(__worksRoot)) return __worksRoot;
+  if (__worksRoot && document.body.contains(__worksRoot)){
+    mountWorksRootIntoPanel();
+    return __worksRoot;
+  }
 
   __worksRoot = document.createElement("div");
   __worksRoot.id = "pawWorksModeRoot";
   __worksRoot.setAttribute("role","region");
   __worksRoot.setAttribute("aria-label","My Works");
+  __worksRoot.style.position = "relative";
+  __worksRoot.style.inset = "auto";
+  __worksRoot.style.zIndex = "auto";
 
   // IMPORTANT: Placeholder only. Real My Works rendering comes next.
   __worksRoot.innerHTML = `
@@ -2561,7 +2581,7 @@ function ensureWorksRoot(){
     exitWorksMode();
   });
 
-  document.body.appendChild(__worksRoot);
+  mountWorksRootIntoPanel();
   // ------------------------------------------------------------
   // Works Mode UI (content inside the already-working container)
   // ------------------------------------------------------------
@@ -3548,7 +3568,7 @@ function findToolRoot(){
         var kids = Array.prototype.slice.call(panel.children || []);
         var topbar = document.querySelector(".panel-topbar");
         kids.forEach(function(el){
-          if (!el || el === __drawer || el === topbar) return;
+          if (!el || el === __drawer || el === topbar || el === __worksRoot) return;
 
           // Avoid touching unrelated injected nodes (e.g., modals/toasts).
           var prev = (el.style && typeof el.style.display === "string") ? el.style.display : "";
@@ -3616,8 +3636,6 @@ function enterWorksMode(){
     return;
   }
 
-  __worksModeOn = true;
-
   // Save scroll + focus to restore exactly.
   try{ __worksPrevScrollY = (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0); }catch(_){ __worksPrevScrollY = 0; }
   try{ __worksPrevActiveEl = document.activeElement || null; }catch(_){ __worksPrevActiveEl = null; }
@@ -3650,15 +3668,8 @@ function enterWorksMode(){
     }
   }catch(_){ __worksBtn = null; __worksBtnHomeParent = null; __worksBtnPlaceholder = null; }
 
-  // Apply mode class + swap surfaces.
-  try{ document.documentElement.classList.add("paw-works-mode"); }catch(_){}
-  try{ document.body.classList.add("paw-works-mode"); }catch(_){}
-
-  // Hide tool completely (no peeking underneath).
-  try{ __toolRoot.style.display = "none"; }catch(_){}
-
-  // Ensure Works surface exists + show it.
   ensureWorksRoot();
+  setWorksMode(true);
   try{ renderWorksBody(); }catch(_){ }
   try{ if (__worksEnsureWorksListLoadedFn) __worksEnsureWorksListLoadedFn(); }catch(_){ }
 
@@ -3686,6 +3697,7 @@ function enterWorksMode(){
   updateWorkPill();
 
   try{ __worksRoot.style.display = "flex"; }catch(_){}
+  try{ pawScheduleLayoutPing(); }catch(_){}
 
   // Stabilize scroll: bring Works to top.
   try{ window.scrollTo(0,0); }catch(_){}
@@ -3693,7 +3705,6 @@ function enterWorksMode(){
 
 function exitWorksMode(){
   if (!__worksModeOn) return;
-  __worksModeOn = false;
 
   // Hide Works surface.
   try{ if (__worksRoot) __worksRoot.style.display = "none"; }catch(_){}
@@ -3736,9 +3747,6 @@ function exitWorksMode(){
     }
   }catch(_){}
 
-  // Restore tool surface.
-  try{ if (__toolRoot) __toolRoot.style.display = ""; }catch(_){}
-
   // Ensure deterministic order in the normal tool header as well: button first, then status.
   // (Prevents edge cases where DOM insertion order could drift if the host page mutates the header.)
   try{
@@ -3755,17 +3763,7 @@ function exitWorksMode(){
     }
   }catch(_){}
 
-  try{ document.documentElement.classList.remove("paw-works-mode"); }catch(_){}
-  try{ document.body.classList.remove("paw-works-mode"); }catch(_){}
-
-  try{
-    if (history && typeof history.scrollRestoration === "string"){
-      history.scrollRestoration = __worksPrevScrollRestoration || "auto";
-    }
-  }catch(_){}
-
-  // Restore scroll position AFTER DOM is restored.
-  try{ setTimeout(function(){ try{ window.scrollTo(0, __worksPrevScrollY || 0); }catch(_){ } }, 0); }catch(_){}
+  setWorksMode(false);
 
   // Restore focus if possible.
   try{
