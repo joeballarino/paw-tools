@@ -3669,6 +3669,13 @@ function enterWorksMode(){
   }catch(_){ __worksBtn = null; __worksBtnHomeParent = null; __worksBtnPlaceholder = null; }
 
   ensureWorksRoot();
+  var activePanel = document.querySelector(".panel") || __toolRoot || null;
+  if (__worksRoot && activePanel && __worksRoot.parentNode !== activePanel){
+    mountWorksRootIntoPanel();
+  }
+  if (!__worksRoot || !activePanel || __worksRoot.parentNode !== activePanel){
+    return;
+  }
   setWorksMode(true);
   try{ renderWorksBody(); }catch(_){ }
   try{ if (__worksEnsureWorksListLoadedFn) __worksEnsureWorksListLoadedFn(); }catch(_){ }
