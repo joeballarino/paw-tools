@@ -3566,9 +3566,8 @@ function findToolRoot(){
       __worksHiddenEls = [];
       try{
         var kids = Array.prototype.slice.call(panel.children || []);
-        var topbar = document.querySelector(".panel-topbar");
         kids.forEach(function(el){
-          if (!el || el === __drawer || el === topbar || el === __worksRoot) return;
+          if (!el || el === __drawer || el === __worksRoot) return;
 
           // Avoid touching unrelated injected nodes (e.g., modals/toasts).
           var prev = (el.style && typeof el.style.display === "string") ? el.style.display : "";
