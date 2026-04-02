@@ -2958,6 +2958,51 @@ function ensureWorksRoot(){
     return String(ep || "").replace(/\/+$/,"");
   }
 
+  // One-time launch handoff for cross-page "Open" flows from My Works.
+  // My Works writes { work_id, bucket, label } into sessionStorage immediately
+  // before parent-driven navigation. The destination page reads it once during
+  // boot, attaches the active work, and then clears it so later visits start clean.
+  var PAW_LAUNCH_WORK_HANDOFF_KEY = "paw:launch_saved_work_handoff:v1";
+
+  function consumeLaunchWorkHandoff(){
+    try{
+      if (__pawActiveWork) return null;
+      if (!window.sessionStorage) return null;
+      var raw = sessionStorage.getItem(PAW_LAUNCH_WORK_HANDOFF_KEY);
+      if (!raw) return null;
+      try{ sessionStorage.removeItem(PAW_LAUNCH_WORK_HANDOFF_KEY); }catch(_){ }
+
+      var parsed = null;
+      try{ parsed = JSON.parse(raw); }catch(_){ parsed = null; }
+
+      var workId = parsed && typeof parsed === "object"
+        ? String(parsed.work_id || parsed.id || "").trim()
+        : "";
+      var bucket = parsed && typeof parsed === "object"
+        ? String(parsed.bucket || "").trim()
+        : "";
+      var label = parsed && typeof parsed === "object"
+        ? String(parsed.label || "").trim()
+        : "";
+
+      if (!workId || !bucket){
+        return null;
+      }
+
+      var handoff = {
+        id: workId,
+        work_id: workId,
+        bucket: bucket,
+        label: label || "Untitled"
+      };
+
+      attachWork(handoff);
+      return handoff;
+    }catch(_){
+      return null;
+    }
+  }
+
   function _apiHeadersJsonAuth(){
     var headers = { "Content-Type":"application/json" };
     try{
@@ -3908,6 +3953,10 @@ function init(apiEndpoint){
   __worksApiEndpoint = String(apiEndpoint || "");
 
   updateWorkPill();
+
+  // Restore a saved-work launch only once on destination boot.
+  // Downstream tool pages already know how to react when active work exists.
+  consumeLaunchWorkHandoff();
 
   // Wire the Work button as a single toggle in every tool.
   var btn = document.getElementById("pawMyStuffBtn");

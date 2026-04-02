@@ -1243,7 +1243,7 @@
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="workUseTitle">
       <div class="modal-head">
         <div id="workUseTitle" class="modal-title">Use in...</div>
-        <button class="modal-close" id="workUseClose" aria-label="Close" type="button">âœ•</button>
+        <button class="modal-close" id="workUseClose" aria-label="Close" type="button">✕</button>
       </div>
       <div class="modal-body">
         <div id="workUseBody" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45;">Choose where to use this saved work.</div>
@@ -1588,6 +1588,12 @@
         listings: "listings",
         transactions: "transactions"
       };
+      // One-time cross-page handoff used when launching a saved work into another tool.
+      // Session storage is the smallest safe fit here because:
+      // - it survives same-tab page navigation
+      // - it does not linger across browser restarts
+      // - tool-shell can clear it immediately after boot consumption
+      const PAW_LAUNCH_WORK_HANDOFF_KEY = "paw:launch_saved_work_handoff:v1";
       const ORIGIN_ORDER = ['all', 'guide', 'connect', 'presence', 'listings', 'transactions'];
       const ORIGIN_META = {
         all: { label: 'All', destination: '' },
@@ -2331,6 +2337,23 @@ function showComing(msg){
 
       }
 
+      function persistLaunchWorkHandoff(handoff){
+        try{
+          const raw = handoff && typeof handoff === 'object' ? handoff : null;
+          const workId = String((raw && (raw.work_id || raw.id)) || '').trim();
+          const bucket = String((raw && raw.bucket) || '').trim();
+          if (!workId || !bucket) return;
+          const payload = {
+            v: 1,
+            work_id: workId,
+            bucket: bucket,
+            label: String((raw && raw.label) || '').trim(),
+            created_at: new Date().toISOString()
+          };
+          sessionStorage.setItem(PAW_LAUNCH_WORK_HANDOFF_KEY, JSON.stringify(payload));
+        }catch(_){}
+      }
+
 
       document.addEventListener('click', (e) => {
         const el = e.target;
@@ -2379,7 +2402,7 @@ function showComing(msg){
           const label = String(el.getAttribute('data-label') || 'Untitled');
           if (!workId || !bucket) return;
           pendingUseWork = { workId, bucket, label };
-          if ($workUseBody) $workUseBody.innerHTML = 'Choose where to use â€œ' + escapeHtml(label) + 'â€.';
+          if ($workUseBody) $workUseBody.innerHTML = 'Choose where to use “' + escapeHtml(label) + '”.';
           openModal($workUseModal);
           return;
         }
@@ -2388,7 +2411,9 @@ function showComing(msg){
           if (!pendingUseWork || !pendingUseWork.workId || !pendingUseWork.bucket || !dest) return;
           const workId = pendingUseWork.workId;
           const bucket = pendingUseWork.bucket;
+          const label = String(pendingUseWork.label || 'Untitled');
           closeWorkUseModal();
+          persistLaunchWorkHandoff({ work_id: workId, bucket: bucket, label: label });
           pawNavigate(dest, { work_id: workId, bucket: bucket });
           return;
         }
