@@ -2967,34 +2967,55 @@ function ensureWorksRoot(){
   function consumeLaunchWorkHandoff(){
     try{
       if (__pawActiveWork) return null;
-      if (!window.sessionStorage) return null;
-      var raw = sessionStorage.getItem(PAW_LAUNCH_WORK_HANDOFF_KEY);
-      if (!raw) return null;
-      try{ sessionStorage.removeItem(PAW_LAUNCH_WORK_HANDOFF_KEY); }catch(_){ }
+      function normalizeLaunchWork(raw){
+        var parsed = raw && typeof raw === "object" ? raw : null;
+        var workId = parsed
+          ? String(parsed.work_id || parsed.id || "").trim()
+          : "";
+        var bucket = parsed
+          ? String(parsed.bucket || "").trim()
+          : "";
+        var label = parsed
+          ? String(parsed.label || "").trim()
+          : "";
 
-      var parsed = null;
-      try{ parsed = JSON.parse(raw); }catch(_){ parsed = null; }
+        if (!workId) return null;
+        if (!bucket) bucket = String(_inferWorkBucketFromPage() || "").trim();
 
-      var workId = parsed && typeof parsed === "object"
-        ? String(parsed.work_id || parsed.id || "").trim()
-        : "";
-      var bucket = parsed && typeof parsed === "object"
-        ? String(parsed.bucket || "").trim()
-        : "";
-      var label = parsed && typeof parsed === "object"
-        ? String(parsed.label || "").trim()
-        : "";
-
-      if (!workId || !bucket){
-        return null;
+        return {
+          id: workId,
+          work_id: workId,
+          bucket: bucket,
+          label: label || "Untitled"
+        };
       }
 
-      var handoff = {
-        id: workId,
-        work_id: workId,
-        bucket: bucket,
-        label: label || "Untitled"
-      };
+      var handoff = null;
+
+      try{
+        if (window.sessionStorage){
+          var raw = sessionStorage.getItem(PAW_LAUNCH_WORK_HANDOFF_KEY);
+          if (raw){
+            try{ sessionStorage.removeItem(PAW_LAUNCH_WORK_HANDOFF_KEY); }catch(_){ }
+            var parsed = null;
+            try{ parsed = JSON.parse(raw); }catch(_){ parsed = null; }
+            handoff = normalizeLaunchWork(parsed);
+          }
+        }
+      }catch(_){ }
+
+      if (!handoff){
+        try{
+          var qp = new URLSearchParams((window.location && window.location.search) || "");
+          handoff = normalizeLaunchWork({
+            work_id: qp.get("work_id") || "",
+            bucket: qp.get("bucket") || "",
+            label: qp.get("label") || ""
+          });
+        }catch(_){ }
+      }
+
+      if (!handoff) return null;
 
       attachWork(handoff);
       return handoff;
