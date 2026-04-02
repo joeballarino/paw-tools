@@ -1300,6 +1300,12 @@
         listings: "listings",
         transactions: "transactions"
       };
+      // One-time cross-page handoff used when launching a saved work into another tool.
+      // Session storage is the smallest safe fit here because:
+      // - it survives same-tab page navigation
+      // - it does not linger across browser restarts
+      // - tool-shell can clear it immediately after boot consumption
+      const PAW_LAUNCH_WORK_HANDOFF_KEY = "paw:launch_saved_work_handoff:v1";
       const TAB_TO_BUCKET_KEY = {
         'tab-assets': 'assets',
         'tab-listings': 'listings',
@@ -1407,7 +1413,7 @@
             + '<div class="work-meta">Last used: ' + escapeHtml(formatDateLike(usedAt)) + '</div>'
             + '</div>'
             + '<div class="work-actions">'
-            + '<button class="btn" type="button" data-action="open-work" data-tab="'+escapeHtml('tab-' + key)+'" data-work-id="'+escapeHtml(id)+'" data-bucket="'+escapeHtml(WORK_BUCKETS[key])+'">Open</button>'
+            + '<button class="btn" type="button" data-action="open-work" data-tab="'+escapeHtml('tab-' + key)+'" data-work-id="'+escapeHtml(id)+'" data-bucket="'+escapeHtml(WORK_BUCKETS[key])+'" data-work-label="'+escapeHtml(label)+'">Open</button>'
             + '<button class="btn" type="button" data-action="delete-work" data-panel="'+escapeHtml(panelId)+'" data-work-id="'+escapeHtml(id)+'" data-label="'+escapeHtml(label)+'">Delete</button>'
             + '</div>'
             + '</div>';
@@ -1872,6 +1878,23 @@ function showComing(msg){
 
       }
 
+      function persistLaunchWorkHandoff(handoff){
+        try{
+          const raw = handoff && typeof handoff === 'object' ? handoff : null;
+          const workId = String((raw && (raw.work_id || raw.id)) || '').trim();
+          const bucket = String((raw && raw.bucket) || '').trim();
+          if (!workId || !bucket) return;
+          const payload = {
+            v: 1,
+            work_id: workId,
+            bucket: bucket,
+            label: String((raw && raw.label) || '').trim(),
+            created_at: new Date().toISOString()
+          };
+          sessionStorage.setItem(PAW_LAUNCH_WORK_HANDOFF_KEY, JSON.stringify(payload));
+        }catch(_){}
+      }
+
 
 document.addEventListener('click', (e) => {
         const el = e.target;
@@ -1892,10 +1915,12 @@ document.addEventListener('click', (e) => {
         if (a === 'open-work') {
           const workId = String(el.getAttribute('data-work-id') || '').trim();
           const bucket = String(el.getAttribute('data-bucket') || '').trim();
+          const label = String(el.getAttribute('data-work-label') || '').trim();
           const tabId = String(el.getAttribute('data-tab') || '').trim();
           if (!workId || !bucket || !tabId) return;
           const dest = TAB_TO_DEST[tabId];
           if (!dest) return;
+          persistLaunchWorkHandoff({ work_id: workId, bucket: bucket, label: label });
           pawNavigate(dest, { work_id: workId, bucket: bucket });
           return;
         }
