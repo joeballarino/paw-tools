@@ -51,8 +51,8 @@
     ----------------------------------------------------
     PURPOSE (v1):
     - Intent-aware content studio for identity, authority, and local expertise.
-    - Generates public-facing content structured for its intended use/destination.
-    - Provides an "escape hatch" for real-world edge cases (Something else / Custom destination).
+    - Generates public-facing content structured for its intended use.
+    - Provides an "escape hatch" for real-world edge cases (Other / custom request).
 
     IMPORTANT PRODUCT RULES (LOCKED):
     - Circle owns the tool title. This embedded page MUST NOT render its own title.
@@ -64,7 +64,7 @@
     - Uses tool-shell.js for consistent chat + deliverable modal behavior.
     - Uses deliverable mode (Copy / Revise) because Presence outputs are typically paste-ready.
     - Sends structured preferences to the Worker:
-        presence_content_type, presence_destination, presence_custom_destination, presence_constraints
+        content_type, content_other
 
     FUTURE PHASES (not implemented here):
     - Optional "Save to My Stuff" actions once Worker endpoints exist for Presence items.
@@ -91,7 +91,7 @@
     body.paw-presence .presence-row{
       display:flex;
       flex-wrap:wrap;
-      align-items:flex-end;
+      align-items:flex-start;
       gap:12px;
     }
 
@@ -110,7 +110,6 @@
       letter-spacing:-0.01em;
     }
 
-    body.paw-presence .presence-select,
     body.paw-presence .presence-input{
       height:38px;
       width:100%;
@@ -125,53 +124,73 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
     }
 
-    body.paw-presence .presence-select:focus,
     body.paw-presence .presence-input:focus{
       border-color:rgba(5,195,249,.70);
       box-shadow:0 0 0 4px rgba(5,195,249,.14);
       background:#fff;
     }
 
-    body.paw-presence .presence-hint{
-      font-size:12px;
-      font-weight:700;
-      color:rgba(15,23,42,.60);
-      line-height:1.25;
-      margin-top:2px;
+    body.paw-presence .presence-button-group{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
     }
 
-    body.paw-presence .presence-mini{
-      padding:10px 14px 12px;background:transparent;
-    }
-
-    body.paw-presence .presence-mini textarea{
-      width:100%;
-      min-height:64px;
-      max-height:220px;
-      resize:none;
-      overflow-y:auto;
-      border-radius:14px;
-      border:1px solid rgba(15,23,42,.14);
+    body.paw-presence .presence-choice{
+      min-width:0;
       background:rgba(255,255,255,.92);
-      padding:12px 12px;
-      font-size:14px;
-      font-weight:650;
-      line-height:1.35;
-      color:rgba(15,23,42,.92);
-      outline:none;
-    }
-    body.paw-presence .presence-mini textarea:focus{
-      border-color:rgba(5,195,249,.70);
-      box-shadow:0 0 0 4px rgba(5,195,249,.14);
-      background:#fff;
+      color:rgba(15,23,42,.88);
+      border-color:rgba(15,23,42,.12);
+      font-weight:750;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
     }
 
-    body.paw-presence .presence-mini .mini-title{
-      font-size:12px;
-      font-weight:900;
-      color:rgba(15,23,42,.72);
-      letter-spacing:-0.01em;
-      margin:0 0 6px 0;
+    body.paw-presence .presence-choice:hover{
+      background:#fff;
+      border-color:rgba(15,23,42,.18);
+    }
+
+    body.paw-presence .presence-choice.is-selected,
+    body.paw-presence .presence-choice[aria-pressed="true"]{
+      background:rgba(5,195,249,.18);
+      color:rgba(15,23,42,.92);
+      border-color:rgba(5,195,249,.38);
+      box-shadow:inset 0 0 0 1px rgba(15,23,42,.08);
+    }
+
+    body.paw-presence .presence-block--missing .presence-label{
+      color:rgba(153,27,27,.84);
+    }
+
+    body.paw-presence .presence-block--missing .presence-button-group{
+      box-shadow:0 0 0 1px rgba(220,38,38,.22);
+      border-radius:999px;
+      background:rgba(254,242,242,.85);
+    }
+
+    body.paw-presence .presence-block--missing .presence-input{
+      border-color:rgba(220,38,38,.22);
+      box-shadow:0 0 0 1px rgba(220,38,38,.22);
+      background:rgba(254,242,242,.85);
+    }
+
+    body.paw-presence .presence-block[hidden]{
+      display:none !important;
+    }
+
+    body.paw-presence .presence-block[data-presence-group="primary"]{
+      flex:1 1 100%;
+      min-width:0;
+    }
+
+    body.paw-presence .presence-block[data-presence-group="secondary"],
+    body.paw-presence .presence-block[data-presence-group="other"]{
+      flex:0 1 auto;
+      min-width:0;
+    }
+
+    body.paw-presence .presence-input{
+      max-width:360px;
     }
 
     /* Hide the message area when empty so the composer sits closer to the intent controls (calmer feel) */
@@ -219,45 +238,29 @@
           <div class="presence-controls" aria-label="Presence intent controls">
             <div class="presence-row" aria-label="Presence primary selectors">
 
-              <div class="presence-block">
+              <div class="presence-block" data-presence-group="primary">
                 <div class="presence-label">What are you creating?</div>
-                <select id="contentType" class="presence-select" aria-label="Content type">
-                  <option value="" selected>Choose…</option>
-                  <option value="bio">Bio / About Me</option>
-                  <option value="authority">Authority content (article / blog)</option>
-                  <option value="local">Local content</option>
-                  <option value="social">Social content</option>
-                  <option value="guide">Guide-related content</option>
-                  <option value="other">Something else (describe it)</option>
-                </select>
-</div>
+                <div id="presencePrimaryGroup" class="presence-button-group" role="group" aria-label="What are you creating?">
+                  <button class="btn presence-choice" type="button" data-presence-primary="bio" aria-pressed="false">Bio</button>
+                  <button class="btn presence-choice" type="button" data-presence-primary="social_post" aria-pressed="false">Social Post</button>
+                  <button class="btn presence-choice" type="button" data-presence-primary="article" aria-pressed="false">Article</button>
+                  <button class="btn presence-choice" type="button" data-presence-primary="guide" aria-pressed="false">Guide</button>
+                  <button class="btn presence-choice" type="button" data-presence-primary="other" aria-pressed="false">Other</button>
+                </div>
+              </div>
 
-              <div class="presence-block" id="destBlock" style="display:none;">
-                <div class="presence-label">Where will this be used?</div>
-                <select id="destination" class="presence-select" aria-label="Destination">
-                  <option value="" selected>Choose…</option>
-                </select>
-</div>
+              <div class="presence-block" id="presenceSecondaryBlock" data-presence-group="secondary" hidden>
+                <div class="presence-label" id="presenceSecondaryLabel">Choose a focus</div>
+                <div id="presenceSecondaryGroup" class="presence-button-group" role="group" aria-live="polite"></div>
+              </div>
 
-              <div class="presence-block" id="customDestBlock" style="display:none;">
-                <div class="presence-label">Custom destination</div>
-                <input id="customDest" class="presence-input" type="text"
-                  placeholder="e.g., Conference app profile" autocomplete="off" />
-</div>
-
-              <div class="presence-block" id="constraintsBlock" style="display:none;">
-                <div class="presence-label">Any constraints?</div>
-                <input id="constraints" class="presence-input" type="text"
-                  placeholder="e.g., Max 300 characters" autocomplete="off" />
-</div>
+              <div class="presence-block" id="presenceOtherBlock" data-presence-group="other" hidden>
+                <label class="presence-label" for="presenceOtherText">What do you want to create?</label>
+                <input id="presenceOtherText" class="presence-input" type="text"
+                  placeholder="Describe what you want to create" autocomplete="off" />
+              </div>
 
             </div>
-          </div>
-
-          <!-- Optional context (light, not required) -->
-          <div class="presence-mini" aria-label="Presence optional context">
-            <div class="mini-title">Anything PAW should know? (optional)</div>
-            <textarea id="context" placeholder="Market, audience, bullets, or a rough draft…"></textarea>
           </div>
 
         </div>
@@ -285,20 +288,218 @@
   <script src="/tool-shell.js"></script>
   <script>
     const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
+    let showPresenceValidation = false;
     const CONTENT_TYPE_MAP = {
       bio: "bio_about_me",
-      authority: "authority_content",
-      local: "local_content",
-      social: "social_content",
+      social_post: "social_content",
+      article: "authority_content",
       guide: "guide_related_content",
       other: "other"
     };
 
+    const PRESENCE_SECONDARY_CONFIG = {
+      bio: {
+        label: "Choose a length",
+        options: [
+          { value: "short", label: "Short" },
+          { value: "standard", label: "Standard" },
+          { value: "long", label: "Long" }
+        ]
+      },
+      social_post: {
+        label: "Choose a focus",
+        options: [
+          { value: "listing", label: "Listing" },
+          { value: "local", label: "Local" },
+          { value: "educational", label: "Educational" },
+          { value: "brand", label: "Brand" },
+          { value: "guide", label: "Guide" }
+        ]
+      },
+      article: {
+        label: "Choose a focus",
+        options: [
+          { value: "market", label: "Market" },
+          { value: "local", label: "Local" },
+          { value: "educational", label: "Educational" },
+          { value: "agent_story", label: "Agent Story" }
+        ]
+      },
+      guide: {
+        label: "Choose a focus",
+        options: [
+          { value: "buying", label: "Buying" },
+          { value: "selling", label: "Selling" },
+          { value: "local_area", label: "Local Area" },
+          { value: "process", label: "Process" }
+        ]
+      }
+    };
+
+    const presenceState = {
+      primary: "",
+      secondary: "",
+      otherText: ""
+    };
+
     function getPresenceContentType() {
-      const contentTypeSelect = document.getElementById("contentType");
-      const selectedValue = contentTypeSelect ? contentTypeSelect.value : "";
-      return CONTENT_TYPE_MAP[selectedValue] || "other";
+      return CONTENT_TYPE_MAP[presenceState.primary] || "";
     }
+
+    function getMissingPresenceGroups() {
+      const missing = [];
+
+      if (!presenceState.primary) missing.push("primary");
+
+      if (presenceState.primary && PRESENCE_SECONDARY_CONFIG[presenceState.primary] && !presenceState.secondary) {
+        missing.push("secondary");
+      }
+
+      if (presenceState.primary === "other" && !String(presenceState.otherText || "").trim()) {
+        missing.push("other");
+      }
+
+      return missing;
+    }
+
+    function updatePresenceValidationState() {
+      const missingGroups = getMissingPresenceGroups();
+
+      document.querySelectorAll(".presence-block[data-presence-group]").forEach((block) => {
+        const group = String(block.getAttribute("data-presence-group") || "");
+        const isMissing = showPresenceValidation && missingGroups.indexOf(group) !== -1;
+        block.classList.toggle("presence-block--missing", isMissing);
+      });
+    }
+
+    function focusFirstMissingPresenceGroup(group) {
+      if (!group) return;
+
+      let target = null;
+      if (group === "primary") target = document.querySelector("[data-presence-primary]");
+      if (group === "secondary") target = document.querySelector("[data-presence-secondary]");
+      if (group === "other") target = document.getElementById("presenceOtherText");
+
+      if (target && typeof target.focus === "function") target.focus();
+    }
+
+    function syncPresenceChoiceUI() {
+      try {
+        document.querySelectorAll("[data-presence-primary]").forEach((button) => {
+          const isSelected = String(button.getAttribute("data-presence-primary") || "") === presenceState.primary;
+          button.classList.toggle("is-selected", isSelected);
+          button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        });
+
+        document.querySelectorAll("[data-presence-secondary]").forEach((button) => {
+          const isSelected = String(button.getAttribute("data-presence-secondary") || "") === presenceState.secondary;
+          button.classList.toggle("is-selected", isSelected);
+          button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        });
+      } catch (_) {}
+    }
+
+    function notifyPresenceLayoutChange() {
+      try {
+        window.dispatchEvent(new Event("resize"));
+      } catch (_) {}
+    }
+
+    function renderPresenceControls() {
+      const secondaryBlock = document.getElementById("presenceSecondaryBlock");
+      const secondaryLabel = document.getElementById("presenceSecondaryLabel");
+      const secondaryGroup = document.getElementById("presenceSecondaryGroup");
+      const otherBlock = document.getElementById("presenceOtherBlock");
+      const otherInput = document.getElementById("presenceOtherText");
+      const secondaryConfig = PRESENCE_SECONDARY_CONFIG[presenceState.primary] || null;
+
+      if (secondaryBlock) secondaryBlock.hidden = !secondaryConfig;
+      if (otherBlock) otherBlock.hidden = presenceState.primary !== "other";
+
+      if (secondaryLabel) {
+        secondaryLabel.textContent = secondaryConfig ? secondaryConfig.label : "Choose a focus";
+      }
+
+      if (secondaryGroup) {
+        if (secondaryConfig) {
+          secondaryGroup.innerHTML = secondaryConfig.options.map((option) => (
+            '<button class="btn presence-choice" type="button" data-presence-secondary="' + option.value + '" aria-pressed="false">' +
+              option.label +
+            "</button>"
+          )).join("");
+        } else {
+          secondaryGroup.innerHTML = "";
+        }
+      }
+
+      if (otherInput) otherInput.value = presenceState.otherText;
+
+      try {
+        document.querySelectorAll("[data-presence-secondary]").forEach((button) => {
+          button.addEventListener("click", function () {
+            presenceState.secondary = String(button.getAttribute("data-presence-secondary") || "");
+            if (getMissingPresenceGroups().length === 0) {
+              showPresenceValidation = false;
+            }
+            syncPresenceChoiceUI();
+            updatePresenceValidationState();
+          });
+        });
+      } catch (_) {}
+
+      syncPresenceChoiceUI();
+      updatePresenceValidationState();
+      notifyPresenceLayoutChange();
+    }
+
+    function resetPresenceControls() {
+      presenceState.primary = "";
+      presenceState.secondary = "";
+      presenceState.otherText = "";
+      renderPresenceControls();
+    }
+
+    function initPresenceControls() {
+      const primaryButtons = Array.from(document.querySelectorAll("[data-presence-primary]"));
+      const otherInput = document.getElementById("presenceOtherText");
+      const resetButton = document.getElementById("reset");
+
+      primaryButtons.forEach((button) => {
+        button.addEventListener("click", function () {
+          const nextPrimary = String(button.getAttribute("data-presence-primary") || "");
+          if (nextPrimary !== presenceState.primary) {
+            presenceState.primary = nextPrimary;
+            presenceState.secondary = "";
+          }
+          if (nextPrimary !== "other") presenceState.otherText = "";
+          if (getMissingPresenceGroups().length === 0) {
+            showPresenceValidation = false;
+          }
+          renderPresenceControls();
+        });
+      });
+
+      if (otherInput) {
+        otherInput.addEventListener("input", function () {
+          presenceState.otherText = String(otherInput.value || "");
+          if (getMissingPresenceGroups().length === 0) {
+            showPresenceValidation = false;
+          }
+          updatePresenceValidationState();
+        });
+      }
+
+      if (resetButton) {
+        resetButton.addEventListener("click", function () {
+          showPresenceValidation = false;
+          resetPresenceControls();
+        });
+      }
+
+      renderPresenceControls();
+    }
+
+    initPresenceControls();
 
     // PAW Tool Shell init (required for consistent My Works mode across tools)
     try {
@@ -306,8 +507,18 @@
         window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
           toolId: "presence",
+          beforeSend: () => {
+            const missingGroups = getMissingPresenceGroups();
+            if (!missingGroups.length) return null;
+
+            showPresenceValidation = true;
+            updatePresenceValidationState();
+            focusFirstMissingPresenceGroup(missingGroups[0]);
+            return { cancel: true };
+          },
           getPrefs: () => ({
-            content_type: getPresenceContentType()
+            content_type: getPresenceContentType(),
+            content_other: presenceState.primary === "other" ? String(presenceState.otherText || "").trim() : ""
           })
         });
       }
