@@ -2360,32 +2360,70 @@ var __worksStatusEl = null;
 var __worksStatusPlaceholder = null;
 var __worksStatusHomeParent = null;
 
-function pawWorksDebugNodeLabel(node){
+// One-time launch handoff for cross-page "Open" flows from My Works.
+// My Works writes { work_id, bucket, label } into sessionStorage immediately
+// before parent-driven navigation. The destination page reads it once during
+// boot, attaches the active work, and then clears it so later visits start clean.
+var PAW_LAUNCH_WORK_HANDOFF_KEY = "paw:launch_saved_work_handoff:v1";
+
+function consumeLaunchWorkHandoff(){
   try{
-    if (!node) return "(null)";
-    if (node === document.body) return "BODY";
-    if (node === document.documentElement) return "HTML";
-    var name = String(node.nodeName || "").toUpperCase() || "(unknown)";
-    var id = node.id ? ("#" + node.id) : "";
-    var cls = "";
+    if (__pawActiveWork) return null;
+    function normalizeLaunchWork(raw){
+      var parsed = raw && typeof raw === "object" ? raw : null;
+      var workId = parsed
+        ? String(parsed.work_id || parsed.id || "").trim()
+        : "";
+      var bucket = parsed
+        ? String(parsed.bucket || "").trim()
+        : "";
+      var label = parsed
+        ? String(parsed.label || "").trim()
+        : "";
+
+      if (!workId) return null;
+      if (!bucket) bucket = String(_inferWorkBucketFromPage() || "").trim();
+
+      return {
+        id: workId,
+        work_id: workId,
+        bucket: bucket,
+        label: label || "Untitled"
+      };
+    }
+
+    var handoff = null;
+
     try{
-      if (node.classList && node.classList.length){
-        cls = "." + Array.prototype.slice.call(node.classList).join(".");
+      if (window.sessionStorage){
+        var raw = sessionStorage.getItem(PAW_LAUNCH_WORK_HANDOFF_KEY);
+        if (raw){
+          try{ sessionStorage.removeItem(PAW_LAUNCH_WORK_HANDOFF_KEY); }catch(_){ }
+          var parsed = null;
+          try{ parsed = JSON.parse(raw); }catch(_){ parsed = null; }
+          handoff = normalizeLaunchWork(parsed);
+        }
       }
     }catch(_){ }
-    return name + id + cls;
-  }catch(_){
-    return "(unreadable)";
-  }
-}
 
-function pawWorksDebugLog(){
-  try{
-    if (!window.console || typeof window.console.log !== "function") return;
-    var args = Array.prototype.slice.call(arguments || []);
-    args.unshift("[PAW Works Debug]");
-    window.console.log.apply(window.console, args);
-  }catch(_){ }
+    if (!handoff){
+      try{
+        var qp = new URLSearchParams((window.location && window.location.search) || "");
+        handoff = normalizeLaunchWork({
+          work_id: qp.get("work_id") || "",
+          bucket: qp.get("bucket") || "",
+          label: qp.get("label") || ""
+        });
+      }catch(_){ }
+    }
+
+    if (!handoff) return null;
+
+    attachWork(handoff);
+    return handoff;
+  }catch(_){
+    return null;
+  }
 }
 
 
@@ -2401,17 +2439,14 @@ function mountWorksRootIntoPanel(){
   try{
     if (!__worksRoot) return;
     var panel = document.querySelector(".panel") || __toolRoot || findToolRoot() || document.body;
-    pawWorksDebugLog("mountWorksRootIntoPanel panel=", pawWorksDebugNodeLabel(panel));
     if (!panel) return;
     var topbar = panel.querySelector ? panel.querySelector(".panel-topbar") : null;
     if (topbar && topbar.parentNode === panel){
       panel.insertBefore(__worksRoot, topbar.nextSibling);
-      pawWorksDebugLog("mountWorksRootIntoPanel insertAfterTopbar ok parent=", pawWorksDebugNodeLabel(__worksRoot.parentNode));
     } else {
       panel.appendChild(__worksRoot);
-      pawWorksDebugLog("mountWorksRootIntoPanel append ok parent=", pawWorksDebugNodeLabel(__worksRoot.parentNode));
     }
-  }catch(err){ pawWorksDebugLog("mountWorksRootIntoPanel error", err && err.message ? err.message : err); }
+  }catch(_){ }
 }
 
 function ensureWorksRoot(){
@@ -3009,72 +3044,6 @@ function ensureWorksRoot(){
     return String(ep || "").replace(/\/+$/,"");
   }
 
-  // One-time launch handoff for cross-page "Open" flows from My Works.
-  // My Works writes { work_id, bucket, label } into sessionStorage immediately
-  // before parent-driven navigation. The destination page reads it once during
-  // boot, attaches the active work, and then clears it so later visits start clean.
-  var PAW_LAUNCH_WORK_HANDOFF_KEY = "paw:launch_saved_work_handoff:v1";
-
-  function consumeLaunchWorkHandoff(){
-    try{
-      if (__pawActiveWork) return null;
-      function normalizeLaunchWork(raw){
-        var parsed = raw && typeof raw === "object" ? raw : null;
-        var workId = parsed
-          ? String(parsed.work_id || parsed.id || "").trim()
-          : "";
-        var bucket = parsed
-          ? String(parsed.bucket || "").trim()
-          : "";
-        var label = parsed
-          ? String(parsed.label || "").trim()
-          : "";
-
-        if (!workId) return null;
-        if (!bucket) bucket = String(_inferWorkBucketFromPage() || "").trim();
-
-        return {
-          id: workId,
-          work_id: workId,
-          bucket: bucket,
-          label: label || "Untitled"
-        };
-      }
-
-      var handoff = null;
-
-      try{
-        if (window.sessionStorage){
-          var raw = sessionStorage.getItem(PAW_LAUNCH_WORK_HANDOFF_KEY);
-          if (raw){
-            try{ sessionStorage.removeItem(PAW_LAUNCH_WORK_HANDOFF_KEY); }catch(_){ }
-            var parsed = null;
-            try{ parsed = JSON.parse(raw); }catch(_){ parsed = null; }
-            handoff = normalizeLaunchWork(parsed);
-          }
-        }
-      }catch(_){ }
-
-      if (!handoff){
-        try{
-          var qp = new URLSearchParams((window.location && window.location.search) || "");
-          handoff = normalizeLaunchWork({
-            work_id: qp.get("work_id") || "",
-            bucket: qp.get("bucket") || "",
-            label: qp.get("label") || ""
-          });
-        }catch(_){ }
-      }
-
-      if (!handoff) return null;
-
-      attachWork(handoff);
-      return handoff;
-    }catch(_){
-      return null;
-    }
-  }
-
   function _apiHeadersJsonAuth(){
     var headers = { "Content-Type":"application/json" };
     try{
@@ -3558,7 +3527,6 @@ function findToolRoot(){
     var want = !!on;
     if (__worksModeOn === want) return;
 
-    pawWorksDebugLog("setWorksMode transition", (__worksModeOn ? "open" : "closed"), "->", (want ? "open" : "closed"));
     __worksModeOn = want;
 
     // Find the shared panel container (all tools use .panel).
@@ -3573,7 +3541,6 @@ function findToolRoot(){
     //     2) avoiding viewport-based CSS that can cause iframe resize loops, and
     //     3) restoring the user's previous scroll position on exit.
     if (want){
-      var hiddenCount = 0;
       // Preserve the user's position so we can return them when Works closes.
       try{
         __worksPrevScrollY = (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0);
@@ -3609,16 +3576,13 @@ function findToolRoot(){
           el.setAttribute("data-paw-prev-display", prev);
           el.style.display = "none";
           __worksHiddenEls.push(el);
-          hiddenCount += 1;
         });
       }catch(_){}
-      pawWorksDebugLog("setWorksMode hiddenChildren=", hiddenCount);
 
       // Works mode class is applied to BOTH html + body (CSS uses both).
       try{ document.documentElement.classList.add("paw-works-mode"); }catch(_){}
       try{ document.body.classList.add("paw-works-mode"); }catch(_){}
     } else {
-      var restoredCount = 0;
       // Restore what we hid, exactly as it was.
       try{
         (__worksHiddenEls || []).forEach(function(el){
@@ -3627,11 +3591,9 @@ function findToolRoot(){
           el.style.display = prev || "";
           el.removeAttribute("data-paw-works-hide");
           el.removeAttribute("data-paw-prev-display");
-          restoredCount += 1;
         });
       }catch(_){}
       __worksHiddenEls = [];
-      pawWorksDebugLog("setWorksMode restoredChildren=", restoredCount);
 
       try{ document.documentElement.classList.remove("paw-works-mode"); }catch(_){}
       try{ document.body.classList.remove("paw-works-mode"); }catch(_){}
@@ -3665,11 +3627,9 @@ function findToolRoot(){
 // Mode enter/exit (full-page swap)
 // ------------------------------------------------------------
 function enterWorksMode(){
-  pawWorksDebugLog("enterWorksMode entry");
   if (__worksModeOn) return;
 
   __toolRoot = findToolRoot();
-  pawWorksDebugLog("enterWorksMode toolRoot=", pawWorksDebugNodeLabel(__toolRoot), "found=", !!__toolRoot);
   if (!__toolRoot){
     // If we can't safely replace the tool UI, the Work button should not be available.
     try{ var btn = document.getElementById("pawMyStuffBtn"); if (btn) btn.style.display = "none"; }catch(_){}
@@ -3709,22 +3669,14 @@ function enterWorksMode(){
   }catch(_){ __worksBtn = null; __worksBtnHomeParent = null; __worksBtnPlaceholder = null; }
 
   var ensuredRoot = ensureWorksRoot();
-  pawWorksDebugLog("enterWorksMode ensureWorksRoot returned=", !!ensuredRoot, "root=", pawWorksDebugNodeLabel(ensuredRoot));
   var activePanel = document.querySelector(".panel") || __toolRoot || null;
-  pawWorksDebugLog("enterWorksMode activePanel=", pawWorksDebugNodeLabel(activePanel), "rootParent=", pawWorksDebugNodeLabel(__worksRoot && __worksRoot.parentNode));
   if (__worksRoot && activePanel && __worksRoot.parentNode !== activePanel){
-    pawWorksDebugLog("enterWorksMode mount verification retry");
     mountWorksRootIntoPanel();
-    pawWorksDebugLog("enterWorksMode rootParentAfterRetry=", pawWorksDebugNodeLabel(__worksRoot && __worksRoot.parentNode));
   }
   if (!__worksRoot || !activePanel || __worksRoot.parentNode !== activePanel){
-    pawWorksDebugLog("enterWorksMode mount verification failed");
     return;
   }
-  pawWorksDebugLog("enterWorksMode mount verification passed");
-  pawWorksDebugLog("enterWorksMode before setWorksMode(true)");
   setWorksMode(true);
-  pawWorksDebugLog("enterWorksMode after setWorksMode(true) __worksModeOn=", __worksModeOn);
   try{ renderWorksBody(); }catch(_){ }
   try{ if (__worksEnsureWorksListLoadedFn) __worksEnsureWorksListLoadedFn(); }catch(_){ }
 
@@ -3751,9 +3703,7 @@ function enterWorksMode(){
 
   updateWorkPill();
 
-  pawWorksDebugLog("enterWorksMode before worksRoot display flex display=", __worksRoot && __worksRoot.style ? __worksRoot.style.display : "(no-style)");
   try{ __worksRoot.style.display = "flex"; }catch(_){}
-  pawWorksDebugLog("enterWorksMode after worksRoot display flex display=", __worksRoot && __worksRoot.style ? __worksRoot.style.display : "(no-style)");
   try{ pawScheduleLayoutPing(); }catch(_){}
 
   // Stabilize scroll: bring Works to top.
@@ -4036,16 +3986,13 @@ function init(apiEndpoint){
 
   // Wire the Work button as a single toggle in every tool.
   var btn = document.getElementById("pawMyStuffBtn");
-  pawWorksDebugLog("init buttonFound=", !!btn);
   if (!btn) return;
 
   // Prevent double-run if init() is called more than once.
   if (btn.getAttribute("data-paw-works") === "1") return;
   btn.setAttribute("data-paw-works","1");
-  pawWorksDebugLog("init attaching click handler");
 
   btn.addEventListener("click", function(e){
-    pawWorksDebugLog("button click fired __worksModeOn=", __worksModeOn);
     try{ e.preventDefault(); }catch(_){}
     if (__worksModeOn) exitWorksMode();
     else enterWorksMode();
