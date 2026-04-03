@@ -3682,7 +3682,7 @@ function enterWorksMode(){
   if (__worksRoot && activePanel && __worksRoot.parentNode !== activePanel){
     mountWorksRootIntoPanel();
   }
-  if (!__worksRoot || !activePanel || __worksRoot.parentNode !== activePanel){
+  if (!ensuredRoot){
     return;
   }
   setWorksMode(true);
