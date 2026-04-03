@@ -189,8 +189,20 @@
       min-width:0;
     }
 
+    body.paw-presence .presence-block[data-presence-group="other"]{
+      flex:1 1 100%;
+      width:100%;
+    }
+
     body.paw-presence .presence-input{
       max-width:360px;
+    }
+
+    body.paw-presence .presence-block[data-presence-group="other"] .presence-input{
+      min-height:88px;
+      max-width:none;
+      line-height:1.4;
+      resize:vertical;
     }
 
     /* Hide the message area when empty so the composer sits closer to the intent controls (calmer feel) */
@@ -256,8 +268,8 @@
 
               <div class="presence-block" id="presenceOtherBlock" data-presence-group="other" hidden>
                 <label class="presence-label" for="presenceOtherText">What do you want to create?</label>
-                <input id="presenceOtherText" class="presence-input" type="text"
-                  placeholder="Describe what you want to create" autocomplete="off" />
+                <textarea id="presenceOtherText" class="presence-input"
+                  placeholder="Describe what you want to create" autocomplete="off" rows="3"></textarea>
               </div>
 
             </div>
@@ -285,10 +297,36 @@
     </div>
   </div>
 
+  <div id="pawResumeModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawResumeTitle">
+      <div class="modal-head">
+        <div id="pawResumeTitle" class="modal-title">Resume draft?</div>
+        <button class="modal-close" id="pawResumeClose" aria-label="Close" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="pawResumeMeta" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45; margin-bottom:14px;">
+          We found a saved draft on this device.
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button id="pawResumeFresh" class="btn" type="button">Start fresh</button>
+          <button id="pawResumeGo" class="btn primary" type="button">Resume</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/tool-shell.js"></script>
   <script>
     const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
     let showPresenceValidation = false;
+    const $resumeModal = document.getElementById("pawResumeModal");
+    const $resumeClose = document.getElementById("pawResumeClose");
+    const $resumeMeta = document.getElementById("pawResumeMeta");
+    const $resumeFresh = document.getElementById("pawResumeFresh");
+    const $resumeGo = document.getElementById("pawResumeGo");
+    const DRAFT_KEY = "paw:presence:draft:v1";
+    const MAX_DRAFT_HISTORY_ITEMS = 30;
+    const MAX_DRAFT_SHELL_INPUT_CHARS = 8000;
     const CONTENT_TYPE_MAP = {
       bio: "bio_about_me",
       social_post: "social_content",
@@ -342,8 +380,37 @@
       otherText: ""
     };
 
+    function trunc(s, max) {
+      s = (s == null) ? "" : String(s);
+      if (!max || max <= 0) return "";
+      return s.length > max ? s.slice(0, max) : s;
+    }
+
+    function storageGet(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (_) { return null; }
+    }
+
+    function storageSet(key, val) {
+      try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (_) { return false; }
+    }
+
+    function storageDel(key) {
+      try { localStorage.removeItem(key); return true; } catch (_) { return false; }
+    }
+
     function getPresenceContentType() {
       return CONTENT_TYPE_MAP[presenceState.primary] || "";
+    }
+
+    function getPresenceDeliverableMeta() {
+      return {
+        content_type: getPresenceContentType(),
+        openModal: false
+      };
     }
 
     function getMissingPresenceGroups() {
@@ -443,6 +510,7 @@
             }
             syncPresenceChoiceUI();
             updatePresenceValidationState();
+            scheduleDraftSave();
           });
         });
       } catch (_) {}
@@ -462,7 +530,6 @@
     function initPresenceControls() {
       const primaryButtons = Array.from(document.querySelectorAll("[data-presence-primary]"));
       const otherInput = document.getElementById("presenceOtherText");
-      const resetButton = document.getElementById("reset");
 
       primaryButtons.forEach((button) => {
         button.addEventListener("click", function () {
@@ -476,6 +543,7 @@
             showPresenceValidation = false;
           }
           renderPresenceControls();
+          scheduleDraftSave();
         });
       });
 
@@ -486,13 +554,7 @@
             showPresenceValidation = false;
           }
           updatePresenceValidationState();
-        });
-      }
-
-      if (resetButton) {
-        resetButton.addEventListener("click", function () {
-          showPresenceValidation = false;
-          resetPresenceControls();
+          scheduleDraftSave();
         });
       }
 
@@ -501,12 +563,18 @@
 
     initPresenceControls();
 
+    let shell = null;
+
     // PAW Tool Shell init (required for consistent My Works mode across tools)
     try {
       if (window.PAWToolShell && window.PAWToolShell.init) {
-        window.PAWToolShell.init({
+        shell = window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
           toolId: "presence",
+          bindReset: false,
+          onResponse: function () {
+            try { setTimeout(saveDraftNow, 0); } catch (_) {}
+          },
           beforeSend: () => {
             const missingGroups = getMissingPresenceGroups();
             if (!missingGroups.length) return null;
@@ -519,10 +587,247 @@
           getPrefs: () => ({
             content_type: getPresenceContentType(),
             content_other: presenceState.primary === "other" ? String(presenceState.otherText || "").trim() : ""
-          })
+          }),
+          getDeliverableMeta: getPresenceDeliverableMeta
         });
       }
     } catch (_) {}
+
+    function buildDraft() {
+      const rawShellState = (shell && shell.getState) ? shell.getState() : { history: [], input: "" };
+      const shellState = {
+        history: Array.isArray(rawShellState.history) ? rawShellState.history.slice(-MAX_DRAFT_HISTORY_ITEMS) : [],
+        input: trunc(rawShellState.input, MAX_DRAFT_SHELL_INPUT_CHARS)
+      };
+
+      return {
+        v: 1,
+        updatedAt: new Date().toISOString(),
+        toolId: "presence",
+        presence: {
+          primary: presenceState.primary,
+          secondary: presenceState.secondary,
+          otherText: presenceState.otherText
+        },
+        shell: shellState
+      };
+    }
+
+    function saveDraftNow() {
+      try {
+        const d = buildDraft();
+        const hasAny =
+          (d.presence && Object.values(d.presence).some((v) => String(v || "").trim())) ||
+          (d.shell && Array.isArray(d.shell.history) && d.shell.history.length) ||
+          (d.shell && typeof d.shell.input === "string" && d.shell.input.trim().length);
+
+        if (!hasAny) {
+          storageDel(DRAFT_KEY);
+          return;
+        }
+
+        storageSet(DRAFT_KEY, d);
+      } catch (_) {}
+    }
+
+    let __draftSaveT = null;
+
+    function scheduleDraftSave() {
+      try {
+        if (__draftSaveT) clearTimeout(__draftSaveT);
+        __draftSaveT = setTimeout(saveDraftNow, 350);
+      } catch (_) {}
+    }
+
+    function openResumeModal(draft) {
+      try {
+        if (!$resumeModal) return;
+        const d = draft || {};
+        const ts = d.updatedAt ? new Date(d.updatedAt) : null;
+        const when = ts && !isNaN(ts.getTime()) ? ts.toLocaleString() : "";
+        $resumeMeta.textContent = `We found a saved Presence draft on this device.` + (when ? ` Last saved: ${when}.` : "");
+        $resumeModal.classList.add("show");
+        $resumeModal.setAttribute("aria-hidden", "false");
+      } catch (_) {}
+    }
+
+    function closeResumeModal() {
+      try {
+        if (!$resumeModal) return;
+        $resumeModal.classList.remove("show");
+        $resumeModal.setAttribute("aria-hidden", "true");
+      } catch (_) {}
+    }
+
+    function applyDraft(draft) {
+      const d = draft && typeof draft === "object" ? draft : null;
+      if (!d) return false;
+
+      try {
+        const p = d.presence || {};
+        presenceState.primary = String(p.primary || "");
+        presenceState.secondary = String(p.secondary || "");
+        presenceState.otherText = String(p.otherText || "");
+        showPresenceValidation = false;
+        renderPresenceControls();
+        closeResumeModal();
+        if (d.shell && shell && shell.setState) shell.setState(d.shell);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function fullResetPresence() {
+      try { storageDel(DRAFT_KEY); } catch (_) {}
+      closeResumeModal();
+      showPresenceValidation = false;
+      resetPresenceControls();
+      try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+      try {
+        if (window.__PAWWorks && window.__PAWWorks.detachWork) {
+          window.__PAWWorks.detachWork();
+        }
+      } catch (_) {}
+    }
+
+    try {
+      const resetButton = document.getElementById("reset");
+      if (resetButton) {
+        resetButton.addEventListener("click", function () {
+          fullResetPresence();
+        });
+      }
+    } catch (_) {}
+
+    let __worksSaving = false;
+
+    window.addEventListener("paw:works:save_current_output", async (e) => {
+      if (__worksSaving) return;
+
+      const detail = e && e.detail ? e.detail : {};
+      const intent = String(detail.intent || "").trim();
+      if (intent !== "save_updates") return;
+      if (String(detail.source_action || "").trim() !== "save_existing") return;
+
+      const aw = detail.active_work || null;
+      if (!aw) return;
+
+      const workId = String(aw.id || aw.work_id || "").trim();
+      if (!workId) return;
+
+      let token = "";
+      try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
+      if (!token) {
+        try {
+          if (window.PAWAuth && window.PAWAuth.whenReady) {
+            await window.PAWAuth.whenReady().catch(() => {});
+            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+          }
+        } catch (_) {}
+      }
+      if (!token) {
+        try { if (shell && shell.toast) shell.toast("Not signed in yet. Please try again."); } catch (_) {}
+        return;
+      }
+
+      __worksSaving = true;
+      try {
+        const saveRequest =
+          (window.__PAWWorks && typeof window.__PAWWorks._buildCreateMyWorkRequest === "function")
+            ? window.__PAWWorks._buildCreateMyWorkRequest(String(aw.bucket || ""), String(aw.label || ""))
+            : null;
+        const payloadToSave = (saveRequest && saveRequest.payload && typeof saveRequest.payload === "object")
+          ? saveRequest.payload
+          : null;
+        if (!payloadToSave) {
+          try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+          return;
+        }
+
+        const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
+
+        let res = await fetch(url, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({ payload: payloadToSave })
+        });
+
+        let data = await res.json().catch(() => ({}));
+
+        if (res.status === 401 || res.status === 403) {
+          try {
+            if (window.PAWAuth && window.PAWAuth.whenReady) {
+              await window.PAWAuth.whenReady().catch(() => {});
+            }
+            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+          } catch (_) {}
+
+          if (token) {
+            res = await fetch(url, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+              },
+              body: JSON.stringify({ payload: payloadToSave })
+            });
+            data = await res.json().catch(() => ({}));
+          }
+        }
+
+        if (!res.ok) {
+          try {
+            const msg = (data && (data.error || data.message)) ? String(data.error || data.message) : "Couldn’t save right now.";
+            if (shell && shell.toast) shell.toast(msg);
+          } catch (_) {}
+          return;
+        }
+
+        try { if (shell && shell.toast) shell.toast("Saved."); } catch (_) {}
+      } catch (_) {
+        try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+      } finally {
+        __worksSaving = false;
+      }
+    });
+
+    try {
+      const $prompt = document.getElementById("prompt");
+      if ($prompt) {
+        $prompt.addEventListener("input", scheduleDraftSave);
+        $prompt.addEventListener("change", scheduleDraftSave);
+      }
+    } catch (_) {}
+
+    window.addEventListener("beforeunload", () => { try { saveDraftNow(); } catch (_) {} });
+
+    try { if ($resumeClose) $resumeClose.addEventListener("click", () => closeResumeModal()); } catch (_) {}
+    try {
+      if ($resumeModal) $resumeModal.addEventListener("click", (e) => { if (e.target === $resumeModal) closeResumeModal(); });
+    } catch (_) {}
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeResumeModal(); } });
+
+    try {
+      if ($resumeFresh) $resumeFresh.addEventListener("click", () => {
+        closeResumeModal();
+        fullResetPresence();
+      });
+    } catch (_) {}
+
+    try {
+      if ($resumeGo) $resumeGo.addEventListener("click", () => {
+        const d = storageGet(DRAFT_KEY);
+        closeResumeModal();
+        if (d) applyDraft(d);
+      });
+    } catch (_) {}
+
+    const existingDraft = storageGet(DRAFT_KEY);
+    if (existingDraft) openResumeModal(existingDraft);
   </script>
 
   <!-- ==========================================================

@@ -847,7 +847,7 @@ function removeNode(node) {
 
 
       function ensureConnectInlineCopyLink(bubble) {
-        if (toolId !== "connect" || !bubble) return;
+        if ((toolId !== "connect" && toolId !== "presence") || !bubble) return;
 
         try {
           const block = bubble.closest && bubble.closest(".paw-message-block");
@@ -1074,6 +1074,7 @@ if ($input) {
         typeof config.sendHistoryItems === "number" ? config.sendHistoryItems : 10;
       const maxHistoryItems =
         typeof config.maxHistoryItems === "number" ? config.maxHistoryItems : 20;
+      const bindReset = config.bindReset !== false;
 
       let history = [];
       let isSending = false;
@@ -1749,7 +1750,7 @@ function resetAutoGrowTextarea($ta){
             ? reportMeta.deliverableMeta
             : null;
         const shouldOpenModal = deliverableMode && (!deliverableMeta || deliverableMeta.openModal !== false);
-        const isConnectDeliverable = toolId === "connect";
+        const isConnectDeliverable = toolId === "connect" || toolId === "presence";
 
         // Remember the last deliverable so the user can re-open/copy it again.
         lastDeliverableState = buildDeliverableModalState(
@@ -2024,7 +2025,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         });
       }
 
-      if ($reset) $reset.addEventListener("click", reset);
+      if ($reset && bindReset) $reset.addEventListener("click", reset);
 
       if ($tips && typeof config.tipsText === "string") {
         
@@ -2555,10 +2556,10 @@ function ensureWorksRoot(){
             updated_at: work.updated_at
           };
           attachWork(nw);
-          setTimeout(function(){ emitWorksSave("save_updates"); }, 0);
+          setTimeout(function(){ emitWorksSave("save_updates", { source_action: "save_new" }); }, 0);
           _touchRecent(nw);
           await reloadWorksList({ append:false });
-          emitWorksSave("create");
+          emitWorksSave("create", { source_action: "save_new" });
           _worksToast("Saved.");
         }catch(err){
           _worksToast((err && err.message) ? err.message : "Couldn’t save right now.");
@@ -2592,10 +2593,10 @@ function ensureWorksRoot(){
             updated_at: work.updated_at
           };
           attachWork(nw);
-          setTimeout(function(){ emitWorksSave("save_updates"); }, 0);
+          setTimeout(function(){ emitWorksSave("save_updates", { source_action: "save_as_new" }); }, 0);
           _touchRecent(nw);
           await reloadWorksList({ append:false });
-          emitWorksSave("save_as_new");
+          emitWorksSave("save_as_new", { source_action: "save_as_new" });
           _worksToast("Saved.");
         }catch(err){
           _worksToast((err && err.message) ? err.message : "Couldn’t save right now.");
@@ -2613,7 +2614,7 @@ function ensureWorksRoot(){
         }
       }catch(_){ }
       try{ renderWorksBody(); }catch(_){ }
-      emitWorksSave("save_updates");
+      emitWorksSave("save_updates", { source_action: "save_existing" });
       return;
     }
 
@@ -3249,10 +3250,19 @@ function ensureWorksRoot(){
     }catch(_){}
   };
 
-  function emitWorksSave(intent){
+  function emitWorksSave(intent, meta){
     try{
+      var detail = {
+        active_work: getActiveWork(),
+        intent: String(intent || "")
+      };
+      if (meta && typeof meta === "object"){
+        for (var k in meta){
+          if (Object.prototype.hasOwnProperty.call(meta, k)) detail[k] = meta[k];
+        }
+      }
       var ev = new CustomEvent("paw:works:save_current_output", {
-        detail: { active_work: getActiveWork(), intent: String(intent || "") }
+        detail: detail
       });
       window.dispatchEvent(ev);
     }catch(_){ }
@@ -4005,6 +4015,7 @@ function init(apiEndpoint){
     getActiveWork: getActiveWork,
     attachWork: attachWork,
     detachWork: detachWork,
+    _buildCreateMyWorkRequest: _buildCreateMyWorkRequest,
     _open: function(){ enterWorksMode(); },
     _close: function(){ exitWorksMode(); }
   };

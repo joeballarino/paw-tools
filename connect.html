@@ -1293,6 +1293,101 @@
       }
     } catch (_) {}
 
+    let __worksSaving = false;
+
+    window.addEventListener("paw:works:save_current_output", async (e) => {
+      if (__worksSaving) return;
+
+      const detail = e && e.detail ? e.detail : {};
+      const intent = String(detail.intent || "").trim();
+      if (intent !== "save_updates") return;
+      if (String(detail.source_action || "").trim() !== "save_existing") return;
+
+      const aw = detail.active_work || null;
+      if (!aw) return;
+
+      const workId = String(aw.id || aw.work_id || "").trim();
+      if (!workId) return;
+
+      let token = "";
+      try { token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : ""; } catch (_) {}
+      if (!token) {
+        try {
+          if (window.PAWAuth && window.PAWAuth.whenReady) {
+            await window.PAWAuth.whenReady().catch(() => {});
+            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+          }
+        } catch (_) {}
+      }
+      if (!token) {
+        try { if (shell && shell.toast) shell.toast("Not signed in yet. Please try again."); } catch (_) {}
+        return;
+      }
+
+      __worksSaving = true;
+      try {
+        const saveRequest =
+          (window.__PAWWorks && typeof window.__PAWWorks._buildCreateMyWorkRequest === "function")
+            ? window.__PAWWorks._buildCreateMyWorkRequest(String(aw.bucket || ""), String(aw.label || ""))
+            : null;
+        const payloadToSave = (saveRequest && saveRequest.payload && typeof saveRequest.payload === "object")
+          ? saveRequest.payload
+          : null;
+        if (!payloadToSave) {
+          try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+          return;
+        }
+
+        const url = String(API_ENDPOINT).replace(/\/+$/, "") + "/myworks/" + encodeURIComponent(workId);
+
+        let res = await fetch(url, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({ payload: payloadToSave })
+        });
+
+        let data = await res.json().catch(() => ({}));
+
+        if (res.status === 401 || res.status === 403) {
+          try {
+            if (window.PAWAuth && window.PAWAuth.whenReady) {
+              await window.PAWAuth.whenReady().catch(() => {});
+            }
+            token = (window.PAWAuth && window.PAWAuth.getToken) ? String(window.PAWAuth.getToken() || "") : "";
+          } catch (_) {}
+
+          if (token) {
+            res = await fetch(url, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+              },
+              body: JSON.stringify({ payload: payloadToSave })
+            });
+            data = await res.json().catch(() => ({}));
+          }
+        }
+
+        if (!res.ok) {
+          try {
+            const msg = (data && (data.error || data.message)) ? String(data.error || data.message) : "Couldn’t save right now.";
+            if (shell && shell.toast) shell.toast(msg);
+          } catch (_) {}
+          return;
+        }
+
+        try { if (shell && shell.toast) shell.toast("Saved."); } catch (_) {}
+      } catch (_) {
+        try { if (shell && shell.toast) shell.toast("Couldn’t save right now."); } catch (_) {}
+      } finally {
+        __worksSaving = false;
+      }
+    });
+
     try { if ($resumeClose) $resumeClose.addEventListener("click", () => closeResumeModal()); } catch (_) {}
     try {
       if ($resumeModal) $resumeModal.addEventListener("click", (e) => { if (e.target === $resumeModal) closeResumeModal(); });
