@@ -274,6 +274,9 @@
         <div class="panel-topbar">
           <div class="topbar-row0">
             <div class="tool-head">
+              <!-- Shared Work host button.
+                   tool-shell.js owns click/open/close/status/mount behavior.
+                   This tool may host the button and consume shared APIs/events only. -->
               <button id="pawMyStuffBtn" class="paw-mystuff-btn paw-works-btn" type="button" aria-label="Work context">
                 <img class="works-paw" src="https://paw-tools.pages.dev/paw.png" alt="" aria-hidden="true">
                 <span class="works-label">Work</span>
@@ -1108,6 +1111,9 @@
       }
     }
     // PAW Tool Shell init (required for consistent My Works mode across tools)
+    // tool-shell.js owns the shared Work button click behavior, status text,
+    // Works mode open/close, and Works root mounting.
+    // Connect may consume shared Work state after init, but must not duplicate that logic locally.
     let shell = null;
     try {
       if (window.PAWToolShell && window.PAWToolShell.init) {
@@ -1144,6 +1150,9 @@
       }
     } catch (_) {}
 
+    // Shared active-work hook.
+    // Connect may react to shell-owned active work and render local context,
+    // but it must not reimplement Work button behavior or Works mode locally.
     window.addEventListener("paw:works:active_changed", function (e) {
       const activeWork = (e && e.detail) ? e.detail.active_work : null;
       renderAttachedWorkSummary(activeWork);

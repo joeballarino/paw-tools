@@ -115,6 +115,9 @@
 <div class="panel-topbar">
 <div class="topbar-row0">
 <div class="tool-head">
+<!-- Shared Work host button.
+     tool-shell.js owns click/open/close/status/mount behavior.
+     This tool may host the button and consume shared APIs/events only. -->
 <button aria-label="Work context" class="paw-mystuff-btn paw-works-btn" id="pawMyStuffBtn" type="button">
 <img alt="" aria-hidden="true" class="works-paw" src="https://paw-tools.pages.dev/paw.png"/>
 <span class="works-label">Work</span>
@@ -340,6 +343,9 @@ Examples
         }
       }
 
+      // Shared Work shell init.
+      // tool-shell.js wires the Work button and owns Works mode lifecycle.
+      // Guide may consume shared Work state after init, but must not duplicate that logic locally.
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "assistant",
@@ -538,6 +544,9 @@ Examples
       const existingDraft = storageGet(DRAFT_KEY);
       if (existingDraft) openResumeModal(existingDraft);
 
+      // Shared active-work hook.
+      // This tool may react to the shell-owned active work, but it must not
+      // reimplement Work button behavior or Works mode open/close locally.
       window.addEventListener("paw:works:active_changed", async (e) => {
         const aw = e && e.detail ? e.detail.active_work : null;
         await loadGuideListingContext(aw);
