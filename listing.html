@@ -58,6 +58,9 @@
 
           <div class="topbar-row0">
             <div class="tool-head">
+              <!-- Shared Work host button.
+                   tool-shell.js owns click/open/close/status/mount behavior.
+                   This tool may host the button and consume shared APIs/events only. -->
               <button id="pawMyStuffBtn" class="paw-mystuff-btn paw-works-btn" type="button" aria-label="Work context">
                 <img class="works-paw" src="https://paw-tools.pages.dev/paw.png" alt="" aria-hidden="true">
                 <span class="works-label">Work</span>
@@ -787,6 +790,9 @@ Examples
 
         return selected;
       }
+      // Shared Work shell init.
+      // tool-shell.js wires the Work button and owns Works mode lifecycle.
+      // Listing may consume shared Work state after init, but must not duplicate that logic locally.
 const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "listing_description_writer",
@@ -1044,6 +1050,8 @@ const shell = window.PAWToolShell.init({
       // Works -> Listing restore hook
       // ----------------------------------------------------------
       // When active work changes, load listing payload for listings bucket.
+      // This consumes shell-owned shared state only.
+      // Do not add local Work-mode or Work-button behavior here.
       // ==========================================================
       window.addEventListener("paw:works:active_changed", async (e) => {
         const seq = ++__activeWorkLoadSeq;
@@ -1139,6 +1147,9 @@ const shell = window.PAWToolShell.init({
         }
       });
 
+      // Shared save hook.
+      // Listing may save into the shell-owned active work when this event fires,
+      // but must not replace the shared save flow or create a local save event.
       window.addEventListener("paw:works:save_current_output", async (e) => {
         if (__worksSaving) return;
 

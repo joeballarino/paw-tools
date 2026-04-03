@@ -277,6 +277,9 @@ body.paw-contracts #analyzeBtn[disabled]{
         <div class="panel-topbar">
           <div class="topbar-row0">
             <div class="tool-head">
+              <!-- Shared Work host button.
+                   tool-shell.js owns click/open/close/status/mount behavior.
+                   This tool may host the button and consume shared APIs/events only. -->
               <button id="pawMyStuffBtn" class="paw-mystuff-btn paw-works-btn" type="button" aria-label="Work context">
                 <img class="works-paw" src="https://paw-tools.pages.dev/paw.png" alt="" aria-hidden="true">
                 <span class="works-label">Work</span>
@@ -476,6 +479,9 @@ body.paw-contracts #analyzeBtn[disabled]{
     }
 
     // PAW Tool Shell init (required for consistent My Works mode across tools)
+    // tool-shell.js owns the shared Work button click behavior, status text,
+    // Works mode open/close, and Works root mounting.
+    // Transactions follows the same shared contract even though its Work-specific hooks are lighter.
     try {
       if (window.PAWToolShell && window.PAWToolShell.init) {
         shellApi = window.PAWToolShell.init({

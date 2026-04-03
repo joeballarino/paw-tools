@@ -2168,6 +2168,16 @@ return { sendMessage, sendExtra, reset, getState, setState, toast: showToast };
 // - Session-first by default.
 // - Users explicitly choose what is saved.
 // - My Works is the single system of record (tools do not own persistence).
+//
+// SHARED WORK CONTRACT:
+// - tool-shell.js owns the shared Work button behavior everywhere it is loaded.
+// - tool-shell.js owns Works mode open/close, Work status text, Works root mounting,
+//   attached/detached session state, saved-work list rendering, and cross-page handoff.
+// - Tool pages may host the button markup and consume the public APIs/events below,
+//   but they must not reimplement click/open/close/status/mount behavior locally.
+// - If a future tool needs Work-aware behavior, integrate through PAWToolShell.init(),
+//   window.__PAWWorks.getActiveWork(), window.__PAWWorks.detachWork(), and the
+//   paw:works:* events. Do not add a second Work system in a tool file.
 // ==========================================================
 
 (function(){
@@ -2360,10 +2370,14 @@ var __worksStatusEl = null;
 var __worksStatusPlaceholder = null;
 var __worksStatusHomeParent = null;
 
-// One-time launch handoff for cross-page "Open" flows from My Works.
-// My Works writes { work_id, bucket, label } into sessionStorage immediately
-// before parent-driven navigation. The destination page reads it once during
-// boot, attaches the active work, and then clears it so later visits start clean.
+// CROSS-PAGE MY WORKS HANDOFF CONTRACT:
+// - myworks.html is the only page that writes the one-time launch handoff key.
+// - It stores { work_id, bucket, label } so a destination tool can boot with
+//   the selected work already attached after page-driven navigation from My Works.
+// - tool-shell.js consumes that handoff once on destination boot, attaches the
+//   work into shared session state, and clears the handoff immediately.
+// - Destination tools should react to active_work after boot; they should not
+//   parse this sessionStorage key directly or invent a second handoff path.
 var PAW_LAUNCH_WORK_HANDOFF_KEY = "paw:launch_saved_work_handoff:v1";
 
 function consumeLaunchWorkHandoff(){
@@ -2455,6 +2469,13 @@ function ensureWorksRoot(){
     return __worksRoot;
   }
 
+  // WORKS ROOT MOUNTING CONTRACT:
+  // - This shared root is created once and mounted on document.body.
+  // - Works mode reuses the live tool page instead of navigating away:
+  //   the active tool surface is hidden, this root is shown, and the
+  //   real Work button/status nodes are moved into this header.
+  // - Tool pages must not create their own Works container, clone the
+  //   Work button, or try to mount content into #pawWorksModeRoot.
   __worksRoot = document.createElement("div");
   __worksRoot.id = "pawWorksModeRoot";
   __worksRoot.setAttribute("role","region");
@@ -3250,6 +3271,14 @@ function ensureWorksRoot(){
   };
 
   function emitWorksSave(intent){
+    // SAVE EVENT ORDER CONTRACT:
+    // - The shell emits paw:works:save_current_output after the user chooses
+    //   a shared save action in Works mode.
+    // - For a newly created work, the create call happens first, then the new
+    //   work is attached, then save_current_output is emitted so the current
+    //   tool can PATCH its live tool payload into that work.
+    // - Tool pages may listen for this event, but they must not invent a
+    //   competing save event or reorder the shared create -> attach -> save flow.
     try{
       var ev = new CustomEvent("paw:works:save_current_output", {
         detail: { active_work: getActiveWork(), intent: String(intent || "") }
@@ -3628,6 +3657,11 @@ function findToolRoot(){
 function enterWorksMode(){
   if (__worksModeOn) return;
 
+  // WORKS MODE OPEN OWNERSHIP:
+  // - Opening Works mode is shell-owned. The shared button click calls this function.
+  // - The shell decides what gets hidden, what gets moved, and how the DOM is restored.
+  // - Tool pages must not toggle paw-works-mode classes, hide their own surface,
+  //   or move the Work button/status locally.
   __toolRoot = findToolRoot();
   if (!__toolRoot){
     // If we can't safely replace the tool UI, the Work button should not be available.
@@ -3648,6 +3682,9 @@ function enterWorksMode(){
   try{
     __worksBtn = document.getElementById("pawMyStuffBtn");
     if (__worksBtn){
+      // DOM MOVEMENT CONTRACT:
+      // - We move the real button node, not a copy, so focus/state/ARIA stay consistent.
+      // - Comment placeholders preserve the exact original location for full restoration.
       __worksBtnHomeParent = __worksBtn.parentNode;
       __worksBtnPlaceholder = document.createComment("paw-works-btn-home");
       if (__worksBtnHomeParent) __worksBtnHomeParent.insertBefore(__worksBtnPlaceholder, __worksBtn);
@@ -3712,6 +3749,11 @@ function enterWorksMode(){
 function exitWorksMode(){
   if (!__worksModeOn) return;
 
+  // WORKS MODE CLOSE OWNERSHIP:
+  // - Closing Works mode is shell-owned whether it comes from the shared button,
+  //   Escape, or a "Use" action that attaches a work and returns to the tool.
+  // - This function remains the single place that restores the hidden tool
+  //   surface and puts the real Work button/status back in their original home.
   // Hide Works surface.
   try{ if (__worksRoot) __worksRoot.style.display = "none"; }catch(_){}
 
@@ -3813,6 +3855,11 @@ function exitWorksMode(){
   }
 
   function attachWork(work){
+    // ATTACHED/DETACHED WORK OWNERSHIP:
+    // - __pawActiveWork is the shared session-only source of truth for the
+    //   currently attached work across all tools.
+    // - Tool pages may read it through getActiveWork() and react to the
+    //   paw:works:active_changed event, but they do not own this state.
     __pawActiveWork = work || null;
 
     // Session-only MRU list (no persistence). Keeps Work mode useful without becoming a file manager.
@@ -3834,6 +3881,9 @@ function exitWorksMode(){
   }
 
   function detachWork(){
+    // Detach clears shared session state only. It does not delete or edit a saved work.
+    // Tool pages may call detachWork() from explicit user actions such as reset flows,
+    // but they must not clear __pawActiveWork by any local workaround.
     __pawActiveWork = null;
     updateWorkPill();
     renderContextRow();
@@ -3977,6 +4027,11 @@ function init(apiEndpoint){
   __apiEndpoint = String(apiEndpoint || "");
   __worksApiEndpoint = String(apiEndpoint || "");
 
+  // TOOL INTEGRATION WARNING:
+  // - Tool pages host #pawMyStuffBtn in their header, then call PAWToolShell.init().
+  // - This init wires the shared button once and keeps Work behavior centralized here.
+  // - Tool files may consume shared APIs/events after init, but must not add local
+  //   click handlers or duplicate Works mode logic.
   updateWorkPill();
 
   // Restore a saved-work launch only once on destination boot.
