@@ -11,13 +11,15 @@
         color: #111;
       }
       .url-row {
-        display: inline-flex;
+        display: flex;
         align-items: center;
         gap: 6px;
+        width: 100%;
         margin-bottom: 6px;
       }
       input[type="text"] {
-        width: min(600px, 100%);
+        flex: 1 1 auto;
+        min-width: 0;
         padding: 6px 8px;
         font-size: 14px;
       }
