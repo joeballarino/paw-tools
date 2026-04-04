@@ -203,6 +203,69 @@
       max-width:none;
     }
 
+    body.paw-presence .presence-attached-summary{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin:0 14px 12px;
+      padding:12px 14px;
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:14px;
+      background:rgba(248,250,252,.92);
+    }
+
+    body.paw-presence .presence-attached-summary[hidden]{
+      display:none !important;
+    }
+
+    body.paw-presence .presence-attached-summary__top{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+    }
+
+    body.paw-presence .presence-attached-summary__type{
+      display:inline-flex;
+      align-items:center;
+      min-height:20px;
+      padding:0 8px;
+      border-radius:999px;
+      background:rgba(5,195,249,.12);
+      color:rgba(15,23,42,.76);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    body.paw-presence .presence-attached-summary__kicker{
+      min-width:0;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:rgba(15,23,42,.52);
+    }
+
+    body.paw-presence .presence-attached-summary__title{
+      font-size:13px;
+      font-weight:800;
+      line-height:1.25;
+      color:rgba(15,23,42,.92);
+    }
+
+    body.paw-presence .presence-attached-summary__copy{
+      font-size:12px;
+      line-height:1.35;
+      color:rgba(15,23,42,.66);
+    }
+
+    body.paw-presence .presence-attached-summary__copy[hidden]{
+      display:none !important;
+    }
+
     /* Hide the message area when empty so the composer sits closer to the intent controls (calmer feel) */
     body.paw-presence #messages:empty{
       display:none;
@@ -273,6 +336,15 @@
               </div>
 
             </div>
+          </div>
+
+          <div id="presenceAttachedSummary" class="presence-attached-summary" aria-live="polite" hidden>
+            <div class="presence-attached-summary__top">
+              <span id="presenceAttachedType" class="presence-attached-summary__type" hidden></span>
+              <span class="presence-attached-summary__kicker">Attached data in use</span>
+            </div>
+            <div id="presenceAttachedTitle" class="presence-attached-summary__title"></div>
+            <div id="presenceAttachedCopy" class="presence-attached-summary__copy" hidden></div>
           </div>
 
         </div>
@@ -352,6 +424,7 @@
       secondary: "",
       otherText: ""
     };
+    let shell = null;
 
     function getPresenceContentType() {
       return CONTENT_TYPE_MAP[presenceState.primary] || "";
@@ -416,6 +489,85 @@
       } catch (_) {}
     }
 
+    function normalizePresenceAttachedWorkText(value) {
+      return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    }
+
+    function humanizePresenceAttachedWorkBucket(bucket) {
+      const raw = normalizePresenceAttachedWorkText(bucket).toLowerCase();
+      if (!raw) return "";
+      if (raw === "brand") return "Brand";
+      if (raw === "brand_assets") return "Brand Assets";
+      if (raw === "listings" || raw === "listing") return "Listing";
+      if (raw === "transactions" || raw === "transaction" || raw === "deals" || raw === "deal") return "Transaction";
+      return raw.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+    }
+
+    function getPresenceActiveWork() {
+      try {
+        return (window.__PAWWorks && window.__PAWWorks.getActiveWork)
+          ? window.__PAWWorks.getActiveWork()
+          : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function getPresenceAttachedWorkCopy(activeWork, typeLabel) {
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      const preview = normalizePresenceAttachedWorkText(aw.preview);
+      if (preview) return preview;
+
+      const subtitle = normalizePresenceAttachedWorkText(aw.subtitle);
+      if (subtitle) return subtitle;
+
+      return typeLabel
+        ? typeLabel + " attached and ready to use in this draft."
+        : "Attached data ready to use in this draft.";
+    }
+
+    // This summary panel stays local to Presence on purpose.
+    // tool-shell.js owns shared Work state, the header status label, and attach/detach behavior.
+    // Presence only renders a body-level summary so its main UI matches Connect without changing shared infrastructure.
+    function renderPresenceAttachedWorkSummary(activeWork) {
+      const root = document.getElementById("presenceAttachedSummary");
+      const typeEl = document.getElementById("presenceAttachedType");
+      const titleEl = document.getElementById("presenceAttachedTitle");
+      const copyEl = document.getElementById("presenceAttachedCopy");
+      if (!root || !typeEl || !titleEl || !copyEl) return;
+
+      const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+      const label = aw ? normalizePresenceAttachedWorkText(aw.label || aw.name) : "";
+
+      if (!aw || !label) {
+        root.hidden = true;
+        typeEl.hidden = true;
+        typeEl.textContent = "";
+        titleEl.textContent = "";
+        copyEl.hidden = true;
+        copyEl.textContent = "";
+        notifyPresenceLayoutChange();
+        return;
+      }
+
+      const typeLabel = humanizePresenceAttachedWorkBucket(aw.bucket);
+      const copyText = getPresenceAttachedWorkCopy(aw, typeLabel);
+
+      root.hidden = false;
+      typeEl.hidden = !typeLabel;
+      typeEl.textContent = typeLabel;
+      titleEl.textContent = label;
+      copyEl.hidden = !copyText;
+      copyEl.textContent = copyText;
+      notifyPresenceLayoutChange();
+    }
+
+    // Presence reads active Work from the shared shell-owned source of truth each time.
+    // Listening to the shared change event keeps this panel synced without duplicating Work state locally.
+    function syncPresenceAttachedWorkSummary() {
+      renderPresenceAttachedWorkSummary(getPresenceActiveWork());
+    }
+
     function renderPresenceControls() {
       const secondaryBlock = document.getElementById("presenceSecondaryBlock");
       const secondaryLabel = document.getElementById("presenceSecondaryLabel");
@@ -470,6 +622,21 @@
       renderPresenceControls();
     }
 
+    // Reset is a full Presence reset, not just a local selector reset.
+    // shell.reset() clears shell-managed UI, but attached Work lives in shared session state,
+    // so we explicitly detach through the existing shared API to match Connect behavior.
+    function fullResetPresence() {
+      showPresenceValidation = false;
+      try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+      try {
+        if (window.__PAWWorks && window.__PAWWorks.detachWork) {
+          window.__PAWWorks.detachWork();
+        }
+      } catch (_) {}
+      resetPresenceControls();
+      syncPresenceAttachedWorkSummary();
+    }
+
     function initPresenceControls() {
       const primaryButtons = Array.from(document.querySelectorAll("[data-presence-primary]"));
       const otherInput = document.getElementById("presenceOtherText");
@@ -502,8 +669,7 @@
 
       if (resetButton) {
         resetButton.addEventListener("click", function () {
-          showPresenceValidation = false;
-          resetPresenceControls();
+          fullResetPresence();
         });
       }
 
@@ -518,7 +684,7 @@
     // Presence follows the same shared contract even though its Work-specific hooks are lighter.
     try {
       if (window.PAWToolShell && window.PAWToolShell.init) {
-        window.PAWToolShell.init({
+        shell = window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
           toolId: "presence",
           beforeSend: () => {
@@ -537,6 +703,12 @@
         });
       }
     } catch (_) {}
+
+    window.addEventListener("paw:works:active_changed", function () {
+      syncPresenceAttachedWorkSummary();
+    });
+
+    syncPresenceAttachedWorkSummary();
   </script>
 
   <!-- ==========================================================
