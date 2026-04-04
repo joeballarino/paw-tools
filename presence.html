@@ -342,6 +342,10 @@
       otherText: ""
     };
 
+    function getPresenceDeliverableMeta() {
+      return { openModal: false };
+    }
+
     function getPresenceContentType() {
       return CONTENT_TYPE_MAP[presenceState.primary] || "";
     }
@@ -507,6 +511,7 @@
         window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
           toolId: "presence",
+          inlineDeliverableCopy: true,
           beforeSend: () => {
             const missingGroups = getMissingPresenceGroups();
             if (!missingGroups.length) return null;
@@ -516,6 +521,7 @@
             focusFirstMissingPresenceGroup(missingGroups[0]);
             return { cancel: true };
           },
+          getDeliverableMeta: getPresenceDeliverableMeta,
           getPrefs: () => ({
             content_type: getPresenceContentType(),
             content_other: presenceState.primary === "other" ? String(presenceState.otherText || "").trim() : ""

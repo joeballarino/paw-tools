@@ -1114,6 +1114,7 @@
         shell = window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
           toolId: "connect",
+          inlineDeliverableCopy: true,
           beforeSend: function () {
             const missingGroups = getMissingConnectGroups();
             if (!missingGroups.length) return null;

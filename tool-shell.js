@@ -846,8 +846,8 @@ function removeNode(node) {
       try { PAWUsage.scheduleRender(); } catch (_) {}
 
 
-      function ensureConnectInlineCopyLink(bubble) {
-        if (toolId !== "connect" || !bubble) return;
+      function ensureInlineDeliverableCopyLink(bubble, onOpen) {
+        if (!bubble || typeof onOpen !== "function") return;
 
         try {
           const block = bubble.closest && bubble.closest(".paw-message-block");
@@ -857,7 +857,7 @@ function removeNode(node) {
           bubble.style.cursor = "pointer";
           bubble.title = "Click to open copy options";
           bubble.onclick = function () {
-            if (lastDeliverableState) showDeliverableModal(lastDeliverableState);
+            onOpen();
           };
 
           if (row.querySelector(".paw-inline-copy-link")) return;
@@ -871,7 +871,7 @@ function removeNode(node) {
           copyLink.style.opacity = "0.75";
           copyLink.addEventListener("click", function (e) {
             try { e.preventDefault(); } catch (_) {}
-            if (lastDeliverableState) showDeliverableModal(lastDeliverableState);
+            onOpen();
           });
 
           const separator = document.createElement("span");
@@ -1060,6 +1060,7 @@ if ($input) {
         typeof config.beforeSend === "function" ? config.beforeSend : null;
 
       const deliverableMode = config.deliverableMode !== false; // default true
+      const inlineDeliverableCopy = config.inlineDeliverableCopy === true;
       const getDeliverableTitle =
         typeof config.deliverableTitle === "function"
           ? config.deliverableTitle
@@ -1749,7 +1750,6 @@ function resetAutoGrowTextarea($ta){
             ? reportMeta.deliverableMeta
             : null;
         const shouldOpenModal = deliverableMode && (!deliverableMeta || deliverableMeta.openModal !== false);
-        const isConnectDeliverable = toolId === "connect";
 
         // Remember the last deliverable so the user can re-open/copy it again.
         lastDeliverableState = buildDeliverableModalState(
@@ -1772,10 +1772,10 @@ function resetAutoGrowTextarea($ta){
           showDeliverableModal(lastDeliverableState);
         };
 
-        if (isConnectDeliverable) {
+        if (inlineDeliverableCopy) {
           try {
             const bubble = messageWrap ? messageWrap.querySelector(".bubble") : null;
-            if (bubble) ensureConnectInlineCopyLink(bubble);
+            if (bubble) ensureInlineDeliverableCopyLink(bubble, openLatestDeliverable);
           } catch (_) {}
         }
 
