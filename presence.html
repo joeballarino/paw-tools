@@ -189,8 +189,18 @@
       min-width:0;
     }
 
+    body.paw-presence #presenceOtherBlock{
+      flex:1 1 640px;
+      min-width:420px;
+    }
+
     body.paw-presence .presence-input{
-      max-width:360px;
+      max-width:520px;
+    }
+
+    body.paw-presence #presenceOtherText{
+      width:min(100%, 960px);
+      max-width:none;
     }
 
     /* Hide the message area when empty so the composer sits closer to the intent controls (calmer feel) */
@@ -242,12 +252,12 @@
             <div class="presence-row" aria-label="Presence primary selectors">
 
               <div class="presence-block" data-presence-group="primary">
-                <div class="presence-label">What are you creating?</div>
-                <div id="presencePrimaryGroup" class="presence-button-group" role="group" aria-label="What are you creating?">
+                <div class="presence-label">Content type</div>
+                <div id="presencePrimaryGroup" class="presence-button-group" role="group" aria-label="Content type">
                   <button class="btn presence-choice" type="button" data-presence-primary="bio" aria-pressed="false">Bio</button>
-                  <button class="btn presence-choice" type="button" data-presence-primary="social_post" aria-pressed="false">Social Post</button>
                   <button class="btn presence-choice" type="button" data-presence-primary="article" aria-pressed="false">Article</button>
                   <button class="btn presence-choice" type="button" data-presence-primary="guide" aria-pressed="false">Guide</button>
+                  <button class="btn presence-choice" type="button" data-presence-primary="social_post" aria-pressed="false">Social Post</button>
                   <button class="btn presence-choice" type="button" data-presence-primary="other" aria-pressed="false">Other</button>
                 </div>
               </div>
@@ -258,9 +268,8 @@
               </div>
 
               <div class="presence-block" id="presenceOtherBlock" data-presence-group="other" hidden>
-                <label class="presence-label" for="presenceOtherText">What do you want to create?</label>
                 <input id="presenceOtherText" class="presence-input" type="text"
-                  placeholder="Describe what you want to create" autocomplete="off" />
+                  placeholder="Where will this be used?" autocomplete="off" />
               </div>
 
             </div>
@@ -309,16 +318,6 @@
           { value: "long", label: "Long" }
         ]
       },
-      social_post: {
-        label: "Choose a focus",
-        options: [
-          { value: "listing", label: "Listing" },
-          { value: "local", label: "Local" },
-          { value: "educational", label: "Educational" },
-          { value: "brand", label: "Brand" },
-          { value: "guide", label: "Guide" }
-        ]
-      },
       article: {
         label: "Choose a focus",
         options: [
@@ -331,10 +330,19 @@
       guide: {
         label: "Choose a focus",
         options: [
-          { value: "buying", label: "Buying" },
-          { value: "selling", label: "Selling" },
+          { value: "buyer", label: "Buyer" },
+          { value: "seller", label: "Seller" },
           { value: "local_area", label: "Local Area" },
-          { value: "process", label: "Process" }
+          { value: "how_to", label: "How-To" }
+        ]
+      },
+      social_post: {
+        label: "Choose a focus",
+        options: [
+          { value: "facebook", label: "Facebook" },
+          { value: "instagram", label: "Instagram" },
+          { value: "linkedin", label: "LinkedIn" },
+          { value: "x", label: "X" }
         ]
       }
     };
