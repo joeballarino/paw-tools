@@ -64,7 +64,7 @@
     - Uses tool-shell.js for consistent chat + deliverable modal behavior.
     - Uses deliverable mode (Copy / Revise) because Presence outputs are typically paste-ready.
     - Sends structured preferences to the Worker:
-        content_type, content_other
+        content_type, content_focus, content_length, content_other
 
     FUTURE PHASES (not implemented here):
     - Optional "Save to My Stuff" actions once Worker endpoints exist for Presence items.
@@ -381,6 +381,35 @@
       other: "other"
     };
 
+    // Normalize the existing Presence UI option values into the worker-facing
+    // intent contract. This keeps the current frontend labels and behavior
+    // intact while sending explicit prompt-driving fields the worker can use.
+    const PRESENCE_SECONDARY_WORKER_MAP = {
+      bio: {
+        short: "short",
+        standard: "standard",
+        long: "long"
+      },
+      social_post: {
+        facebook: "brand",
+        instagram: "listing",
+        linkedin: "educational",
+        x: "local"
+      },
+      article: {
+        market: "market",
+        local: "local",
+        educational: "educational",
+        agent_story: "agent_story"
+      },
+      guide: {
+        buyer: "buying",
+        seller: "selling",
+        local_area: "local_area",
+        how_to: "process"
+      }
+    };
+
     const PRESENCE_SECONDARY_CONFIG = {
       bio: {
         label: "Choose a length",
@@ -432,6 +461,35 @@
 
     function getPresenceContentType() {
       return CONTENT_TYPE_MAP[presenceState.primary] || "";
+    }
+
+    function getPresencePrefs() {
+      const prefs = {};
+      const contentType = getPresenceContentType();
+      const secondaryMap = PRESENCE_SECONDARY_WORKER_MAP[presenceState.primary] || null;
+      const normalizedSecondary = secondaryMap ? (secondaryMap[presenceState.secondary] || "") : "";
+
+      if (contentType) prefs.content_type = contentType;
+
+      if (presenceState.primary === "bio" && normalizedSecondary) {
+        prefs.content_length = normalizedSecondary;
+      }
+
+      if (
+        (presenceState.primary === "social_post" ||
+          presenceState.primary === "article" ||
+          presenceState.primary === "guide") &&
+        normalizedSecondary
+      ) {
+        prefs.content_focus = normalizedSecondary;
+      }
+
+      if (presenceState.primary === "other") {
+        const otherText = String(presenceState.otherText || "").trim();
+        if (otherText) prefs.content_other = otherText;
+      }
+
+      return prefs;
     }
 
     function getMissingPresenceGroups() {
@@ -702,10 +760,7 @@
             return { cancel: true };
           },
           getDeliverableMeta: getPresenceDeliverableMeta,
-          getPrefs: () => ({
-            content_type: getPresenceContentType(),
-            content_other: presenceState.primary === "other" ? String(presenceState.otherText || "").trim() : ""
-          })
+          getPrefs: getPresencePrefs
         });
       }
     } catch (_) {}
