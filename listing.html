@@ -558,6 +558,11 @@ Examples
 
         // Clear shell thread
         try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+        try {
+          if (window.__PAWWorks && window.__PAWWorks.detachWork) {
+            window.__PAWWorks.detachWork();
+          }
+        } catch (_) {}
       }
 
 
