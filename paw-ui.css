@@ -289,6 +289,9 @@ html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; back
   background:transparent;
   border-bottom:1px solid var(--border-soft);
 }
+body.paw-listing .controls-row{
+  border-bottom:none;
+}
 .ctl{
   display:flex;
   align-items:center;

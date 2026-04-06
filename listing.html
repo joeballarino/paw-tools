@@ -122,7 +122,7 @@
             <div class="ctl">
               <label for="cityInp">City</label>
               <span class="input-wrap md">
-                <input id="cityInp" type="text" placeholder="Example: 2023 roof, quartz counters, walkable to shops" autocomplete="address-level2" />
+                <input id="cityInp" type="text" placeholder="City" autocomplete="address-level2" />
               </span>
             </div>
 
@@ -151,44 +151,38 @@
 
             <div class="lock-grid">
               <div class="field">
-                <label for="bedsSel">Beds</label>
-                <select id="bedsSel">
-                  <option value="" selected>—</option>
+                <select id="bedsSel" aria-label="Beds">
+                  <option value="" selected>Beds</option>
                   <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5+">5+</option>
                 </select>
               </div>
 
               <div class="field">
-                <label for="bathsSel">Baths</label>
-                <select id="bathsSel">
-                  <option value="" selected>—</option>
+                <select id="bathsSel" aria-label="Baths">
+                  <option value="" selected>Baths</option>
                   <option value="1">1</option><option value="1.5">1.5</option><option value="2">2</option><option value="2.5">2.5</option><option value="3+">3+</option>
                 </select>
               </div>
 
               <div class="field">
-                <label for="sqftInp">Sqft</label>
-                <input id="sqftInp" type="text" inputmode="numeric" placeholder="Example: 2023 roof, quartz counters, walkable to shops" />
+                <input id="sqftInp" type="text" inputmode="numeric" placeholder="Sqft" aria-label="Sqft" />
               </div>
 
               <div class="field">
-                <label for="priceInp">Price</label>
-                <input id="priceInp" type="text" placeholder="Example: 2023 roof, quartz counters, walkable to shops" />
+                <input id="priceInp" type="text" placeholder="Price" aria-label="Price" />
               </div>
 
               <div class="field">
-                <label for="poolSel">Pool</label>
-                <select id="poolSel">
-                  <option value="" selected>—</option>
+                <select id="poolSel" aria-label="Pool">
+                  <option value="" selected>Pool</option>
                   <option value="yes">Yes</option>
                   <option value="no">No</option>
                 </select>
               </div>
 
               <div class="field">
-                <label for="porchSel">Porch</label>
-                <select id="porchSel">
-                  <option value="" selected>—</option>
+                <select id="porchSel" aria-label="Porch">
+                  <option value="" selected>Porch</option>
                   <option value="yes">Yes</option>
                   <option value="no">No</option>
                 </select>
@@ -196,10 +190,9 @@
             </div>
 
             <div class="lock-row2">
-              <label class="field" style="width:100%;">
-                <div class="field-label" style="font-size:12px; font-weight:700; color:rgba(15,23,42,.82); margin-bottom:8px; letter-spacing:-0.01em;">Most Compelling Feature</div>
-                <input id="compellingInp" class="big-input" type="text" placeholder="Example: 2023 roof, quartz counters, walkable to shops" />
-              </label>
+              <div class="field" style="width:100%;">
+                <input id="compellingInp" class="big-input" type="text" placeholder="Most Compelling Feature" aria-label="Most Compelling Feature" />
+              </div>
             </div>
 
           </div>
