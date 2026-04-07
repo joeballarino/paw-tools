@@ -846,19 +846,29 @@ function removeNode(node) {
       try { PAWUsage.scheduleRender(); } catch (_) {}
 
 
-      function ensureInlineDeliverableCopyLink(bubble, onOpen) {
-        if (!bubble || typeof onOpen !== "function") return;
+      function ensureInlineDeliverableCopyLink(bubble, options) {
+        const opts = options && typeof options === "object" ? options : {};
+        const onCopy = typeof opts.onCopy === "function" ? opts.onCopy : null;
+        const onOpen = typeof opts.onOpen === "function" ? opts.onOpen : null;
+        const bubbleOpensModal = opts.bubbleOpensModal !== false;
+        if (!bubble || !onCopy) return;
 
         try {
           const block = bubble.closest && bubble.closest(".paw-message-block");
           const row = block && block.querySelector ? block.querySelector(".paw-report-row") : null;
           if (!row) return;
 
-          bubble.style.cursor = "pointer";
-          bubble.title = "Click to open copy options";
-          bubble.onclick = function () {
-            onOpen();
-          };
+          if (bubbleOpensModal && onOpen) {
+            bubble.style.cursor = "pointer";
+            bubble.title = "Click to open copy options";
+            bubble.onclick = function () {
+              onOpen();
+            };
+          } else {
+            bubble.style.cursor = "";
+            bubble.removeAttribute("title");
+            bubble.onclick = null;
+          }
 
           if (row.querySelector(".paw-inline-copy-link")) return;
 
@@ -871,7 +881,7 @@ function removeNode(node) {
           copyLink.style.opacity = "0.75";
           copyLink.addEventListener("click", function (e) {
             try { e.preventDefault(); } catch (_) {}
-            onOpen();
+            onCopy();
           });
 
           const separator = document.createElement("span");
@@ -891,6 +901,41 @@ function removeNode(node) {
       }
 
       var lastDeliverableState = null;
+
+      function isElementInViewport(el) {
+        try {
+          if (!el || !el.getBoundingClientRect) return true;
+          const rect = el.getBoundingClientRect();
+          const viewH = window.innerHeight || document.documentElement.clientHeight || 0;
+          return rect.top >= 0 && rect.bottom <= viewH;
+        } catch (_) {
+          return true;
+        }
+      }
+
+      function scrollDeliverableIntoViewIfNeeded(el) {
+        try {
+          if (!el || isElementInViewport(el)) return;
+          requestAnimationFrame(function () {
+            try {
+              el.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+            } catch (_) {
+              try { el.scrollIntoView(true); } catch (_) {}
+            }
+          });
+        } catch (_) {}
+      }
+
+      function copyInlineDeliverableState(deliverableState) {
+        const state = deliverableState && typeof deliverableState === "object" ? deliverableState : {};
+        if (String(state.variant || "").toLowerCase() === "email") {
+          copyToClipboard(String(state.body || ""));
+          showToast("Body copied");
+          return;
+        }
+        copyToClipboard(String(state.text || ""));
+        showToast("Copied");
+      }
 
       function getCurrentSaveSnapshot() {
         var shellState = null;
@@ -1754,6 +1799,7 @@ function resetAutoGrowTextarea($ta){
             ? reportMeta.deliverableMeta
             : null;
         const shouldOpenModal = deliverableMode && (!deliverableMeta || deliverableMeta.openModal !== false);
+        const inlineDirectCopyMode = !!(inlineDeliverableCopy && !shouldOpenModal);
 
         // Remember the last deliverable so the user can re-open/copy it again.
         lastDeliverableState = buildDeliverableModalState(
@@ -1775,11 +1821,29 @@ function resetAutoGrowTextarea($ta){
         const openLatestDeliverable = function () {
           showDeliverableModal(lastDeliverableState);
         };
+        const copyLatestDeliverable = function () {
+          copyInlineDeliverableState(lastDeliverableState);
+        };
 
         if (inlineDeliverableCopy) {
           try {
             const bubble = messageWrap ? messageWrap.querySelector(".bubble") : null;
-            if (bubble) ensureInlineDeliverableCopyLink(bubble, openLatestDeliverable);
+            if (bubble) {
+              ensureInlineDeliverableCopyLink(bubble, {
+                onCopy: inlineDirectCopyMode ? copyLatestDeliverable : openLatestDeliverable,
+                onOpen: openLatestDeliverable,
+                bubbleOpensModal: !inlineDirectCopyMode
+              });
+            }
+          } catch (_) {}
+        }
+
+        if (inlineDirectCopyMode) {
+          try {
+            const deliverableBlock = messageWrap && messageWrap.closest
+              ? (messageWrap.closest(".paw-message-block") || messageWrap)
+              : messageWrap;
+            scrollDeliverableIntoViewIfNeeded(deliverableBlock);
           } catch (_) {}
         }
 
