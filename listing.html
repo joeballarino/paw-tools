@@ -42,6 +42,70 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Listing Description Writer</title>
   <link rel="stylesheet" href="./paw-ui.css">
+  <style>
+    body.paw-listing .listing-attached-summary{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin:0 14px 12px;
+      padding:12px 14px;
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:14px;
+      background:rgba(248,250,252,.92);
+    }
+
+    body.paw-listing .listing-attached-summary[hidden]{
+      display:none !important;
+    }
+
+    body.paw-listing .listing-attached-summary__top{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+    }
+
+    body.paw-listing .listing-attached-summary__type{
+      display:inline-flex;
+      align-items:center;
+      min-height:20px;
+      padding:0 8px;
+      border-radius:999px;
+      background:rgba(5,195,249,.12);
+      color:rgba(15,23,42,.76);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    body.paw-listing .listing-attached-summary__kicker{
+      min-width:0;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:rgba(15,23,42,.52);
+    }
+
+    body.paw-listing .listing-attached-summary__title{
+      font-size:13px;
+      font-weight:800;
+      line-height:1.25;
+      color:rgba(15,23,42,.92);
+    }
+
+    body.paw-listing .listing-attached-summary__copy{
+      font-size:12px;
+      line-height:1.35;
+      color:rgba(15,23,42,.66);
+    }
+
+    body.paw-listing .listing-attached-summary__copy[hidden]{
+      display:none !important;
+    }
+  </style>
   <!--
     HEADER CONTRACT (LOCKED):
     - The panel top bar (.topbar-row0) MUST NEVER include a title.
@@ -196,6 +260,15 @@
             </div>
 
           </div>
+        </div>
+
+        <div id="listingAttachedSummary" class="listing-attached-summary" aria-live="polite" hidden>
+          <div class="listing-attached-summary__top">
+            <span id="listingAttachedType" class="listing-attached-summary__type" hidden></span>
+            <span class="listing-attached-summary__kicker">Attached data in use</span>
+          </div>
+          <div id="listingAttachedTitle" class="listing-attached-summary__title"></div>
+          <div id="listingAttachedCopy" class="listing-attached-summary__copy" hidden></div>
         </div>
 
         <div id="messages" class="messages"></div>
@@ -790,6 +863,87 @@ Examples
 
         return selected;
       }
+
+      function notifyListingLayoutChange() {
+        try {
+          window.dispatchEvent(new Event("resize"));
+        } catch (_) {}
+      }
+
+      function normalizeListingAttachedWorkText(value) {
+        return String(value || "").replace(/\s+/g, " ").trim();
+      }
+
+      function humanizeListingAttachedWorkBucket(value) {
+        const raw = String(value || "").trim().toLowerCase();
+        if (!raw) return "";
+        if (raw === "brand") return "Brand";
+        if (raw === "brand_assets") return "Brand Assets";
+        if (raw === "listings" || raw === "listing") return "Listing";
+        if (raw === "transactions" || raw === "transaction" || raw === "deals" || raw === "deal") return "Transaction";
+        return raw.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+      }
+
+      function getListingActiveWork() {
+        try {
+          return (window.__PAWWorks && window.__PAWWorks.getActiveWork)
+            ? window.__PAWWorks.getActiveWork()
+            : null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function getListingAttachedWorkCopy(activeWork, typeLabel) {
+        const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+        const preview = normalizeListingAttachedWorkText(aw.preview);
+        if (preview) return preview;
+
+        const subtitle = normalizeListingAttachedWorkText(aw.subtitle);
+        if (subtitle) return subtitle;
+
+        return typeLabel
+          ? typeLabel + " attached and ready to use in this draft."
+          : "Attached data ready to use in this draft.";
+      }
+
+      function renderListingAttachedWorkSummary(activeWork) {
+        const root = document.getElementById("listingAttachedSummary");
+        const typeEl = document.getElementById("listingAttachedType");
+        const titleEl = document.getElementById("listingAttachedTitle");
+        const copyEl = document.getElementById("listingAttachedCopy");
+        if (!root || !typeEl || !titleEl || !copyEl) return;
+
+        const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+        const label = aw ? normalizeListingAttachedWorkText(aw.label || aw.name) : "";
+
+        if (!aw || !label) {
+          root.hidden = true;
+          typeEl.hidden = true;
+          typeEl.textContent = "";
+          titleEl.textContent = "";
+          copyEl.hidden = true;
+          copyEl.textContent = "";
+          notifyListingLayoutChange();
+          return;
+        }
+
+        const typeLabel = humanizeListingAttachedWorkBucket(aw.bucket);
+        const copyText = getListingAttachedWorkCopy(aw, typeLabel);
+
+        root.hidden = false;
+        typeEl.hidden = !typeLabel;
+        typeEl.textContent = typeLabel;
+        titleEl.textContent = label;
+        copyEl.hidden = !copyText;
+        copyEl.textContent = copyText;
+        notifyListingLayoutChange();
+      }
+
+      function syncListingAttachedWorkSummary() {
+        renderListingAttachedWorkSummary(getListingActiveWork());
+      }
+
       // Shared Work shell init.
       // tool-shell.js wires the Work button and owns Works mode lifecycle.
       // Listing may consume shared Work state after init, but must not duplicate that logic locally.
@@ -935,6 +1089,12 @@ const shell = window.PAWToolShell.init({
           }
         }
       });
+
+      window.addEventListener("paw:works:active_changed", function () {
+        syncListingAttachedWorkSummary();
+      });
+
+      syncListingAttachedWorkSummary();
 
       // ==========================================================
       // POI modal controls
