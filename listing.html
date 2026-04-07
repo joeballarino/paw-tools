@@ -952,6 +952,8 @@ const shell = window.PAWToolShell.init({
         toolId: "listing_description_writer",
         tipsText: TIPS_TEXT,
         deliverableTitle: "Your MLS Description",
+        inlineDeliverableCopy: true,
+        getDeliverableMeta: () => ({ openModal: false }),
 
         getPrefs: () => ({
           listing_type: mapType($type.value),
