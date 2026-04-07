@@ -901,6 +901,7 @@ function removeNode(node) {
       }
 
       var lastDeliverableState = null;
+      var lastInlineDirectCopyMode = false;
 
       function isElementInViewport(el) {
         try {
@@ -1022,8 +1023,19 @@ function removeNode(node) {
               }
 
               if (bubble === lastAiBubble && inlineDeliverableCopy) {
-                ensureInlineDeliverableCopyLink(bubble, function () {
-                  if (lastDeliverableState) showDeliverableModal(lastDeliverableState);
+                ensureInlineDeliverableCopyLink(bubble, {
+                  onCopy: function () {
+                    if (!lastDeliverableState) return;
+                    if (lastInlineDirectCopyMode) {
+                      copyInlineDeliverableState(lastDeliverableState);
+                      return;
+                    }
+                    showDeliverableModal(lastDeliverableState);
+                  },
+                  onOpen: function () {
+                    if (lastDeliverableState) showDeliverableModal(lastDeliverableState);
+                  },
+                  bubbleOpensModal: !lastInlineDirectCopyMode
                 });
               }
             });
@@ -1800,6 +1812,7 @@ function resetAutoGrowTextarea($ta){
             : null;
         const shouldOpenModal = deliverableMode && (!deliverableMeta || deliverableMeta.openModal !== false);
         const inlineDirectCopyMode = !!(inlineDeliverableCopy && !shouldOpenModal);
+        lastInlineDirectCopyMode = inlineDirectCopyMode;
 
         // Remember the last deliverable so the user can re-open/copy it again.
         lastDeliverableState = buildDeliverableModalState(
