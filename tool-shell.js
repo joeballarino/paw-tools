@@ -938,18 +938,32 @@ function removeNode(node) {
         } catch (_) {}
       }
 
-      function requestParentScrollOnSubmitWorkingState() {
+      function requestParentScrollOnSubmitWorkingState(thinkingNode) {
         try {
           if (window.parent === window) return;
-          window.parent.postMessage(
-            {
-              type: "paw_iframe_scroll_request_v1",
-              anchor: "bottom",
-              reason: "submit-working-state",
-              behavior: "smooth"
-            },
-            "*"
-          );
+          requestAnimationFrame(function () {
+            try {
+              const rect = thinkingNode && thinkingNode.getBoundingClientRect ? thinkingNode.getBoundingClientRect() : null;
+              const scrollY =
+                window.pageYOffset ||
+                document.documentElement.scrollTop ||
+                document.body.scrollTop ||
+                0;
+              const message = {
+                type: "paw_iframe_scroll_request_v1",
+                anchor: "bottom",
+                reason: "submit-working-state",
+                behavior: "smooth"
+              };
+
+              if (rect) {
+                message.targetTop = Math.max(0, Math.round(rect.top + scrollY));
+                message.padding = 24;
+              }
+
+              window.parent.postMessage(message, "*");
+            } catch (_) {}
+          });
         } catch (_) {}
       }
 
@@ -1939,7 +1953,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
 
           thinkingNode = appendThinking($messages);
           scrollWorkingStateIntoViewIfNeeded(thinkingNode);
-          requestParentScrollOnSubmitWorkingState();
+          requestParentScrollOnSubmitWorkingState(thinkingNode);
 
           const prefs = getPrefs ? getPrefs() : {};
           const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
@@ -2033,7 +2047,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
 
           thinkingNode = appendThinking($messages);
           scrollWorkingStateIntoViewIfNeeded(thinkingNode);
-          requestParentScrollOnSubmitWorkingState();
+          requestParentScrollOnSubmitWorkingState(thinkingNode);
 
           const prefs = getPrefs ? getPrefs() : {};
           const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
