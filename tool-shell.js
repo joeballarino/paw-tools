@@ -877,8 +877,6 @@ function removeNode(node) {
           copyLink.href = "#";
           copyLink.className = "paw-inline-copy-link";
           copyLink.textContent = "Copy";
-          copyLink.style.textDecoration = "none";
-          copyLink.style.opacity = "0.75";
           copyLink.addEventListener("click", function (e) {
             try { e.preventDefault(); } catch (_) {}
             onCopy();
@@ -1772,17 +1770,12 @@ function resetAutoGrowTextarea($ta){
 
         const row = document.createElement("div");
         row.className = "paw-report-row";
-        // Inline styles as a safety net so the link is visible even if a page forgets to include
-        // the global CSS updates. (We still prefer CSS, but this prevents "it does nothing" bugs.)
         row.style.marginTop = "6px";
         row.style.textAlign = "right";
         row.style.fontSize = "12px";
-
         const a = document.createElement("a");
         a.href = "#";
         a.className = "paw-report-link";
-        a.style.textDecoration = "none";
-        a.style.opacity = "0.75";
         a.textContent = "Give feedback";
 
         a.addEventListener("click", function (e) {
