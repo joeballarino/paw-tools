@@ -953,6 +953,7 @@ const shell = window.PAWToolShell.init({
         tipsText: TIPS_TEXT,
         deliverableTitle: "Your MLS Description",
         inlineDeliverableCopy: true,
+        composerWorkingState: { enabled: true, message: "PAW is working\u2026" },
         getDeliverableMeta: () => ({ openModal: false }),
 
         getPrefs: () => ({
@@ -1027,9 +1028,6 @@ const shell = window.PAWToolShell.init({
 
             // Open modal immediately (loading), then fetch POIs in the background.
             openPoiModalLoading();
-
-            // Clear composer since the send will happen after POI selection/skip.
-            if (helpers && helpers.clearComposer) helpers.clearComposer({ keepPlaceholder: true });
 
             // Ask the Worker for nearby highlights (no user echo).
             if (helpers && helpers.sendExtra) {
