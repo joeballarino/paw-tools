@@ -938,6 +938,21 @@ function removeNode(node) {
         } catch (_) {}
       }
 
+      function requestParentScrollOnSubmitWorkingState() {
+        try {
+          if (window.parent === window) return;
+          window.parent.postMessage(
+            {
+              type: "paw_iframe_scroll_request_v1",
+              anchor: "bottom",
+              reason: "submit-working-state",
+              behavior: "smooth"
+            },
+            "*"
+          );
+        } catch (_) {}
+      }
+
       function copyInlineDeliverableState(deliverableState) {
         const state = deliverableState && typeof deliverableState === "object" ? deliverableState : {};
         if (String(state.variant || "").toLowerCase() === "email") {
@@ -1924,6 +1939,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
 
           thinkingNode = appendThinking($messages);
           scrollWorkingStateIntoViewIfNeeded(thinkingNode);
+          requestParentScrollOnSubmitWorkingState();
 
           const prefs = getPrefs ? getPrefs() : {};
           const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
@@ -2017,6 +2033,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
 
           thinkingNode = appendThinking($messages);
           scrollWorkingStateIntoViewIfNeeded(thinkingNode);
+          requestParentScrollOnSubmitWorkingState();
 
           const prefs = getPrefs ? getPrefs() : {};
           const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
