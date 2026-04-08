@@ -1121,6 +1121,7 @@
           apiEndpoint: API_ENDPOINT,
           toolId: "connect",
           inlineDeliverableCopy: true,
+          composerWorkingState: { enabled: true, message: "PAW is working\u2026" },
           beforeSend: function () {
             const missingGroups = getMissingConnectGroups();
             if (!missingGroups.length) return null;

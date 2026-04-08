@@ -938,35 +938,6 @@ function removeNode(node) {
         } catch (_) {}
       }
 
-      function requestParentScrollOnSubmitWorkingState(thinkingNode) {
-        try {
-          if (window.parent === window) return;
-          requestAnimationFrame(function () {
-            try {
-              const rect = thinkingNode && thinkingNode.getBoundingClientRect ? thinkingNode.getBoundingClientRect() : null;
-              const scrollY =
-                window.pageYOffset ||
-                document.documentElement.scrollTop ||
-                document.body.scrollTop ||
-                0;
-              const message = {
-                type: "paw_iframe_scroll_request_v1",
-                anchor: "bottom",
-                reason: "submit-working-state",
-                behavior: "smooth"
-              };
-
-              if (rect) {
-                message.targetTop = Math.max(0, Math.round(rect.top + scrollY));
-                message.padding = 24;
-              }
-
-              window.parent.postMessage(message, "*");
-            } catch (_) {}
-          });
-        } catch (_) {}
-      }
-
       function copyInlineDeliverableState(deliverableState) {
         const state = deliverableState && typeof deliverableState === "object" ? deliverableState : {};
         if (String(state.variant || "").toLowerCase() === "email") {
@@ -1159,6 +1130,18 @@ if ($input) {
       // NEW: tool can gate sending (listing uses this for POI modal before write)
       const beforeSend =
         typeof config.beforeSend === "function" ? config.beforeSend : null;
+      const composerWorkingConfig =
+        config.composerWorkingState && typeof config.composerWorkingState === "object"
+          ? config.composerWorkingState
+          : null;
+      const composerWorkingEnabled = !!($input && composerWorkingConfig && composerWorkingConfig.enabled === true);
+      const composerWorkingMessage =
+        safeText(composerWorkingConfig && composerWorkingConfig.message) || "PAW is working\u2026";
+      const $composer = $input && $input.closest ? $input.closest(".composer") : null;
+      const $composerMain =
+        $input && $input.closest
+          ? ($input.closest(".composer-main") || $input.parentElement || null)
+          : null;
 
       const deliverableMode = config.deliverableMode !== false; // default true
       const inlineDeliverableCopy = config.inlineDeliverableCopy === true;
@@ -1179,6 +1162,8 @@ if ($input) {
 
       let history = [];
       let isSending = false;
+      let composerWorkingSnapshot = null;
+      let $composerBusyMessage = null;
 
       // ==========================================================
       // PAW Composer + Paw Submit Contract (LOCKED)
@@ -1236,6 +1221,8 @@ if ($input) {
 
       function clearComposer(opts) {
         opts = opts || {};
+        composerWorkingSnapshot = null;
+        clearComposerWorkingUi();
         if ($input) {
             $input.value = "";
             // Auto-grow: return to baseline height when reset clears the composer
@@ -1246,6 +1233,117 @@ if ($input) {
         if ($input && opts.keepFocus) {
           try { $input.focus(); } catch (_) {}
         }
+      }
+
+      function ensureComposerBusyMessage() {
+        try {
+          if (!composerWorkingEnabled) return null;
+          if (!$input || !$composerMain) return null;
+          if ($composerBusyMessage && $composerBusyMessage.isConnected) return $composerBusyMessage;
+          const node = document.createElement("div");
+          node.className = "paw-composer-status";
+          node.setAttribute("aria-live", "polite");
+          node.setAttribute("role", "status");
+          node.hidden = true;
+          if ($input.nextSibling) $composerMain.insertBefore(node, $input.nextSibling);
+          else $composerMain.appendChild(node);
+          $composerBusyMessage = node;
+          return $composerBusyMessage;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function setComposerBusyMessageVisible(on) {
+        try {
+          const node = ensureComposerBusyMessage();
+          if (!node) return;
+          if (on) {
+            node.textContent = composerWorkingMessage;
+            node.hidden = false;
+            return;
+          }
+          node.hidden = true;
+          node.textContent = "";
+        } catch (_) {}
+      }
+
+      function clearComposerWorkingUi() {
+        try {
+          if (!composerWorkingEnabled) return;
+          if ($input) {
+            $input.removeAttribute("readonly");
+            $input.removeAttribute("data-paw-working");
+          }
+          if ($composer) $composer.removeAttribute("data-paw-composer-working");
+          setComposerBusyMessageVisible(false);
+          try { updateSendEnabled(); } catch (_) {}
+          pawScheduleLayoutPing();
+        } catch (_) {}
+      }
+
+      function beginComposerWorkingState(displayText) {
+        try {
+          if (!composerWorkingEnabled || !$input) return false;
+          const text = String(displayText || $input.value || "");
+          if (!text) return false;
+          const rect = $input.getBoundingClientRect ? $input.getBoundingClientRect() : null;
+          const height =
+            $input.style.height ||
+            (rect && rect.height ? Math.max(0, Math.round(rect.height)) + "px" : "");
+          composerWorkingSnapshot = {
+            text: text,
+            scrollTop: $input.scrollTop || 0,
+            height: height,
+            overflowY: $input.style.overflowY || ""
+          };
+          $input.value = text;
+          if (height) $input.style.height = height;
+          $input.style.overflowY = composerWorkingSnapshot.overflowY;
+          $input.setAttribute("readonly", "");
+          $input.setAttribute("data-paw-working", "1");
+          if ($composer) $composer.setAttribute("data-paw-composer-working", "1");
+          setComposerBusyMessageVisible(true);
+          try { updateSendEnabled(); } catch (_) {}
+          try { $input.scrollTop = composerWorkingSnapshot.scrollTop; } catch (_) {}
+          requestAnimationFrame(function () {
+            try {
+              if ($input && composerWorkingSnapshot) $input.scrollTop = composerWorkingSnapshot.scrollTop;
+            } catch (_) {}
+          });
+          pawScheduleLayoutPing();
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function endComposerWorkingState(options) {
+        const opts = options && typeof options === "object" ? options : {};
+        const snapshot = composerWorkingSnapshot;
+        composerWorkingSnapshot = null;
+        clearComposerWorkingUi();
+        if (!$input) return;
+        if (opts.clear === true) {
+          clearComposer({ keepFocus: opts.keepFocus !== false });
+          return;
+        }
+        const restoreText =
+          typeof opts.text === "string"
+            ? opts.text
+            : snapshot && typeof snapshot.text === "string"
+              ? snapshot.text
+              : String($input.value || "");
+        $input.value = restoreText;
+        try { autoGrowTextarea($input); } catch (_) {}
+        if (snapshot && typeof snapshot.scrollTop === "number") {
+          try { $input.scrollTop = snapshot.scrollTop; } catch (_) {}
+        }
+        try { updateSendEnabled(); } catch (_) {}
+        if (opts.keepFocus) {
+          try { $input.focus(); } catch (_) {}
+        }
+        pawScheduleLayoutPing();
       }
 
 
@@ -1919,7 +2017,7 @@ function resetAutoGrowTextarea($ta){
 
         $messages.scrollTop = $messages.scrollHeight;
       }
-async function sendExtra(instruction, extraPayload = {}, options = {}) {
+      async function sendExtra(instruction, extraPayload = {}, options = {}) {
         if (isSending) return;
 
         const msg = safeText(instruction);
@@ -1931,15 +2029,21 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         }
 
         const echoUser = options.echoUser !== false;
+        const shouldUseComposerWorkingState =
+          !!(composerWorkingEnabled && echoUser && $input && safeText($input.value));
+        const composerDisplayText = shouldUseComposerWorkingState ? String($input.value || "") : "";
 
         isSending = true;
 
         // Brand feedback: instant acknowledgement + working ring (click or Enter)
         pawSubmitBump();
         pawSetBusy(true);
-
+        const usedComposerWorkingState = shouldUseComposerWorkingState
+          ? beginComposerWorkingState(composerDisplayText)
+          : false;
 
         let thinkingNode = null;
+        let sendSucceeded = false;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
         showWorkingBar("Working…");
@@ -1953,7 +2057,6 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
 
           thinkingNode = appendThinking($messages);
           scrollWorkingStateIntoViewIfNeeded(thinkingNode);
-          requestParentScrollOnSubmitWorkingState(thinkingNode);
 
           const prefs = getPrefs ? getPrefs() : {};
           const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
@@ -1963,6 +2066,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           payload.message = msg;
 
           const data = await postToWorker(payload);
+          sendSucceeded = true;
 
           removeNode(thinkingNode);
 
@@ -2003,6 +2107,10 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           isSending = false;
           pawSetBusy(false);
           hideWorkingBar();
+          if (usedComposerWorkingState) {
+            if (sendSucceeded) endComposerWorkingState({ clear: true, keepFocus: true });
+            else endComposerWorkingState({ keepFocus: true });
+          }
         }
       }
 
@@ -2032,8 +2140,12 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         // Brand feedback: instant acknowledgement + working ring (click or Enter)
         pawSubmitBump();
         pawSetBusy(true);
+        const usedComposerWorkingState = composerWorkingEnabled
+          ? beginComposerWorkingState(trimmed)
+          : false;
 
         let thinkingNode = null;
+        let sendSucceeded = false;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
         showWorkingBar("Working…");
@@ -2043,11 +2155,8 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           appendMessage($messages, "user", trimmed);
           pushHistory("user", trimmed);
 
-          clearComposer({ keepFocus: true });
-
           thinkingNode = appendThinking($messages);
           scrollWorkingStateIntoViewIfNeeded(thinkingNode);
-          requestParentScrollOnSubmitWorkingState(thinkingNode);
 
           const prefs = getPrefs ? getPrefs() : {};
           const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
@@ -2055,6 +2164,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           payload.message = trimmed;
 
           const data = await postToWorker(payload);
+          sendSucceeded = true;
 
           removeNode(thinkingNode);
 
@@ -2094,6 +2204,10 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           isSending = false;
           pawSetBusy(false);
           hideWorkingBar();
+          if (usedComposerWorkingState) {
+            if (sendSucceeded) endComposerWorkingState({ clear: true, keepFocus: true });
+            else endComposerWorkingState({ keepFocus: true });
+          }
         }
       }
 
@@ -2108,6 +2222,8 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
         try {
           history = [];
           if ($messages) $messages.innerHTML = "";
+          composerWorkingSnapshot = null;
+          clearComposerWorkingUi();
           if ($input) $input.value = "";
           lastDeliverableState = null;
           try { _setWorksCreateContext({ summary: "" }); } catch (_) {}
@@ -2252,6 +2368,8 @@ $tips.addEventListener("click", function () { openTipsModal(config.tipsText || "
           }
 
           if ($input) {
+            composerWorkingSnapshot = null;
+            clearComposerWorkingUi();
             $input.value = typeof st.input === "string" ? st.input : "";
             // Auto-grow: re-measure after restore so height matches restored content
             try {

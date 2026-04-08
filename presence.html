@@ -750,6 +750,7 @@
           apiEndpoint: API_ENDPOINT,
           toolId: "presence",
           inlineDeliverableCopy: true,
+          composerWorkingState: { enabled: true, message: "PAW is working\u2026" },
           beforeSend: () => {
             const missingGroups = getMissingPresenceGroups();
             if (!missingGroups.length) return null;
