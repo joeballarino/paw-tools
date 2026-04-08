@@ -925,6 +925,19 @@ function removeNode(node) {
         } catch (_) {}
       }
 
+      function scrollWorkingStateIntoViewIfNeeded(el) {
+        try {
+          if (!el || isElementInViewport(el)) return;
+          requestAnimationFrame(function () {
+            try {
+              el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+            } catch (_) {
+              try { el.scrollIntoView(false); } catch (_) {}
+            }
+          });
+        } catch (_) {}
+      }
+
       function copyInlineDeliverableState(deliverableState) {
         const state = deliverableState && typeof deliverableState === "object" ? deliverableState : {};
         if (String(state.variant || "").toLowerCase() === "email") {
@@ -1910,6 +1923,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           }
 
           thinkingNode = appendThinking($messages);
+          scrollWorkingStateIntoViewIfNeeded(thinkingNode);
 
           const prefs = getPrefs ? getPrefs() : {};
           const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
@@ -2002,6 +2016,7 @@ async function sendExtra(instruction, extraPayload = {}, options = {}) {
           clearComposer({ keepFocus: true });
 
           thinkingNode = appendThinking($messages);
+          scrollWorkingStateIntoViewIfNeeded(thinkingNode);
 
           const prefs = getPrefs ? getPrefs() : {};
           const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
