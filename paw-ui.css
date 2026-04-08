@@ -984,11 +984,47 @@ body.connect-tool .paw-report-row{
 }
 
 .paw-report-row--connect-copy{
-  gap:8px;
+  margin-top:4px;
+  gap:10px;
+  padding-left:var(--connect-response-content-inset, 12px);
+  padding-right:var(--connect-response-content-inset, 12px);
+  box-sizing:border-box;
+  flex-wrap:wrap;
 }
 
+.paw-report-row--connect-copy .paw-report-separator{
+  display:none;
+}
+
+.paw-report-row--connect-copy .paw-inline-copy-link,
 .paw-report-row--connect-copy .paw-report-link{
   margin-left:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:30px;
+  padding:0 12px;
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:999px;
+  background:rgba(15,23,42,.04);
+  color:rgba(15,23,42,.72);
+  text-decoration:none;
+  line-height:1;
+  transition:background-color .16s ease, border-color .16s ease, color .16s ease;
+}
+
+.paw-report-row--connect-copy .paw-inline-copy-link:hover,
+.paw-report-row--connect-copy .paw-report-link:hover{
+  background:rgba(15,23,42,.07);
+  border-color:rgba(15,23,42,.16);
+  color:rgba(15,23,42,.82);
+  text-decoration:none;
+}
+
+.paw-report-row--connect-copy .paw-inline-copy-link:focus-visible,
+.paw-report-row--connect-copy .paw-report-link:focus-visible{
+  outline:2px solid rgba(var(--accent-rgb), .28);
+  outline-offset:2px;
 }
 
 .paw-report-link{
