@@ -358,6 +358,10 @@ body.paw-contracts #analyzeBtn[disabled]{
     let contractSessionId = "";
     let shellApi = null;
 
+    function getTransactionsDeliverableMeta() {
+      return { openModal: false };
+    }
+
     function setReviewMode(nextReview) {
       selectedReview = String(nextReview || "");
       reviewButtons.forEach(function (button) {
@@ -488,7 +492,9 @@ body.paw-contracts #analyzeBtn[disabled]{
         shellApi = window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
           toolId: "transactions",
+          inlineDeliverableCopy: true,
           composerWorkingState: { enabled: true, message: "PAW is working…" },
+          getDeliverableMeta: getTransactionsDeliverableMeta,
           getExtraPayload: function () {
             return contractSessionId ? { contract_session_id: contractSessionId } : {};
           },
