@@ -349,6 +349,7 @@ Examples
       const shell = window.PAWToolShell.init({
         apiEndpoint: API_ENDPOINT,
         toolId: "assistant",
+        inlineDeliverableCopy: true,
         composerWorkingState: { enabled: true, message: "PAW is working…" },
         inputPlaceholder: "e.g., Rewrite this to sound confident and friendly",
         tipsText: TIPS_TEXT,
@@ -484,6 +485,11 @@ Examples
         try { storageDel(DRAFT_KEY); } catch (_) {}
         closeResumeModal();
         try { if (shell && shell.reset) shell.reset(); } catch (_) {}
+        try {
+          if (window.__PAWWorks && window.__PAWWorks.detachWork) {
+            window.__PAWWorks.detachWork();
+          }
+        } catch (_) {}
       }
 
       // Intercept Reset so we can guarantee draft deletion.
