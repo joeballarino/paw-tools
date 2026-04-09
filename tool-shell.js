@@ -1245,7 +1245,7 @@ if ($input) {
           node.setAttribute("aria-live", "polite");
           node.setAttribute("role", "status");
           node.hidden = true;
-          if ($input.nextSibling) $composerMain.insertBefore(node, $input.nextSibling);
+          if ($composerMain.firstChild) $composerMain.insertBefore(node, $composerMain.firstChild);
           else $composerMain.appendChild(node);
           $composerBusyMessage = node;
           return $composerBusyMessage;
@@ -1285,8 +1285,9 @@ if ($input) {
       function beginComposerWorkingState(displayText) {
         try {
           if (!composerWorkingEnabled || !$input) return false;
-          const text = String(displayText || $input.value || "");
-          if (!text) return false;
+          const text = String(
+            typeof displayText === "string" ? displayText : ($input.value || "")
+          );
           const rect = $input.getBoundingClientRect ? $input.getBoundingClientRect() : null;
           const height =
             $input.style.height ||
@@ -2029,8 +2030,13 @@ function resetAutoGrowTextarea($ta){
         }
 
         const echoUser = options.echoUser !== false;
+        const forceComposerWorking = options.composerWorking === true;
         const shouldUseComposerWorkingState =
-          !!(composerWorkingEnabled && echoUser && $input && safeText($input.value));
+          !!(
+            composerWorkingEnabled &&
+            $input &&
+            ((echoUser && safeText($input.value)) || forceComposerWorking)
+          );
         const composerDisplayText = shouldUseComposerWorkingState ? String($input.value || "") : "";
 
         isSending = true;
@@ -2046,7 +2052,7 @@ function resetAutoGrowTextarea($ta){
         let sendSucceeded = false;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
-        showWorkingBar("Working…");
+        if (!composerWorkingEnabled) showWorkingBar("Working…");
         await nextPaint();
 
         try {
@@ -2148,7 +2154,7 @@ function resetAutoGrowTextarea($ta){
         let sendSucceeded = false;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
-        showWorkingBar("Working…");
+        if (!composerWorkingEnabled) showWorkingBar("Working…");
         await nextPaint();
 
         try {
