@@ -1138,6 +1138,7 @@ if ($input) {
       const composerWorkingMessage =
         safeText(composerWorkingConfig && composerWorkingConfig.message) || "PAW is working\u2026";
       const $composer = $input && $input.closest ? $input.closest(".composer") : null;
+      const $composerStatusMountParent = $composer && $composer.parentElement ? $composer.parentElement : null;
       const $composerMain =
         $input && $input.closest
           ? ($input.closest(".composer-main") || $input.parentElement || null)
@@ -1238,16 +1239,31 @@ if ($input) {
       function ensureComposerBusyMessage() {
         try {
           if (!composerWorkingEnabled) return null;
-          if (!$input || !$composerMain) return null;
-          if ($composerBusyMessage && $composerBusyMessage.isConnected) return $composerBusyMessage;
-          const node = document.createElement("div");
-          node.className = "paw-composer-status";
-          node.setAttribute("aria-live", "polite");
-          node.setAttribute("role", "status");
-          node.hidden = true;
-          if ($composerMain.firstChild) $composerMain.insertBefore(node, $composerMain.firstChild);
-          else $composerMain.appendChild(node);
-          $composerBusyMessage = node;
+          if (!$input || (!$composerStatusMountParent && !$composerMain)) return null;
+          if (!$composerBusyMessage) {
+            const node = document.createElement("div");
+            node.className = "paw-composer-status";
+            node.setAttribute("aria-live", "polite");
+            node.setAttribute("role", "status");
+            node.hidden = true;
+            $composerBusyMessage = node;
+          }
+          if ($composerStatusMountParent && $composer) {
+            if (
+              $composerBusyMessage.parentNode !== $composerStatusMountParent ||
+              $composerBusyMessage.nextSibling !== $composer
+            ) {
+              $composerStatusMountParent.insertBefore($composerBusyMessage, $composer);
+            }
+          } else if ($composerMain) {
+            if (
+              $composerBusyMessage.parentNode !== $composerMain ||
+              $composerBusyMessage !== $composerMain.firstChild
+            ) {
+              if ($composerMain.firstChild) $composerMain.insertBefore($composerBusyMessage, $composerMain.firstChild);
+              else $composerMain.appendChild($composerBusyMessage);
+            }
+          }
           return $composerBusyMessage;
         } catch (_) {
           return null;

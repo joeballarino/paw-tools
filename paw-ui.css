@@ -690,6 +690,10 @@ body.connect-tool .composer{
   .composer textarea{
     min-height:96px;
   }
+  .paw-composer-status{
+    margin-left:var(--connect-column-inset, 14px);
+    margin-right:var(--connect-column-inset, 14px);
+  }
 }
 .composer textarea{
   /* NOTE: removed flex sizing so textarea can auto-grow by height */
@@ -721,6 +725,7 @@ body.connect-tool .composer{
   align-items:center;
   gap:8px;
   min-height:0;
+  margin:0 var(--connect-column-inset, 18px) 8px;
   padding:9px 12px;
   border:1px solid rgba(var(--accent-rgb),.14);
   border-radius:12px;
