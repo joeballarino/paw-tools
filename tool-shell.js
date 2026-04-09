@@ -1139,6 +1139,10 @@ if ($input) {
         safeText(composerWorkingConfig && composerWorkingConfig.message) || "PAW is working\u2026";
       const $composer = $input && $input.closest ? $input.closest(".composer") : null;
       const $composerStatusMountParent = $composer && $composer.parentElement ? $composer.parentElement : null;
+      const $composerStatusMountBefore =
+        $messages && $composerStatusMountParent && $messages.parentElement === $composerStatusMountParent
+          ? $messages
+          : $composer;
       const $composerMain =
         $input && $input.closest
           ? ($input.closest(".composer-main") || $input.parentElement || null)
@@ -1248,12 +1252,12 @@ if ($input) {
             node.hidden = true;
             $composerBusyMessage = node;
           }
-          if ($composerStatusMountParent && $composer) {
+          if ($composerStatusMountParent && $composerStatusMountBefore) {
             if (
               $composerBusyMessage.parentNode !== $composerStatusMountParent ||
-              $composerBusyMessage.nextSibling !== $composer
+              $composerBusyMessage.nextSibling !== $composerStatusMountBefore
             ) {
-              $composerStatusMountParent.insertBefore($composerBusyMessage, $composer);
+              $composerStatusMountParent.insertBefore($composerBusyMessage, $composerStatusMountBefore);
             }
           } else if ($composerMain) {
             if (
