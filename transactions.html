@@ -432,7 +432,8 @@ body.paw-contracts #analyzeBtn[disabled]{
             name: selectedFile.name || "contract.pdf"
           }
         }, {
-          echoUser: false
+          echoUser: false,
+          composerWorking: true
         });
       } finally {
         syncUploadUi();
@@ -487,6 +488,7 @@ body.paw-contracts #analyzeBtn[disabled]{
         shellApi = window.PAWToolShell.init({
           apiEndpoint: API_ENDPOINT,
           toolId: "transactions",
+          composerWorkingState: { enabled: true, message: "PAW is working…" },
           getExtraPayload: function () {
             return contractSessionId ? { contract_session_id: contractSessionId } : {};
           },
