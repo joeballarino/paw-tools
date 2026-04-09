@@ -1136,7 +1136,7 @@ if ($input) {
           : null;
       const composerWorkingEnabled = !!($input && composerWorkingConfig && composerWorkingConfig.enabled === true);
       const composerWorkingMessage =
-        safeText(composerWorkingConfig && composerWorkingConfig.message) || "PAW is working\u2026";
+        safeText(composerWorkingConfig && composerWorkingConfig.message) || "PAW is on it";
       const $composer = $input && $input.closest ? $input.closest(".composer") : null;
       const $composerStatusMountParent = $composer && $composer.parentElement ? $composer.parentElement : null;
       const $composerStatusMountBefore =
@@ -1169,6 +1169,7 @@ if ($input) {
       let isSending = false;
       let composerWorkingSnapshot = null;
       let $composerBusyMessage = null;
+      let $composerBusyMessageLabel = null;
 
       // ==========================================================
       // PAW Composer + Paw Submit Contract (LOCKED)
@@ -1250,7 +1251,18 @@ if ($input) {
             node.setAttribute("aria-live", "polite");
             node.setAttribute("role", "status");
             node.hidden = true;
+            const label = document.createElement("span");
+            label.className = "paw-composer-status__label";
+            const dots = document.createElement("span");
+            dots.className = "paw-composer-status__dots";
+            dots.setAttribute("aria-hidden", "true");
+            for (let i = 0; i < 3; i += 1) {
+              dots.appendChild(document.createElement("span"));
+            }
+            node.appendChild(label);
+            node.appendChild(dots);
             $composerBusyMessage = node;
+            $composerBusyMessageLabel = label;
           }
           if ($composerStatusMountParent && $composerStatusMountBefore) {
             if (
@@ -1279,12 +1291,12 @@ if ($input) {
           const node = ensureComposerBusyMessage();
           if (!node) return;
           if (on) {
-            node.textContent = composerWorkingMessage;
+            if ($composerBusyMessageLabel) $composerBusyMessageLabel.textContent = composerWorkingMessage;
             node.hidden = false;
             return;
           }
           node.hidden = true;
-          node.textContent = "";
+          if ($composerBusyMessageLabel) $composerBusyMessageLabel.textContent = "";
         } catch (_) {}
       }
 
