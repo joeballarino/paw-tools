@@ -389,6 +389,20 @@ body.paw-contracts #analyzeBtn[disabled]{
       syncUploadUi();
     }
 
+    function fullResetTransactions() {
+      resetUploadState();
+      try {
+        if (shellApi && shellApi.reset) {
+          shellApi.reset();
+        }
+      } catch (_) {}
+      try {
+        if (window.__PAWWorks && window.__PAWWorks.detachWork) {
+          window.__PAWWorks.detachWork();
+        }
+      } catch (_) {}
+    }
+
     function syncUploadUi() {
       var hasFile = !!selectedFile;
       if (reviewSeg) reviewSeg.style.display = hasFile ? "" : "none";
@@ -478,9 +492,13 @@ body.paw-contracts #analyzeBtn[disabled]{
     }
 
     if (resetBtn) {
-      resetBtn.addEventListener("click", function () {
-        resetUploadState();
-      });
+      resetBtn.addEventListener("click", function (event) {
+        try {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        } catch (_) {}
+        fullResetTransactions();
+      }, true);
     }
 
     // PAW Tool Shell init (required for consistent My Works mode across tools)
