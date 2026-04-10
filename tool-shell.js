@@ -3493,8 +3493,8 @@ function ensureWorksRoot(){
       var recent = _findRecentWorkMatch(work);
       var lastSaved = _formatRelative((work && (work.updated_at || work.created_at)) || "");
       var lastUsed = _formatRelative((recent && recent._last_used) || (work && work._last_used) || "");
-      if (lastSaved) bits.push("Last saved " + lastSaved);
-      if (lastUsed) bits.push("Last used " + lastUsed);
+      if (lastSaved) bits.push(lastSaved);
+      if (lastUsed) bits.push(lastUsed);
     }catch(_){ }
     return bits.join(" • ");
   }
@@ -3948,11 +3948,13 @@ function ensureWorksRoot(){
           html += `
             <article class="paw-works-card">
               <div class="paw-works-card__main">
-                <div class="paw-works-card__badges">
-                  <span class="paw-works-badge">${escapeHtml(type)}</span>
-                  ${tool ? `<span class="paw-works-badge paw-works-badge--muted">${escapeHtml(tool)}</span>` : ``}
+                <div class="paw-works-card__head">
+                  <div class="paw-works-card__title">${escapeHtml(String(w.label||"Untitled"))}</div>
+                  <div class="paw-works-card__badges">
+                    <span class="paw-works-badge">${escapeHtml(type)}</span>
+                    ${tool ? `<span class="paw-works-badge paw-works-badge--muted">${escapeHtml(tool)}</span>` : ``}
+                  </div>
                 </div>
-                <div class="paw-works-card__title">${escapeHtml(String(w.label||"Untitled"))}</div>
                 <div class="paw-works-card__preview">${escapeHtml(preview)}</div>
               </div>
               <div class="paw-works-card__foot">

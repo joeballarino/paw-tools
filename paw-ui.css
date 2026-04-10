@@ -1588,10 +1588,17 @@ body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters input.paw-work
   gap:10px;
   min-height:0;
 }
+.paw-works-card__head{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) auto;
+  align-items:start;
+  gap:10px;
+}
 .paw-works-card__badges{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
+  justify-content:flex-end;
 }
 .paw-works-badge{
   display:inline-flex;
@@ -1612,6 +1619,7 @@ body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters input.paw-work
   font-weight:850;
   color:var(--text-strong);
   line-height:1.35;
+  min-width:0;
 }
 .paw-works-card__preview{
   font-size:12.5px;
@@ -1711,6 +1719,12 @@ body.paw-works-mode #pawWorksModeRoot .paw-works-recents__filters input.paw-work
   }
   .paw-works-list{
     grid-template-columns:1fr;
+  }
+  .paw-works-card__head{
+    grid-template-columns:minmax(0, 1fr);
+  }
+  .paw-works-card__badges{
+    justify-content:flex-start;
   }
   .paw-works-card__actions{
     width:100%;
