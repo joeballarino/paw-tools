@@ -2919,6 +2919,28 @@ function ensureWorksRoot(){
       return;
     }
 
+    if (t.getAttribute("data-paw-works-delete") === "1"){
+      var deleteBucket = t.getAttribute("data-bucket") || "";
+      var deleteId = t.getAttribute("data-id") || "";
+      var deleteLabel = t.getAttribute("data-label") || "Untitled";
+      if (!deleteBucket || !deleteId) return;
+      __worksPendingDelete = { bucket: deleteBucket, id: deleteId, label: deleteLabel };
+      openWorkDeleteModal(__worksPendingDelete, async function(){
+        try{
+          await deleteMyWork(deleteId);
+          _removeWorkFromSessionState(deleteBucket, deleteId);
+          await reloadWorksList({ append:false });
+          _worksToast("Deleted.");
+          __worksPendingDelete = null;
+        }catch(err){
+          var msg = (err && err.message) ? err.message : "Couldn’t delete right now.";
+          _worksToast(msg);
+          return;
+        }
+      });
+      return;
+    }
+
     if (t.getAttribute("data-paw-works-retry") === "1"){
       reloadWorksList({ append:false });
       return;
@@ -2963,6 +2985,7 @@ function ensureWorksRoot(){
   var __worksListLoading = false;
   var __worksListError = "";
   var __worksListHasLoaded = false;
+  var __worksPendingDelete = null;
   var __worksCreateContext = {
     toolId: "",
     originTool: "",
@@ -2976,6 +2999,23 @@ function ensureWorksRoot(){
     if (bucket === "listings") return "Listing";
     if (bucket === "transactions") return "Transaction";
     return "Work";
+  }
+
+  function _workOriginToolLabel(work){
+    var raw = "";
+    try{
+      raw = String(
+        (work && work.origin_tool) ||
+        ((((work || {}).payload || {}).portable || {}).origin_tool) ||
+        ""
+      ).trim().toLowerCase();
+    }catch(_){ raw = ""; }
+    if (raw === "listing") return "Listings";
+    if (raw === "guide") return "Guide";
+    if (raw === "connect") return "Connect";
+    if (raw === "presence") return "Presence";
+    if (raw === "transaction" || raw === "transactions") return "Transactions";
+    return "";
   }
 
   function _inferWorkBucketFromPage(){
@@ -3374,6 +3414,28 @@ function ensureWorksRoot(){
     return work;
   }
 
+  async function deleteMyWork(workId){
+    var id = String(workId || "").trim();
+    if (!id) throw new Error("Couldn’t delete right now.");
+    var ep = _getWorksApiEndpoint();
+    if (!ep) throw new Error("Couldn’t delete right now.");
+    var url = String(ep).replace(/\/+$/,"") + "/myworks/" + encodeURIComponent(id);
+    var res = await fetch(url, {
+      method: "DELETE",
+      headers: _apiHeadersJsonAuth()
+    });
+
+    var text = await res.text();
+    var data = null;
+    try{ data = JSON.parse(text); }catch(_){ data = { reply: text || "" }; }
+
+    if (!res.ok){
+      throw new Error((data && (data.error || data.message || data.reply)) || ("Request failed (" + res.status + ")"));
+    }
+
+    return data;
+  }
+
   function _normalizeWorkRow(raw){
     var w = raw && typeof raw === "object" ? raw : {};
     return {
@@ -3407,6 +3469,56 @@ function ensureWorksRoot(){
     if (typeof w.subtitle === "string" && w.subtitle.trim()) return w.subtitle.trim();
     if (typeof w.label === "string" && w.label.trim()) return w.label.trim();
     return "Untitled";
+  }
+
+  function _findRecentWorkMatch(work){
+    try{
+      var bucket = String((work && work.bucket) || "");
+      var id = String((work && (work.id || work.work_id)) || "");
+      if (!bucket || !id) return null;
+      for (var i = 0; i < (__worksRecent || []).length; i++){
+        var recent = __worksRecent[i];
+        if (!recent) continue;
+        if (String(recent.bucket || "") === bucket && String(recent.id || recent.work_id || "") === id){
+          return recent;
+        }
+      }
+    }catch(_){ }
+    return null;
+  }
+
+  function _workMetaSummary(work){
+    var bits = [];
+    try{
+      var recent = _findRecentWorkMatch(work);
+      var lastSaved = _formatRelative((work && (work.updated_at || work.created_at)) || "");
+      var lastUsed = _formatRelative((recent && recent._last_used) || (work && work._last_used) || "");
+      if (lastSaved) bits.push("Last saved " + lastSaved);
+      if (lastUsed) bits.push("Last used " + lastUsed);
+    }catch(_){ }
+    return bits.join(" • ");
+  }
+
+  function _removeWorkFromSessionState(bucket, workId){
+    var normalizedBucket = String(bucket || "");
+    var normalizedId = String(workId || "");
+
+    try{
+      __worksRecent = (__worksRecent || []).filter(function(item){
+        if (!item) return false;
+        return !(String(item.bucket || "") === normalizedBucket && String(item.id || item.work_id || "") === normalizedId);
+      });
+    }catch(_){ }
+
+    try{
+      if (__pawActiveWork && String(__pawActiveWork.bucket || "") === normalizedBucket && String(__pawActiveWork.id || __pawActiveWork.work_id || "") === normalizedId){
+        __pawActiveWork = null;
+        updateWorkPill();
+        renderContextRow();
+        try{ renderWorksBody(); }catch(_){ }
+        emitActiveWorkChanged();
+      }
+    }catch(_){ }
   }
 
   async function fetchMyWorksList(opts){
@@ -3650,6 +3762,95 @@ function ensureWorksRoot(){
     }catch(_){ }
   }
 
+  function ensureWorkDeleteModal(){
+    try{
+      var existing = document.getElementById("pawWorkDeleteModal");
+      if (existing) return existing;
+
+      var m = document.createElement("div");
+      m.id = "pawWorkDeleteModal";
+      m.className = "modal";
+      m.setAttribute("aria-hidden","true");
+
+      m.innerHTML =
+        '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pawWorkDeleteTitle">' +
+          '<div class="modal-head">' +
+            '<div id="pawWorkDeleteTitle" class="modal-title">Delete this work?</div>' +
+            '<button class="modal-close" id="pawWorkDeleteClose" aria-label="Close" type="button">&times;</button>' +
+          '</div>' +
+          '<div class="modal-body">' +
+            '<div id="pawWorkDeleteBody" style="font-size:14px; color:rgba(15,23,42,.86); line-height:1.45;">This cannot be undone.</div>' +
+            '<div class="paw-workname-actions">' +
+              '<button class="btn" id="pawWorkDeleteCancel" type="button">Cancel</button>' +
+              '<button class="btn primary" id="pawWorkDeleteConfirm" type="button">Delete</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      document.body.appendChild(m);
+
+      var closeBtn = document.getElementById("pawWorkDeleteClose");
+      if (closeBtn) closeBtn.addEventListener("click", function(){ closeWorkDeleteModal(); });
+      var cancelBtn = document.getElementById("pawWorkDeleteCancel");
+      if (cancelBtn) cancelBtn.addEventListener("click", function(){ closeWorkDeleteModal(); });
+
+      m.addEventListener("click", function(e){
+        if (e.target === m) closeWorkDeleteModal();
+      });
+
+      document.addEventListener("keydown", function(e){
+        if (e.key === "Escape") closeWorkDeleteModal();
+      });
+
+      return m;
+    }catch(_){ return null; }
+  }
+
+  function closeWorkDeleteModal(){
+    try{
+      var m = document.getElementById("pawWorkDeleteModal");
+      if (!m) return;
+      m.classList.remove("show");
+      m.setAttribute("aria-hidden","true");
+      __worksPendingDelete = null;
+    }catch(_){ }
+  }
+
+  function openWorkDeleteModal(work, onConfirm){
+    try{
+      var m = ensureWorkDeleteModal();
+      if (!m) return;
+
+      var body = document.getElementById("pawWorkDeleteBody");
+      var confirmBtn = document.getElementById("pawWorkDeleteConfirm");
+      var label = String((work && work.label) || "Untitled");
+
+      if (body){
+        body.innerHTML = "This permanently deletes &ldquo;" + escapeHtml(label) + "&rdquo;. This cannot be undone.";
+      }
+
+      if (confirmBtn){
+        confirmBtn.disabled = false;
+        confirmBtn.onclick = async function(){
+          if (confirmBtn.disabled) return;
+          confirmBtn.disabled = true;
+          try{
+            if (typeof onConfirm === "function") await onConfirm();
+            closeWorkDeleteModal();
+          }catch(_){
+            confirmBtn.disabled = false;
+            return;
+          }
+          confirmBtn.disabled = false;
+        };
+      }
+
+      m.classList.add("show");
+      m.setAttribute("aria-hidden","false");
+      setTimeout(function(){ try{ if (confirmBtn) confirmBtn.focus(); }catch(_){ } }, 0);
+    }catch(_){ }
+  }
+
   renderWorksBody = function renderWorksBody(){
     try{
       if (!__worksRoot) return;
@@ -3720,12 +3921,6 @@ function ensureWorksRoot(){
               <input class="paw-works-search" type="search" placeholder="Search saved works" value="${escapeHtml(__worksSearchQ||"")}" aria-label="Search works" data-paw-works-search="1"/>
             </div>
           </div>
-          <div class="paw-works-table-head" role="presentation">
-            <div>Name</div>
-            <div>Type</div>
-            <div>Last used</div>
-            <div>Use</div>
-          </div>
           <div class="paw-works-list" data-paw-works-list="1">
       `;
 
@@ -3746,22 +3941,33 @@ function ensureWorksRoot(){
         for (var i=0;i<list.length;i++){
           var w = list[i];
           var type = _workTypeLabel(w.bucket);
-          var when = _formatRelative(w.updated_at || w.created_at || w._last_used);
+          var tool = _workOriginToolLabel(w);
+          var meta = _workMetaSummary(w);
           var preview = _workPreviewSummary(w);
+          if (!preview || preview === String(w.label || "Untitled")) preview = "Saved work ready to reuse.";
           html += `
-            <div class="paw-works-item paw-works-row">
-              <div class="paw-works-col paw-works-col--name">${escapeHtml(String(w.label||"Untitled"))}<div class="paw-works-item__sub">${escapeHtml(preview)}</div></div>
-              <div class="paw-works-col">${escapeHtml(type)}</div>
-              <div class="paw-works-col">${escapeHtml(when || "—")}</div>
-              <div class="paw-works-col paw-works-col--action">
-                <button class="btn" type="button" data-paw-works-attach="1" data-bucket="${escapeHtml(String(w.bucket||""))}" data-id="${escapeHtml(String(w.id||""))}">Use</button>
+            <article class="paw-works-card">
+              <div class="paw-works-card__main">
+                <div class="paw-works-card__badges">
+                  <span class="paw-works-badge">${escapeHtml(type)}</span>
+                  ${tool ? `<span class="paw-works-badge paw-works-badge--muted">${escapeHtml(tool)}</span>` : ``}
+                </div>
+                <div class="paw-works-card__title">${escapeHtml(String(w.label||"Untitled"))}</div>
+                <div class="paw-works-card__preview">${escapeHtml(preview)}</div>
               </div>
-            </div>
+              <div class="paw-works-card__foot">
+                <div class="paw-works-card__meta">${escapeHtml(meta || "Saved work ready to reuse.")}</div>
+                <div class="paw-works-card__actions">
+                  <button class="btn primary" type="button" data-paw-works-attach="1" data-bucket="${escapeHtml(String(w.bucket||""))}" data-id="${escapeHtml(String(w.id||""))}">Use</button>
+                  <button class="btn" type="button" data-paw-works-delete="1" data-bucket="${escapeHtml(String(w.bucket||""))}" data-id="${escapeHtml(String(w.id||""))}" data-label="${escapeHtml(String(w.label||"Untitled"))}">Delete</button>
+                </div>
+              </div>
+            </article>
           `;
         }
         if (hasMore){
           html += `
-            <div class="paw-works-actions">
+            <div class="paw-works-actions paw-works-actions--list">
               <button class="btn" type="button" data-paw-works-load-more="1">Load more</button>
             </div>
           `;
@@ -4384,5 +4590,4 @@ function init(apiEndpoint){
       document.addEventListener("DOMContentLoaded", function(){ tryInit(); }, { once:true });
     }catch(_){}
   })();
-
 })();
