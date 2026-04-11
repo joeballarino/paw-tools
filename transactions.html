@@ -108,11 +108,19 @@
       min-width: 220px;
     }
 
+    /* Match Connect's left-to-right toolbar flow for the primary selector row. */
+    body.paw-contracts .contracts-primary-row{
+      align-items:center;
+      gap:14px;
+      flex-wrap:nowrap;
+      justify-content:flex-start;
+    }
+
     body.paw-contracts .contracts-primary-block{
       display:flex;
       align-items:center;
       gap:12px;
-      flex:1 1 100%;
+      flex:0 0 auto;
       min-width:0;
     }
 
@@ -267,10 +275,12 @@
         gap:14px;
       }
       body.paw-contracts .contracts-block{ min-width: 0; width:100%; }
+      body.paw-contracts .contracts-primary-row{ flex-wrap:wrap; }
       body.paw-contracts .contracts-primary-block{
         flex-direction:column;
         align-items:flex-start;
         gap:6px;
+        flex:1 1 100%;
       }
       body.paw-contracts .stage-seg,
     body.paw-contracts .type-seg{ width:100%; }
@@ -342,7 +352,7 @@ body.paw-contracts #analyzeBtn[disabled]{
 
             <!-- Primary use-case selector stays UI-only for now.
                  It teaches the main Transactions modes without changing existing review/upload logic. -->
-            <div class="contracts-row" aria-label="Transactions primary use cases">
+            <div class="contracts-row contracts-primary-row" aria-label="Transactions primary use cases">
               <div id="transactionsPrimaryBlock" class="contracts-block contracts-primary-block">
                 <div class="contracts-label">Choose one</div>
                 <div id="transactionsPrimarySeg" class="transactions-primary-seg paw-seg paw-seg--compact" role="group" aria-label="Transactions primary use cases">
