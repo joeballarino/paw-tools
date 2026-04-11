@@ -109,6 +109,9 @@
     }
 
     body.paw-contracts .contracts-primary-block{
+      display:flex;
+      align-items:center;
+      gap:12px;
       flex:1 1 100%;
       min-width:0;
     }
@@ -118,6 +121,8 @@
       font-weight:800;
       color:rgba(15,23,42,.72);
       letter-spacing:-0.01em;
+      margin-right:2px;
+      white-space:nowrap;
     }
 
     /* Primary Transactions use-case row.
@@ -131,6 +136,14 @@
       background:rgba(5,195,249,.18);
       color:rgba(15,23,42,.92);
       box-shadow:inset 0 0 0 1px rgba(15,23,42,.08);
+    }
+    body.paw-contracts .contracts-primary-block--missing .contracts-label{
+      color:rgba(153,27,27,.84);
+    }
+    body.paw-contracts .contracts-primary-block--missing .transactions-primary-seg{
+      box-shadow:0 0 0 1px rgba(220,38,38,.22);
+      border-radius:999px;
+      background:rgba(254,242,242,.85);
     }
 
     /* Stage segmented control (scoped to Contracts only) */
@@ -254,6 +267,11 @@
         gap:14px;
       }
       body.paw-contracts .contracts-block{ min-width: 0; width:100%; }
+      body.paw-contracts .contracts-primary-block{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:6px;
+      }
       body.paw-contracts .stage-seg,
     body.paw-contracts .type-seg{ width:100%; }
       body.paw-contracts .transactions-primary-seg.paw-seg.paw-seg--compact{ width:100%; display:flex; }
@@ -325,10 +343,10 @@ body.paw-contracts #analyzeBtn[disabled]{
             <!-- Primary use-case selector stays UI-only for now.
                  It teaches the main Transactions modes without changing existing review/upload logic. -->
             <div class="contracts-row" aria-label="Transactions primary use cases">
-              <div class="contracts-block contracts-primary-block">
+              <div id="transactionsPrimaryBlock" class="contracts-block contracts-primary-block">
                 <div class="contracts-label">Choose one</div>
                 <div id="transactionsPrimarySeg" class="transactions-primary-seg paw-seg paw-seg--compact" role="group" aria-label="Transactions primary use cases">
-                  <button class="transactions-primary-btn paw-seg__btn is-selected" type="button" data-transactions-primary="client_report" aria-pressed="true">Client Report</button>
+                  <button class="transactions-primary-btn paw-seg__btn" type="button" data-transactions-primary="client_report" aria-pressed="false">Client Report</button>
                   <button class="transactions-primary-btn paw-seg__btn" type="button" data-transactions-primary="write_terms" aria-pressed="false">Write Terms</button>
                   <button class="transactions-primary-btn paw-seg__btn" type="button" data-transactions-primary="negotiation" aria-pressed="false">Negotiation</button>
                   <button class="transactions-primary-btn paw-seg__btn" type="button" data-transactions-primary="form_help" aria-pressed="false">Form Help</button>
@@ -382,13 +400,15 @@ body.paw-contracts #analyzeBtn[disabled]{
     const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
     const fileInput = document.getElementById("file");
     const fileNameEl = document.getElementById("fileName");
+    const transactionsPrimaryBlock = document.getElementById("transactionsPrimaryBlock");
     const reviewSeg = document.getElementById("reviewSeg");
     const reviewButtons = Array.from(document.querySelectorAll("#reviewSeg .type-btn"));
     const transactionsPrimaryButtons = Array.from(document.querySelectorAll("[data-transactions-primary]"));
     const analyzeBtn = document.getElementById("analyzeBtn");
     const resetBtn = document.getElementById("reset");
 
-    let selectedTransactionsPrimary = "client_report";
+    let selectedTransactionsPrimary = "";
+    let showTransactionsPrimaryValidation = false;
     let selectedFile = null;
     let selectedReview = "";
     let contractSessionId = "";
@@ -401,12 +421,36 @@ body.paw-contracts #analyzeBtn[disabled]{
     // UI-only state for the new primary Transactions pill row.
     // This does not change prompts, uploads, or review handling in this step.
     function setTransactionsPrimary(nextPrimary) {
-      selectedTransactionsPrimary = String(nextPrimary || "client_report");
+      selectedTransactionsPrimary = String(nextPrimary || "");
+      if (selectedTransactionsPrimary) {
+        showTransactionsPrimaryValidation = false;
+      }
       transactionsPrimaryButtons.forEach(function (button) {
         var isActive = button.getAttribute("data-transactions-primary") === selectedTransactionsPrimary;
         button.classList.toggle("is-selected", isActive);
         button.setAttribute("aria-pressed", isActive ? "true" : "false");
       });
+      updateTransactionsPrimaryValidationState();
+    }
+
+    function getMissingTransactionsPrimaryGroups() {
+      return selectedTransactionsPrimary ? [] : ["primary"];
+    }
+
+    function updateTransactionsPrimaryValidationState() {
+      if (transactionsPrimaryBlock) {
+        transactionsPrimaryBlock.classList.toggle(
+          "contracts-primary-block--missing",
+          showTransactionsPrimaryValidation && !selectedTransactionsPrimary
+        );
+      }
+    }
+
+    function focusFirstMissingTransactionsPrimaryGroup() {
+      var target = document.querySelector("[data-transactions-primary]");
+      if (target && typeof target.focus === "function") {
+        target.focus();
+      }
     }
 
     function setReviewMode(nextReview) {
@@ -437,7 +481,8 @@ body.paw-contracts #analyzeBtn[disabled]{
     }
 
     function fullResetTransactions() {
-      setTransactionsPrimary("client_report");
+      showTransactionsPrimaryValidation = false;
+      setTransactionsPrimary("");
       resetUploadState();
       try {
         if (shellApi && shellApi.reset) {
@@ -481,6 +526,13 @@ body.paw-contracts #analyzeBtn[disabled]{
     }
 
     async function startReview() {
+      if (getMissingTransactionsPrimaryGroups().length) {
+        showTransactionsPrimaryValidation = true;
+        updateTransactionsPrimaryValidationState();
+        focusFirstMissingTransactionsPrimaryGroup();
+        return;
+      }
+
       if (!selectedFile || !selectedReview || !shellApi || typeof shellApi.sendExtra !== "function") {
         return;
       }
@@ -566,6 +618,15 @@ body.paw-contracts #analyzeBtn[disabled]{
           toolId: "transactions",
           inlineDeliverableCopy: true,
           composerWorkingState: { enabled: true, message: "PAW is working…" },
+          beforeSend: function () {
+            const missingGroups = getMissingTransactionsPrimaryGroups();
+            if (!missingGroups.length) return null;
+
+            showTransactionsPrimaryValidation = true;
+            updateTransactionsPrimaryValidationState();
+            focusFirstMissingTransactionsPrimaryGroup();
+            return { cancel: true };
+          },
           getDeliverableMeta: getTransactionsDeliverableMeta,
           getExtraPayload: function () {
             return contractSessionId ? { contract_session_id: contractSessionId } : {};
