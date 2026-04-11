@@ -108,11 +108,29 @@
       min-width: 220px;
     }
 
+    body.paw-contracts .contracts-primary-block{
+      flex:1 1 100%;
+      min-width:0;
+    }
+
     body.paw-contracts .contracts-label{
       font-size:12px;
       font-weight:800;
       color:rgba(15,23,42,.72);
       letter-spacing:-0.01em;
+    }
+
+    /* Primary Transactions use-case row.
+       Reuses the shared segmented-pill component so this matches Connect's pattern
+       without changing shared CSS or existing review/upload behavior. */
+    body.paw-contracts .transactions-primary-seg{
+      display:inline-flex;
+    }
+    body.paw-contracts .transactions-primary-btn.is-selected,
+    body.paw-contracts .transactions-primary-btn[aria-pressed="true"]{
+      background:rgba(5,195,249,.18);
+      color:rgba(15,23,42,.92);
+      box-shadow:inset 0 0 0 1px rgba(15,23,42,.08);
     }
 
     /* Stage segmented control (scoped to Contracts only) */
@@ -238,6 +256,8 @@
       body.paw-contracts .contracts-block{ min-width: 0; width:100%; }
       body.paw-contracts .stage-seg,
     body.paw-contracts .type-seg{ width:100%; }
+      body.paw-contracts .transactions-primary-seg.paw-seg.paw-seg--compact{ width:100%; display:flex; }
+      body.paw-contracts .transactions-primary-seg.paw-seg.paw-seg--compact .paw-seg__btn{ flex:1 1 0; }
       body.paw-contracts .stage-btn,
     body.paw-contracts .type-btn{ flex:1 1 0; height:40px; font-size:14px; }
       body.paw-contracts .file-pill{ width:100%; justify-content:center; height:48px; font-size:14px; }
@@ -302,6 +322,20 @@ body.paw-contracts #analyzeBtn[disabled]{
                     <!-- Controls: Contract Review + Upload (optional) -->
           <div class="contracts-controls" aria-label="Contracts controls">
 
+            <!-- Primary use-case selector stays UI-only for now.
+                 It teaches the main Transactions modes without changing existing review/upload logic. -->
+            <div class="contracts-row" aria-label="Transactions primary use cases">
+              <div class="contracts-block contracts-primary-block">
+                <div class="contracts-label">Choose one</div>
+                <div id="transactionsPrimarySeg" class="transactions-primary-seg paw-seg paw-seg--compact" role="group" aria-label="Transactions primary use cases">
+                  <button class="transactions-primary-btn paw-seg__btn is-selected" type="button" data-transactions-primary="client_report" aria-pressed="true">Client Report</button>
+                  <button class="transactions-primary-btn paw-seg__btn" type="button" data-transactions-primary="write_terms" aria-pressed="false">Write Terms</button>
+                  <button class="transactions-primary-btn paw-seg__btn" type="button" data-transactions-primary="negotiation" aria-pressed="false">Negotiation</button>
+                  <button class="transactions-primary-btn paw-seg__btn" type="button" data-transactions-primary="form_help" aria-pressed="false">Form Help</button>
+                </div>
+              </div>
+            </div>
+
             <!-- Row A+B: Action row (Choose PDF + Review state + Analyze) -->
 <div class="contracts-row contracts-action-row" aria-label="Contracts action row">
   <div class="file-pill" title="Choose a PDF file">
@@ -350,9 +384,11 @@ body.paw-contracts #analyzeBtn[disabled]{
     const fileNameEl = document.getElementById("fileName");
     const reviewSeg = document.getElementById("reviewSeg");
     const reviewButtons = Array.from(document.querySelectorAll("#reviewSeg .type-btn"));
+    const transactionsPrimaryButtons = Array.from(document.querySelectorAll("[data-transactions-primary]"));
     const analyzeBtn = document.getElementById("analyzeBtn");
     const resetBtn = document.getElementById("reset");
 
+    let selectedTransactionsPrimary = "client_report";
     let selectedFile = null;
     let selectedReview = "";
     let contractSessionId = "";
@@ -360,6 +396,17 @@ body.paw-contracts #analyzeBtn[disabled]{
 
     function getTransactionsDeliverableMeta() {
       return { openModal: false };
+    }
+
+    // UI-only state for the new primary Transactions pill row.
+    // This does not change prompts, uploads, or review handling in this step.
+    function setTransactionsPrimary(nextPrimary) {
+      selectedTransactionsPrimary = String(nextPrimary || "client_report");
+      transactionsPrimaryButtons.forEach(function (button) {
+        var isActive = button.getAttribute("data-transactions-primary") === selectedTransactionsPrimary;
+        button.classList.toggle("is-selected", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
     }
 
     function setReviewMode(nextReview) {
@@ -390,6 +437,7 @@ body.paw-contracts #analyzeBtn[disabled]{
     }
 
     function fullResetTransactions() {
+      setTransactionsPrimary("client_report");
       resetUploadState();
       try {
         if (shellApi && shellApi.reset) {
@@ -485,6 +533,12 @@ body.paw-contracts #analyzeBtn[disabled]{
       });
     });
 
+    transactionsPrimaryButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        setTransactionsPrimary(button.getAttribute("data-transactions-primary"));
+      });
+    });
+
     if (analyzeBtn) {
       analyzeBtn.addEventListener("click", function () {
         startReview();
@@ -527,6 +581,7 @@ body.paw-contracts #analyzeBtn[disabled]{
       }
     } catch (_) {}
 
+    setTransactionsPrimary(selectedTransactionsPrimary);
     syncUploadUi();
   </script>
 
