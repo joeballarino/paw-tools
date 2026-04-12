@@ -276,6 +276,12 @@
         align-items:stretch;
         gap:14px;
       }
+      body.paw-contracts .contracts-review-inline{
+        width:100%;
+        flex-direction:column;
+        align-items:flex-start;
+        gap:6px;
+      }
       body.paw-contracts .contracts-block{ min-width: 0; width:100%; }
       body.paw-contracts .contracts-primary-row{ flex-wrap:wrap; }
       body.paw-contracts .contracts-primary-block{
@@ -300,6 +306,20 @@
 body.paw-contracts .contracts-action-row{
   gap:10px;
   align-items:center;
+}
+
+body.paw-contracts .contracts-review-inline{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+body.paw-contracts .contracts-review-inline-label{
+  font-size:11px;
+  font-weight:800;
+  color:rgba(15,23,42,.72);
+  letter-spacing:-0.01em;
+  white-space:nowrap;
 }
 
 /* Disabled segmented buttons (Contracts-only) */
@@ -373,10 +393,13 @@ body.paw-contracts #analyzeBtn[disabled]{
     <input id="file" type="file" accept="application/pdf" />
   </div>
 
-  <div id="reviewSeg" class="type-seg" role="group" aria-label="Contract review" style="display:none">
-    <button class="type-btn" type="button" data-review="blank" aria-pressed="false" disabled>Blank</button>
-    <button class="type-btn" type="button" data-review="draft" aria-pressed="false" disabled>Draft</button>
-    <button class="type-btn" type="button" data-review="executed" aria-pressed="false" disabled>Executed</button>
+  <div id="reviewChoiceWrap" class="contracts-review-inline" style="display:none">
+    <div class="contracts-review-inline-label">Choose one</div>
+    <div id="reviewSeg" class="type-seg" role="group" aria-label="Contract review">
+      <button class="type-btn" type="button" data-review="blank" aria-pressed="false" disabled>Blank</button>
+      <button class="type-btn" type="button" data-review="draft" aria-pressed="false" disabled>Draft</button>
+      <button class="type-btn" type="button" data-review="executed" aria-pressed="false" disabled>Executed</button>
+    </div>
   </div>
 
   <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled style="display:none">Start review</button>
@@ -413,6 +436,7 @@ body.paw-contracts #analyzeBtn[disabled]{
     const fileInput = document.getElementById("file");
     const fileNameEl = document.getElementById("fileName");
     const transactionsPrimaryBlock = document.getElementById("transactionsPrimaryBlock");
+    const reviewChoiceWrap = document.getElementById("reviewChoiceWrap");
     const reviewSeg = document.getElementById("reviewSeg");
     const reviewButtons = Array.from(document.querySelectorAll("#reviewSeg .type-btn"));
     const transactionsPrimaryButtons = Array.from(document.querySelectorAll("[data-transactions-primary]"));
@@ -510,7 +534,7 @@ body.paw-contracts #analyzeBtn[disabled]{
 
     function syncUploadUi() {
       var hasFile = !!selectedFile;
-      if (reviewSeg) reviewSeg.style.display = hasFile ? "" : "none";
+      if (reviewChoiceWrap) reviewChoiceWrap.style.display = hasFile ? "" : "none";
       if (analyzeBtn) analyzeBtn.style.display = hasFile ? "" : "none";
 
       reviewButtons.forEach(function (button) {
