@@ -181,6 +181,18 @@
     body.paw-presence .presence-block[data-presence-group="primary"]{
       flex:1 1 100%;
       min-width:0;
+      flex-direction:row;
+      align-items:center;
+      gap:12px;
+    }
+
+    body.paw-presence .presence-block[data-presence-group="primary"] > .presence-label{
+      white-space:nowrap;
+    }
+
+    body.paw-presence .presence-block[data-presence-group="primary"] > .presence-button-group{
+      flex:1 1 auto;
+      min-width:0;
     }
 
     body.paw-presence .presence-block[data-presence-group="secondary"],
@@ -276,6 +288,11 @@
       body.paw-presence .presence-controls{ padding:10px 12px 12px; }
       body.paw-presence .presence-row{ flex-direction:column; align-items:stretch; }
       body.paw-presence .presence-block{ min-width:0; width:100%; }
+      body.paw-presence .presence-block[data-presence-group="primary"]{
+        flex-direction:column;
+        align-items:stretch;
+        gap:6px;
+      }
     }
   </style>
 </head>
