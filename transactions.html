@@ -61,16 +61,16 @@
     /* ==========================================================
        PAW — Contracts (Circle-embedded tool page)
        ----------------------------------------------------------
-       DESIGN GOALS (v1):
-       - Chat-first (works with or without a document)
-       - Optional contract upload (PDF) for more precise analysis
-       - Contract review selector (Blank / Draft / Executed) sets tone and output style
+       DESIGN GOALS (v2):
+       - Chat-first review flow with no document-state classification
+       - Multi-file upload for the current temporary Transactions session
+       - Clear local session state for uploaded files before and after review starts
        - Scanned PDFs are NOT supported (we reject and ask for a digital PDF)
 
        IMPORTANT PRODUCT RULES:
        - No AI logic lives here. All "secret sauce" prompting is in the Worker.
        - Do NOT store uploaded contracts in localStorage.
-         We only store chat history + contract type selection as a local draft (optional).
+         Uploaded files stay in memory only for the current page session.
        ========================================================== */
 
     body.paw-contracts .contracts-controls{
@@ -97,7 +97,10 @@
     }
 
     body.paw-contracts .contracts-row--meta{
-      min-height:18px; /* reserved blank row for file details */
+      min-height:18px;
+      flex-direction:column;
+      align-items:stretch;
+      gap:8px;
     }
 
 
@@ -155,7 +158,7 @@
       background:rgba(254,242,242,.85);
     }
 
-    /* Stage segmented control (scoped to Contracts only) */
+    /* Button treatment scoped to Transactions only */
     body.paw-contracts .stage-seg,
     body.paw-contracts .type-seg{
       display:flex;
@@ -224,17 +227,6 @@
       width:100%;
       height:100%;
     }
-    body.paw-contracts .file-name{
-      /* Slight inset so uploaded file text aligns more naturally with the control text above. */
-      padding-left:12px;
-      font-size:13px;
-      font-weight:750;
-      color:rgba(15,23,42,.82);
-      max-width: 360px;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
     body.paw-contracts .file-sub{
       font-size:12px;
       color:rgba(15,23,42,.60);
@@ -266,6 +258,75 @@
       color: rgba(15,23,42,.92);
     }
 
+    body.paw-contracts .uploaded-files-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    body.paw-contracts .uploaded-files-list{
+      list-style:none;
+      margin:0;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      width:100%;
+    }
+    body.paw-contracts .uploaded-file-item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      width:100%;
+      padding:8px 12px;
+      border-radius:14px;
+      border:1px solid rgba(15,23,42,.08);
+      background:rgba(255,255,255,.82);
+    }
+    body.paw-contracts .uploaded-file-name{
+      min-width:0;
+      font-size:13px;
+      font-weight:750;
+      color:rgba(15,23,42,.82);
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    body.paw-contracts .uploaded-file-status{
+      flex:0 0 auto;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.01em;
+      white-space:nowrap;
+    }
+    body.paw-contracts .uploaded-file-status--pending{
+      background:rgba(251,191,36,.18);
+      color:rgba(146,64,14,.92);
+    }
+    body.paw-contracts .uploaded-file-status--active{
+      background:rgba(5,195,249,.16);
+      color:rgba(15,23,42,.92);
+    }
+    body.paw-contracts .uploaded-files-empty{
+      margin:0;
+    }
+    body.paw-contracts .transactions-session-state{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(15,23,42,.06);
+      color:rgba(15,23,42,.72);
+      font-size:11px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
     /* Mobile: stack nicely */
     @media (max-width: 560px){
       body.paw-contracts .contracts-controls{
@@ -276,12 +337,6 @@
         flex-direction:column;
         align-items:stretch;
         gap:14px;
-      }
-      body.paw-contracts .contracts-review-inline{
-        width:100%;
-        flex-direction:column;
-        align-items:flex-start;
-        gap:6px;
       }
       body.paw-contracts .contracts-block{ min-width: 0; width:100%; }
       body.paw-contracts .contracts-primary-row{ flex-wrap:wrap; }
@@ -299,35 +354,16 @@
     body.paw-contracts .type-btn{ flex:1 1 0; height:40px; font-size:14px; }
       body.paw-contracts .file-pill{ width:100%; justify-content:center; height:48px; font-size:14px; }
       body.paw-contracts #analyzeBtn{ width:100%; height:48px; min-height:48px; font-size:14px; margin-top:2px; }
-      body.paw-contracts .file-name{ max-width: 100%; }
-
+      body.paw-contracts .uploaded-file-item{
+        align-items:flex-start;
+        flex-direction:column;
+      }
     }
 
-    /* Contracts action row */
+/* Contracts action row */
 body.paw-contracts .contracts-action-row{
   gap:10px;
   align-items:center;
-}
-
-body.paw-contracts .contracts-review-inline{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-body.paw-contracts .contracts-review-inline-label{
-  font-size:11px;
-  font-weight:800;
-  color:rgba(15,23,42,.72);
-  letter-spacing:-0.01em;
-  white-space:nowrap;
-}
-
-/* Disabled segmented buttons (Contracts-only) */
-body.paw-contracts .type-btn:disabled{
-  opacity:.45;
-  cursor:not-allowed;
-  pointer-events:none;
 }
 
 /* Analyze button (Contracts-specific) */
@@ -370,11 +406,9 @@ body.paw-contracts #analyzeBtn[disabled]{
             </div>
           </div>
 
-                    <!-- Controls: Contract Review + Upload (optional) -->
+                    <!-- Controls: Transactions mode + upload -->
           <div class="contracts-controls" aria-label="Contracts controls">
 
-            <!-- Primary use-case selector stays UI-only for now.
-                 It teaches the main Transactions modes without changing existing review/upload logic. -->
             <div class="contracts-row contracts-primary-row" aria-label="Transactions primary use cases">
               <div id="transactionsPrimaryBlock" class="contracts-block contracts-primary-block">
                 <div class="contracts-label">Choose one</div>
@@ -387,29 +421,25 @@ body.paw-contracts #analyzeBtn[disabled]{
               </div>
             </div>
 
-            <!-- Row A+B: Action row (Choose PDF + Review state + Analyze) -->
+            <!-- Row A: Upload + review action -->
 <div class="contracts-row contracts-action-row" aria-label="Contracts action row">
-  <div class="file-pill" title="Choose a PDF file">
-    <label class="file-pill__label" for="file">Choose PDF…</label>
-    <input id="file" type="file" accept="application/pdf" />
-  </div>
-
-  <div id="reviewChoiceWrap" class="contracts-review-inline" style="display:none">
-    <div class="contracts-review-inline-label">Choose one</div>
-    <div id="reviewSeg" class="type-seg" role="group" aria-label="Contract review">
-      <button class="type-btn" type="button" data-review="blank" aria-pressed="false" disabled>Blank</button>
-      <button class="type-btn" type="button" data-review="draft" aria-pressed="false" disabled>Draft</button>
-      <button class="type-btn" type="button" data-review="executed" aria-pressed="false" disabled>Executed</button>
-    </div>
+  <div class="file-pill" title="Choose PDF files">
+    <label class="file-pill__label" for="file">Choose files...</label>
+    <input id="file" type="file" accept="application/pdf" multiple />
   </div>
 
   <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled style="display:none">Start review</button>
 </div>
 
-<!-- Row C: Reserved space for upload details (populates after file selection) -->
+<!-- Row B: Current session files -->
 
             <div id="fileMetaRow" class="contracts-row contracts-row--meta" aria-label="Upload details row">
-              <div id="fileName" class="file-name" aria-live="polite"></div>
+              <div class="uploaded-files-header">
+                <div id="uploadedFilesTitle" class="file-sub" aria-live="polite">No files uploaded yet.</div>
+                <div id="transactionsSessionState" class="transactions-session-state" hidden>Session active</div>
+              </div>
+              <p id="uploadedFilesEmpty" class="file-sub uploaded-files-empty">Add one or more PDF files to start a Transactions review.</p>
+              <ul id="uploadedFilesList" class="uploaded-files-list" aria-live="polite"></ul>
             </div>
 
           </div>
@@ -435,28 +465,25 @@ body.paw-contracts #analyzeBtn[disabled]{
   <script>
     const API_ENDPOINT = "https://paw-api.joe-b40.workers.dev";
     const fileInput = document.getElementById("file");
-    const fileNameEl = document.getElementById("fileName");
+    const uploadedFilesTitle = document.getElementById("uploadedFilesTitle");
+    const uploadedFilesEmpty = document.getElementById("uploadedFilesEmpty");
+    const uploadedFilesList = document.getElementById("uploadedFilesList");
+    const transactionsSessionState = document.getElementById("transactionsSessionState");
     const transactionsPrimaryBlock = document.getElementById("transactionsPrimaryBlock");
-    const reviewChoiceWrap = document.getElementById("reviewChoiceWrap");
-    const reviewSeg = document.getElementById("reviewSeg");
-    const reviewButtons = Array.from(document.querySelectorAll("#reviewSeg .type-btn"));
     const transactionsPrimaryButtons = Array.from(document.querySelectorAll("[data-transactions-primary]"));
     const analyzeBtn = document.getElementById("analyzeBtn");
     const resetBtn = document.getElementById("reset");
 
     let selectedTransactionsPrimary = "";
     let showTransactionsPrimaryValidation = false;
-    let selectedFile = null;
-    let selectedReview = "";
-    let contractSessionId = "";
+    let uploadedFiles = [];
+    let sessionId = "";
     let shellApi = null;
 
     function getTransactionsDeliverableMeta() {
       return { openModal: false };
     }
 
-    // UI-only state for the new primary Transactions pill row.
-    // This does not change prompts, uploads, or review handling in this step.
     function setTransactionsPrimary(nextPrimary) {
       selectedTransactionsPrimary = String(nextPrimary || "");
       if (selectedTransactionsPrimary) {
@@ -490,30 +517,117 @@ body.paw-contracts #analyzeBtn[disabled]{
       }
     }
 
-    function setReviewMode(nextReview) {
-      selectedReview = String(nextReview || "");
-      reviewButtons.forEach(function (button) {
-        var isActive = button.getAttribute("data-review") === selectedReview;
-        button.classList.toggle("primary", isActive);
-        button.setAttribute("aria-pressed", isActive ? "true" : "false");
-      });
-      syncUploadUi();
+    function getFileKey(file) {
+      if (!file) return "";
+      return [
+        String(file.name || ""),
+        Number(file.size || 0),
+        Number(file.lastModified || 0)
+      ].join("::");
     }
 
-    function clearContractSession() {
-      contractSessionId = "";
+    function getPendingFiles() {
+      return uploadedFiles.filter(function (entry) {
+        return !!(entry && entry.pending && entry.file);
+      });
+    }
+
+    function updateUploadedFilesUi() {
+      var hasFiles = uploadedFiles.length > 0;
+      var pendingFiles = getPendingFiles();
+
+      if (uploadedFilesTitle) {
+        if (!hasFiles) {
+          uploadedFilesTitle.textContent = "No files uploaded yet.";
+        } else if (uploadedFiles.length === 1) {
+          uploadedFilesTitle.textContent = "1 file in this session.";
+        } else {
+          uploadedFilesTitle.textContent = String(uploadedFiles.length) + " files in this session.";
+        }
+      }
+
+      if (transactionsSessionState) {
+        transactionsSessionState.hidden = !sessionId;
+      }
+
+      if (uploadedFilesEmpty) {
+        if (!hasFiles) {
+          uploadedFilesEmpty.hidden = false;
+          uploadedFilesEmpty.textContent = "Add one or more PDF files to start a Transactions review.";
+        } else if (pendingFiles.length) {
+          uploadedFilesEmpty.hidden = false;
+          uploadedFilesEmpty.textContent =
+            pendingFiles.length === 1
+              ? "1 file is ready for review."
+              : String(pendingFiles.length) + " files are ready for review.";
+        } else {
+          uploadedFilesEmpty.hidden = false;
+          uploadedFilesEmpty.textContent = "All selected files are attached to this current session.";
+        }
+      }
+
+      if (uploadedFilesList) {
+        uploadedFilesList.innerHTML = "";
+        uploadedFiles.forEach(function (entry) {
+          if (!entry) return;
+          var item = document.createElement("li");
+          item.className = "uploaded-file-item";
+
+          var name = document.createElement("div");
+          name.className = "uploaded-file-name";
+          name.textContent = String(entry.name || "contract.pdf");
+
+          var status = document.createElement("span");
+          status.className = "uploaded-file-status " + (entry.pending ? "uploaded-file-status--pending" : "uploaded-file-status--active");
+          status.textContent = entry.pending ? "Ready to review" : "In session";
+
+          item.appendChild(name);
+          item.appendChild(status);
+          uploadedFilesList.appendChild(item);
+        });
+      }
+    }
+
+    function addSelectedFiles(fileList) {
+      var nextFiles = Array.isArray(fileList) ? fileList : Array.from(fileList || []);
+      nextFiles.forEach(function (file) {
+        var fileKey = getFileKey(file);
+        if (!fileKey) return;
+
+        var alreadyAdded = uploadedFiles.some(function (entry) {
+          return entry && entry.key === fileKey;
+        });
+        if (alreadyAdded) return;
+
+        uploadedFiles.push({
+          key: fileKey,
+          name: String(file.name || "contract.pdf"),
+          file: file,
+          pending: true
+        });
+      });
+
+      updateUploadedFilesUi();
+    }
+
+    function markUploadedFilePendingState(fileKey, isPending) {
+      uploadedFiles = uploadedFiles.map(function (entry) {
+        if (!entry || entry.key !== fileKey) return entry;
+        return {
+          key: entry.key,
+          name: entry.name,
+          file: entry.file,
+          pending: !!isPending
+        };
+      });
+      updateUploadedFilesUi();
     }
 
     function resetUploadState() {
-      selectedFile = null;
-      selectedReview = "";
-      clearContractSession();
+      uploadedFiles = [];
+      sessionId = "";
       if (fileInput) fileInput.value = "";
-      if (fileNameEl) fileNameEl.textContent = "";
-      reviewButtons.forEach(function (button) {
-        button.classList.remove("primary");
-        button.setAttribute("aria-pressed", "false");
-      });
+      updateUploadedFilesUi();
       syncUploadUi();
     }
 
@@ -534,16 +648,11 @@ body.paw-contracts #analyzeBtn[disabled]{
     }
 
     function syncUploadUi() {
-      var hasFile = !!selectedFile;
-      if (reviewChoiceWrap) reviewChoiceWrap.style.display = hasFile ? "" : "none";
-      if (analyzeBtn) analyzeBtn.style.display = hasFile ? "" : "none";
-
-      reviewButtons.forEach(function (button) {
-        button.disabled = !hasFile;
-      });
+      var pendingFiles = getPendingFiles();
 
       if (analyzeBtn) {
-        analyzeBtn.disabled = !(hasFile && selectedReview);
+        analyzeBtn.style.display = uploadedFiles.length ? "" : "none";
+        analyzeBtn.disabled = !pendingFiles.length;
       }
     }
 
@@ -563,33 +672,46 @@ body.paw-contracts #analyzeBtn[disabled]{
     }
 
     async function startReview() {
-      if (getMissingTransactionsPrimaryGroups().length) {
-        showTransactionsPrimaryValidation = true;
-        updateTransactionsPrimaryValidationState();
-        focusFirstMissingTransactionsPrimaryGroup();
+      if (!shellApi || typeof shellApi.sendExtra !== "function") {
         return;
       }
 
-      if (!selectedFile || !selectedReview || !shellApi || typeof shellApi.sendExtra !== "function") {
+      var filesToSend = getPendingFiles();
+      if (!filesToSend.length) {
         return;
       }
 
       analyzeBtn.disabled = true;
 
       try {
-        clearContractSession();
-        var base64 = await fileToBase64(selectedFile);
-        await shellApi.sendExtra("Start review", {
-          action: "contract_upload",
-          contract_review: selectedReview,
-          file: {
-            base64: base64,
-            name: selectedFile.name || "contract.pdf"
+        for (var index = 0; index < filesToSend.length; index += 1) {
+          var entry = filesToSend[index];
+          var base64 = await fileToBase64(entry.file);
+          var reviewPayload = {
+            action: "contract_upload",
+            file: {
+              base64: base64,
+              name: entry.name || "contract.pdf",
+              type: String((entry.file && entry.file.type) || "application/pdf"),
+              size: Number((entry.file && entry.file.size) || 0)
+            }
+          };
+          if (selectedTransactionsPrimary) {
+            reviewPayload.transactions_mode = selectedTransactionsPrimary;
           }
-        }, {
-          echoUser: false,
-          composerWorking: true
-        });
+          if (sessionId) {
+            reviewPayload.session_id = sessionId;
+          }
+
+          var response = await shellApi.sendExtra("Start review", reviewPayload, {
+            echoUser: false,
+            composerWorking: true
+          });
+
+          if (response) {
+            markUploadedFilePendingState(entry.key, false);
+          }
+        }
       } finally {
         syncUploadUi();
       }
@@ -598,33 +720,18 @@ body.paw-contracts #analyzeBtn[disabled]{
     if (fileInput) {
       fileInput.addEventListener("change", function (event) {
         var files = event && event.target && event.target.files ? event.target.files : [];
-        selectedFile = files && files[0] ? files[0] : null;
-        selectedReview = "";
-        clearContractSession();
-
-        if (fileNameEl) {
-          fileNameEl.textContent = selectedFile ? selectedFile.name : "";
+        addSelectedFiles(files);
+        if (fileInput) {
+          fileInput.value = "";
         }
-
-        reviewButtons.forEach(function (button) {
-          button.classList.remove("primary");
-          button.setAttribute("aria-pressed", "false");
-        });
-
         syncUploadUi();
       });
     }
 
-    reviewButtons.forEach(function (button) {
-      button.addEventListener("click", function () {
-        if (button.disabled) return;
-        setReviewMode(button.getAttribute("data-review"));
-      });
-    });
-
     transactionsPrimaryButtons.forEach(function (button) {
       button.addEventListener("click", function () {
         setTransactionsPrimary(button.getAttribute("data-transactions-primary"));
+        syncUploadUi();
       });
     });
 
@@ -666,20 +773,32 @@ body.paw-contracts #analyzeBtn[disabled]{
           },
           getDeliverableMeta: getTransactionsDeliverableMeta,
           getExtraPayload: function () {
-            return contractSessionId ? { contract_session_id: contractSessionId } : {};
+            var payload = {};
+            if (selectedTransactionsPrimary) {
+              payload.transactions_mode = selectedTransactionsPrimary;
+            }
+            if (sessionId) {
+              payload.session_id = sessionId;
+            }
+            return payload;
           },
           onResponse: function (data) {
-            var nextSessionId = data && data.contract && data.contract.session_id;
+            var nextSessionId =
+              (data && data.session_id) ||
+              (data && data.contract && data.contract.session_id) ||
+              (data && data.session && data.session.id);
             if (nextSessionId) {
-              // Contract session stays in memory only for this temporary page session.
-              contractSessionId = String(nextSessionId);
+              sessionId = String(nextSessionId);
             }
+            updateUploadedFilesUi();
+            syncUploadUi();
           }
         });
       }
     } catch (_) {}
 
     setTransactionsPrimary(selectedTransactionsPrimary);
+    updateUploadedFilesUi();
     syncUploadUi();
   </script>
 
