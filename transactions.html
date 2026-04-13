@@ -610,6 +610,19 @@ body.paw-contracts #analyzeBtn[disabled]{
       updateUploadedFilesUi();
     }
 
+    function markUploadedFilePendingState(fileKey, isPending) {
+      uploadedFiles = uploadedFiles.map(function (entry) {
+        if (!entry || entry.key !== fileKey) return entry;
+        return {
+          key: entry.key,
+          name: entry.name,
+          file: entry.file,
+          pending: !!isPending
+        };
+      });
+      updateUploadedFilesUi();
+    }
+
     function resetUploadState() {
       uploadedFiles = [];
       sessionId = "";
@@ -671,43 +684,34 @@ body.paw-contracts #analyzeBtn[disabled]{
       analyzeBtn.disabled = true;
 
       try {
-        var filePayloads = await Promise.all(filesToSend.map(async function (entry) {
-          return {
-            base64: await fileToBase64(entry.file),
-            name: entry.name || "contract.pdf"
+        for (var index = 0; index < filesToSend.length; index += 1) {
+          var entry = filesToSend[index];
+          var base64 = await fileToBase64(entry.file);
+          var reviewPayload = {
+            action: "contract_upload",
+            file: {
+              base64: base64,
+              name: entry.name || "contract.pdf",
+              type: String((entry.file && entry.file.type) || "application/pdf"),
+              size: Number((entry.file && entry.file.size) || 0)
+            }
           };
-        }));
+          if (selectedTransactionsPrimary) {
+            reviewPayload.transactions_mode = selectedTransactionsPrimary;
+          }
+          if (sessionId) {
+            reviewPayload.session_id = sessionId;
+          }
 
-        var reviewPayload = {
-          action: "contract_upload",
-          files: filePayloads
-        };
-        if (selectedTransactionsPrimary) {
-          reviewPayload.transactions_mode = selectedTransactionsPrimary;
+          var response = await shellApi.sendExtra("Start review", reviewPayload, {
+            echoUser: false,
+            composerWorking: true
+          });
+
+          if (response) {
+            markUploadedFilePendingState(entry.key, false);
+          }
         }
-        if (sessionId) {
-          reviewPayload.session_id = sessionId;
-        }
-
-        await shellApi.sendExtra("Start review", reviewPayload, {
-          echoUser: false,
-          composerWorking: true
-        });
-
-        var uploadedKeys = filesToSend.map(function (entry) {
-          return entry.key;
-        });
-
-        uploadedFiles = uploadedFiles.map(function (entry) {
-          if (!entry || uploadedKeys.indexOf(entry.key) === -1) return entry;
-          return {
-            key: entry.key,
-            name: entry.name,
-            file: entry.file,
-            pending: false
-          };
-        });
-        updateUploadedFilesUi();
       } finally {
         syncUploadUi();
       }
