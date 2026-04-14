@@ -518,20 +518,6 @@
     return wrap;
   }
 
-  function appendThinking($messages) {
-    const wrap = document.createElement("div");
-    wrap.className = "msg ai paw-thinking";
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.innerHTML =
-      '<p>Thinking<span class="paw-dots"><span class="paw-dot"></span><span class="paw-dot"></span><span class="paw-dot"></span></span></p>';
-    wrap.appendChild(bubble);
-    $messages.appendChild(wrap);
-    $messages.scrollTop = $messages.scrollHeight;
-    return wrap;
-  }
-
-  
   // --- UX helper: always-visible "Working..." strip -------------------------
   // Problem this solves:
   // In embedded/iframe tools (Circle), long text pastes can push the chat stream
@@ -2080,7 +2066,6 @@ function resetAutoGrowTextarea($ta){
           ? beginComposerWorkingState(composerDisplayText)
           : false;
 
-        let thinkingNode = null;
         let sendSucceeded = false;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
@@ -2093,9 +2078,6 @@ function resetAutoGrowTextarea($ta){
             pushHistory("user", msg);
           }
 
-          thinkingNode = appendThinking($messages);
-          scrollWorkingStateIntoViewIfNeeded(thinkingNode);
-
           const prefs = getPrefs ? getPrefs() : {};
           const baseExtra = getExtraPayload ? getExtraPayload(msg) : {};
           const mergedExtra = Object.assign({}, baseExtra, extraPayload || {});
@@ -2105,8 +2087,6 @@ function resetAutoGrowTextarea($ta){
 
           const data = await postToWorker(payload);
           sendSucceeded = true;
-
-          removeNode(thinkingNode);
 
           if (onResponse) {
             try {
@@ -2139,7 +2119,6 @@ function resetAutoGrowTextarea($ta){
           }
           return data;
         } catch (err) {
-          removeNode(thinkingNode);
           appendMessage($messages, "ai", formatAssistantErrorText(err));
         } finally {
           isSending = false;
@@ -2182,7 +2161,6 @@ function resetAutoGrowTextarea($ta){
           ? beginComposerWorkingState(trimmed)
           : false;
 
-        let thinkingNode = null;
         let sendSucceeded = false;
 
         // Always-visible progress cue (prevents "nothing is happening" when the chat stream is off-screen)
@@ -2193,9 +2171,6 @@ function resetAutoGrowTextarea($ta){
           appendMessage($messages, "user", trimmed);
           pushHistory("user", trimmed);
 
-          thinkingNode = appendThinking($messages);
-          scrollWorkingStateIntoViewIfNeeded(thinkingNode);
-
           const prefs = getPrefs ? getPrefs() : {};
           const extraPayload = getExtraPayload ? getExtraPayload(trimmed) : {};
           const payload = buildPayloadBase(toolId, getHistoryForSend(), prefs, extraPayload);
@@ -2203,8 +2178,6 @@ function resetAutoGrowTextarea($ta){
 
           const data = await postToWorker(payload);
           sendSucceeded = true;
-
-          removeNode(thinkingNode);
 
           if (onResponse) {
             try {
@@ -2236,7 +2209,6 @@ function resetAutoGrowTextarea($ta){
             pushHistory("assistant", reply);
           }
         } catch (err) {
-          removeNode(thinkingNode);
           appendMessage($messages, "ai", formatAssistantErrorText(err));
         } finally {
           isSending = false;
