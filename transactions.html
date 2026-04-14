@@ -428,7 +428,7 @@ body.paw-contracts #analyzeBtn[disabled]{
     <input id="file" type="file" accept="application/pdf" multiple />
   </div>
 
-  <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled style="display:none">Start review</button>
+  <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled style="display:none">Review files</button>
 </div>
 
 <!-- Row B: Current session files -->
@@ -436,9 +436,8 @@ body.paw-contracts #analyzeBtn[disabled]{
             <div id="fileMetaRow" class="contracts-row contracts-row--meta" aria-label="Upload details row">
               <div class="uploaded-files-header">
                 <div id="uploadedFilesTitle" class="file-sub" aria-live="polite">No files uploaded yet.</div>
-                <div id="transactionsSessionState" class="transactions-session-state" hidden>Session active</div>
               </div>
-              <p id="uploadedFilesEmpty" class="file-sub uploaded-files-empty">Add one or more PDF files to start a Transactions review.</p>
+              <p id="uploadedFilesEmpty" class="file-sub uploaded-files-empty">Add one or more PDF files to review them here.</p>
               <ul id="uploadedFilesList" class="uploaded-files-list" aria-live="polite"></ul>
             </div>
 
@@ -468,7 +467,6 @@ body.paw-contracts #analyzeBtn[disabled]{
     const uploadedFilesTitle = document.getElementById("uploadedFilesTitle");
     const uploadedFilesEmpty = document.getElementById("uploadedFilesEmpty");
     const uploadedFilesList = document.getElementById("uploadedFilesList");
-    const transactionsSessionState = document.getElementById("transactionsSessionState");
     const transactionsPrimaryBlock = document.getElementById("transactionsPrimaryBlock");
     const transactionsPrimaryButtons = Array.from(document.querySelectorAll("[data-transactions-primary]"));
     const analyzeBtn = document.getElementById("analyzeBtn");
@@ -546,23 +544,19 @@ body.paw-contracts #analyzeBtn[disabled]{
         }
       }
 
-      if (transactionsSessionState) {
-        transactionsSessionState.hidden = !sessionId;
-      }
-
       if (uploadedFilesEmpty) {
         if (!hasFiles) {
           uploadedFilesEmpty.hidden = false;
-          uploadedFilesEmpty.textContent = "Add one or more PDF files to start a Transactions review.";
+          uploadedFilesEmpty.textContent = "Add one or more PDF files to review them here.";
         } else if (pendingFiles.length) {
           uploadedFilesEmpty.hidden = false;
           uploadedFilesEmpty.textContent =
             pendingFiles.length === 1
-              ? "1 file is ready for review."
-              : String(pendingFiles.length) + " files are ready for review.";
+              ? "1 file added. Review it to load document details into this session."
+              : String(pendingFiles.length) + " files added. Review them to load document details into this session.";
         } else {
           uploadedFilesEmpty.hidden = false;
-          uploadedFilesEmpty.textContent = "All selected files are attached to this current session.";
+          uploadedFilesEmpty.textContent = "Document details loaded for this session.";
         }
       }
 
@@ -577,12 +571,7 @@ body.paw-contracts #analyzeBtn[disabled]{
           name.className = "uploaded-file-name";
           name.textContent = String(entry.name || "contract.pdf");
 
-          var status = document.createElement("span");
-          status.className = "uploaded-file-status " + (entry.pending ? "uploaded-file-status--pending" : "uploaded-file-status--active");
-          status.textContent = entry.pending ? "Ready to review" : "In session";
-
           item.appendChild(name);
-          item.appendChild(status);
           uploadedFilesList.appendChild(item);
         });
       }
