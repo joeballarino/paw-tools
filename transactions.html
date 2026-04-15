@@ -353,7 +353,6 @@
       body.paw-contracts .stage-btn,
     body.paw-contracts .type-btn{ flex:1 1 0; height:40px; font-size:14px; }
       body.paw-contracts .file-pill{ width:100%; justify-content:center; height:48px; font-size:14px; }
-      body.paw-contracts #analyzeBtn{ width:100%; height:48px; min-height:48px; font-size:14px; margin-top:2px; }
       body.paw-contracts .uploaded-file-item{
         align-items:flex-start;
         flex-direction:column;
@@ -364,13 +363,6 @@
 body.paw-contracts .contracts-action-row{
   gap:10px;
   align-items:center;
-}
-
-/* Analyze button (Contracts-specific) */
-body.paw-contracts #analyzeBtn[disabled]{
-  opacity:.45;
-  cursor:not-allowed;
-  pointer-events:none;
 }
 
 </style>
@@ -421,14 +413,12 @@ body.paw-contracts #analyzeBtn[disabled]{
               </div>
             </div>
 
-            <!-- Row A: Upload + review action -->
+            <!-- Row A: Upload -->
 <div class="contracts-row contracts-action-row" aria-label="Contracts action row">
   <div class="file-pill" title="Choose PDF files">
     <label class="file-pill__label" for="file">Choose files...</label>
     <input id="file" type="file" accept="application/pdf" multiple />
   </div>
-
-  <button id="analyzeBtn" class="type-btn primary analyze-btn" type="button" disabled style="display:none">Review files</button>
 </div>
 
 <!-- Row B: Current session files -->
@@ -437,7 +427,7 @@ body.paw-contracts #analyzeBtn[disabled]{
               <div class="uploaded-files-header">
                 <div id="uploadedFilesTitle" class="file-sub" aria-live="polite">No files uploaded yet.</div>
               </div>
-              <p id="uploadedFilesEmpty" class="file-sub uploaded-files-empty">Add one or more PDF files to review them here.</p>
+              <p id="uploadedFilesEmpty" class="file-sub uploaded-files-empty">Add one or more PDF files to load document details here.</p>
               <ul id="uploadedFilesList" class="uploaded-files-list" aria-live="polite"></ul>
             </div>
 
@@ -469,7 +459,6 @@ body.paw-contracts #analyzeBtn[disabled]{
     const uploadedFilesList = document.getElementById("uploadedFilesList");
     const transactionsPrimaryBlock = document.getElementById("transactionsPrimaryBlock");
     const transactionsPrimaryButtons = Array.from(document.querySelectorAll("[data-transactions-primary]"));
-    const analyzeBtn = document.getElementById("analyzeBtn");
     const resetBtn = document.getElementById("reset");
 
     let selectedTransactionsPrimary = "";
@@ -477,6 +466,8 @@ body.paw-contracts #analyzeBtn[disabled]{
     let uploadedFiles = [];
     let sessionId = "";
     let shellApi = null;
+    let isAutoReviewRunning = false;
+    let shouldReviewPendingAfterCurrent = false;
 
     function getTransactionsDeliverableMeta() {
       return { openModal: false };
@@ -547,13 +538,20 @@ body.paw-contracts #analyzeBtn[disabled]{
       if (uploadedFilesEmpty) {
         if (!hasFiles) {
           uploadedFilesEmpty.hidden = false;
-          uploadedFilesEmpty.textContent = "Add one or more PDF files to review them here.";
+          uploadedFilesEmpty.textContent = "Add one or more PDF files to load document details here.";
         } else if (pendingFiles.length) {
           uploadedFilesEmpty.hidden = false;
-          uploadedFilesEmpty.textContent =
-            pendingFiles.length === 1
-              ? "1 file added. Review it to load document details into this session."
-              : String(pendingFiles.length) + " files added. Review them to load document details into this session.";
+          if (isAutoReviewRunning) {
+            uploadedFilesEmpty.textContent =
+              pendingFiles.length === 1
+                ? "Reviewing file and loading document details..."
+                : "Reviewing files and loading document details...";
+          } else {
+            uploadedFilesEmpty.textContent =
+              pendingFiles.length === 1
+                ? "File still needs review before it is ready."
+                : "Some files still need review before they are ready.";
+          }
         } else {
           uploadedFilesEmpty.hidden = false;
           uploadedFilesEmpty.textContent = "Document details loaded for this session.";
@@ -579,6 +577,7 @@ body.paw-contracts #analyzeBtn[disabled]{
 
     function addSelectedFiles(fileList) {
       var nextFiles = Array.isArray(fileList) ? fileList : Array.from(fileList || []);
+      var addedCount = 0;
       nextFiles.forEach(function (file) {
         var fileKey = getFileKey(file);
         if (!fileKey) return;
@@ -594,9 +593,11 @@ body.paw-contracts #analyzeBtn[disabled]{
           file: file,
           pending: true
         });
+        addedCount += 1;
       });
 
       updateUploadedFilesUi();
+      return addedCount;
     }
 
     function markUploadedFilePendingState(fileKey, isPending) {
@@ -616,8 +617,9 @@ body.paw-contracts #analyzeBtn[disabled]{
       uploadedFiles = [];
       sessionId = "";
       if (fileInput) fileInput.value = "";
+      isAutoReviewRunning = false;
+      shouldReviewPendingAfterCurrent = false;
       updateUploadedFilesUi();
-      syncUploadUi();
     }
 
     function fullResetTransactions() {
@@ -636,15 +638,6 @@ body.paw-contracts #analyzeBtn[disabled]{
       } catch (_) {}
     }
 
-    function syncUploadUi() {
-      var pendingFiles = getPendingFiles();
-
-      if (analyzeBtn) {
-        analyzeBtn.style.display = uploadedFiles.length ? "" : "none";
-        analyzeBtn.disabled = !pendingFiles.length;
-      }
-    }
-
     function fileToBase64(file) {
       return new Promise(function (resolve, reject) {
         var reader = new FileReader();
@@ -661,6 +654,10 @@ body.paw-contracts #analyzeBtn[disabled]{
     }
 
     async function startReview() {
+      if (isAutoReviewRunning) {
+        shouldReviewPendingAfterCurrent = true;
+        return;
+      }
       if (!shellApi || typeof shellApi.sendExtra !== "function") {
         return;
       }
@@ -670,7 +667,9 @@ body.paw-contracts #analyzeBtn[disabled]{
         return;
       }
 
-      analyzeBtn.disabled = true;
+      isAutoReviewRunning = true;
+      shouldReviewPendingAfterCurrent = false;
+      updateUploadedFilesUi();
 
       try {
         for (var index = 0; index < filesToSend.length; index += 1) {
@@ -702,33 +701,34 @@ body.paw-contracts #analyzeBtn[disabled]{
           }
         }
       } finally {
-        syncUploadUi();
+        var rerunPendingReview = shouldReviewPendingAfterCurrent;
+        isAutoReviewRunning = false;
+        shouldReviewPendingAfterCurrent = false;
+        updateUploadedFilesUi();
+        if (rerunPendingReview && getPendingFiles().length) {
+          startReview();
+        }
       }
     }
 
     if (fileInput) {
       fileInput.addEventListener("change", function (event) {
         var files = event && event.target && event.target.files ? event.target.files : [];
-        addSelectedFiles(files);
+        var addedCount = addSelectedFiles(files);
         if (fileInput) {
           fileInput.value = "";
         }
-        syncUploadUi();
+        if (addedCount) {
+          startReview();
+        }
       });
     }
 
     transactionsPrimaryButtons.forEach(function (button) {
       button.addEventListener("click", function () {
         setTransactionsPrimary(button.getAttribute("data-transactions-primary"));
-        syncUploadUi();
       });
     });
-
-    if (analyzeBtn) {
-      analyzeBtn.addEventListener("click", function () {
-        startReview();
-      });
-    }
 
     if (resetBtn) {
       resetBtn.addEventListener("click", function (event) {
@@ -780,15 +780,16 @@ body.paw-contracts #analyzeBtn[disabled]{
               sessionId = String(nextSessionId);
             }
             updateUploadedFilesUi();
-            syncUploadUi();
           }
         });
+        if (getPendingFiles().length) {
+          startReview();
+        }
       }
     } catch (_) {}
 
     setTransactionsPrimary(selectedTransactionsPrimary);
     updateUploadedFilesUi();
-    syncUploadUi();
   </script>
 
   <!-- ==========================================================
