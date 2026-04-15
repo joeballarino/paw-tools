@@ -157,6 +157,14 @@
       border-radius:999px;
       background:rgba(254,242,242,.85);
     }
+    body.paw-contracts .contracts-primary-block--prompt .contracts-label{
+      color:rgba(3,105,161,.86);
+    }
+    body.paw-contracts .contracts-primary-block--prompt .transactions-primary-seg{
+      box-shadow:0 0 0 1px rgba(14,165,233,.18);
+      border-radius:999px;
+      background:rgba(240,249,255,.9);
+    }
 
     /* Button treatment scoped to Transactions only */
     body.paw-contracts .stage-seg,
@@ -463,11 +471,13 @@ body.paw-contracts .contracts-action-row{
 
     let selectedTransactionsPrimary = "";
     let showTransactionsPrimaryValidation = false;
+    let showTransactionsPrimaryPrompt = false;
     let uploadedFiles = [];
     let sessionId = "";
     let shellApi = null;
     let isAutoReviewRunning = false;
     let shouldReviewPendingAfterCurrent = false;
+    let suppressNextUploadOnlyReply = false;
 
     function getTransactionsDeliverableMeta() {
       return { openModal: false };
@@ -477,6 +487,7 @@ body.paw-contracts .contracts-action-row{
       selectedTransactionsPrimary = String(nextPrimary || "");
       if (selectedTransactionsPrimary) {
         showTransactionsPrimaryValidation = false;
+        showTransactionsPrimaryPrompt = false;
       }
       transactionsPrimaryButtons.forEach(function (button) {
         var isActive = button.getAttribute("data-transactions-primary") === selectedTransactionsPrimary;
@@ -492,10 +503,14 @@ body.paw-contracts .contracts-action-row{
 
     function updateTransactionsPrimaryValidationState() {
       if (transactionsPrimaryBlock) {
+        var shouldShowMissingState = showTransactionsPrimaryValidation && !selectedTransactionsPrimary;
+        var shouldShowPromptState =
+          showTransactionsPrimaryPrompt && !showTransactionsPrimaryValidation && !selectedTransactionsPrimary;
         transactionsPrimaryBlock.classList.toggle(
           "contracts-primary-block--missing",
-          showTransactionsPrimaryValidation && !selectedTransactionsPrimary
+          shouldShowMissingState
         );
+        transactionsPrimaryBlock.classList.toggle("contracts-primary-block--prompt", shouldShowPromptState);
       }
     }
 
@@ -619,11 +634,13 @@ body.paw-contracts .contracts-action-row{
       if (fileInput) fileInput.value = "";
       isAutoReviewRunning = false;
       shouldReviewPendingAfterCurrent = false;
+      suppressNextUploadOnlyReply = false;
       updateUploadedFilesUi();
     }
 
     function fullResetTransactions() {
       showTransactionsPrimaryValidation = false;
+      showTransactionsPrimaryPrompt = false;
       setTransactionsPrimary("");
       resetUploadState();
       try {
@@ -690,6 +707,7 @@ body.paw-contracts .contracts-action-row{
           if (sessionId) {
             reviewPayload.session_id = sessionId;
           }
+          suppressNextUploadOnlyReply = !selectedTransactionsPrimary;
 
           var response = await shellApi.sendExtra("Start review", reviewPayload, {
             echoUser: false,
@@ -719,6 +737,10 @@ body.paw-contracts .contracts-action-row{
           fileInput.value = "";
         }
         if (addedCount) {
+          if (!selectedTransactionsPrimary) {
+            showTransactionsPrimaryPrompt = true;
+            updateTransactionsPrimaryValidationState();
+          }
           startReview();
         }
       });
@@ -755,6 +777,7 @@ body.paw-contracts .contracts-action-row{
             const missingGroups = getMissingTransactionsPrimaryGroups();
             if (!missingGroups.length) return null;
 
+            showTransactionsPrimaryPrompt = false;
             showTransactionsPrimaryValidation = true;
             updateTransactionsPrimaryValidationState();
             focusFirstMissingTransactionsPrimaryGroup();
@@ -776,10 +799,19 @@ body.paw-contracts .contracts-action-row{
               (data && data.session_id) ||
               (data && data.contract && data.contract.session_id) ||
               (data && data.session && data.session.id);
+            var shouldSuppressDefaultReply = suppressNextUploadOnlyReply;
+            suppressNextUploadOnlyReply = false;
             if (nextSessionId) {
               sessionId = String(nextSessionId);
             }
             updateUploadedFilesUi();
+            if (shouldSuppressDefaultReply) {
+              if (!selectedTransactionsPrimary) {
+                showTransactionsPrimaryPrompt = true;
+                updateTransactionsPrimaryValidationState();
+              }
+              return { skipDefault: true };
+            }
           }
         });
         if (getPendingFiles().length) {
