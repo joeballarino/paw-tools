@@ -3007,7 +3007,7 @@ function ensureWorksRoot(){
     if (rawToolId === "assistant") return "guide";
     if (rawToolId === "connect") return "connect";
     if (rawToolId === "presence") return "presence";
-    if (rawToolId === "transactions" || rawToolId === "transaction") return "transaction";
+    if (rawToolId === "transactions" || rawToolId === "transaction") return "transactions";
     if (rawToolId === "guide") return "guide";
     try{
       var path = String((window.location && window.location.pathname) || "").toLowerCase();
@@ -3015,7 +3015,7 @@ function ensureWorksRoot(){
       if (path.indexOf("guide.html") !== -1) return "guide";
       if (path.indexOf("connect.html") !== -1) return "connect";
       if (path.indexOf("presence.html") !== -1) return "presence";
-      if (path.indexOf("transactions.html") !== -1) return "transaction";
+      if (path.indexOf("transactions.html") !== -1) return "transactions";
     }catch(_){ }
     return rawToolId;
   }
@@ -3098,6 +3098,38 @@ function ensureWorksRoot(){
     }catch(_){
       return null;
     }
+  }
+
+  function _getTransactionsSaveContext(snapshot, originTool){
+    var normalizedOriginTool = String(originTool || "").trim().toLowerCase();
+    if (normalizedOriginTool !== "transactions" && normalizedOriginTool !== "transaction") return null;
+
+    var extraPayload = snapshot && snapshot.extraPayload && typeof snapshot.extraPayload === "object"
+      ? snapshot.extraPayload
+      : null;
+    if (!extraPayload) return null;
+
+    var sessionId = String(
+      extraPayload.session_id ||
+      extraPayload.contract_session_id ||
+      ""
+    ).trim();
+    var mode = String(
+      extraPayload.transactions_mode ||
+      extraPayload.transaction_mode ||
+      ""
+    ).trim().toLowerCase();
+    var allowedModes = {
+      form_help: true,
+      client_report: true,
+      write_terms: true,
+      negotiation: true
+    };
+
+    var context = {};
+    if (sessionId) context.session_id = sessionId;
+    if (allowedModes[mode]) context.transactions_mode = mode;
+    return _hasCreateData(context) ? context : null;
   }
 
   function _extractCreateSummary(state){
@@ -3207,7 +3239,7 @@ function ensureWorksRoot(){
     return _inferContentKindFromPage(originTool) || String(__worksCreateContext.contentKind || "").trim();
   }
 
-  function _buildCreatePayload(snapshot, activeWork, originTool, contentKind, summary){
+  function _buildCreatePayload(snapshot, activeWork, originTool, contentKind, summary, transactionsSaveContext){
     var payload = {};
     var activePayload = activeWork && activeWork.payload && typeof activeWork.payload === "object"
       ? _cloneCreateData(activeWork.payload)
@@ -3271,6 +3303,20 @@ function ensureWorksRoot(){
         input: hasShellInput ? String(shellState.input || "") : ""
       };
     }
+    if (transactionsSaveContext){
+      var transactionsState = toolState.transactions && typeof toolState.transactions === "object"
+        ? Object.assign({}, toolState.transactions)
+        : {};
+      if (transactionsSaveContext.session_id) {
+        toolState.session_id = String(transactionsSaveContext.session_id || "");
+        transactionsState.session_id = String(transactionsSaveContext.session_id || "");
+      }
+      if (transactionsSaveContext.transactions_mode) {
+        toolState.transactions_mode = String(transactionsSaveContext.transactions_mode || "");
+        transactionsState.mode = String(transactionsSaveContext.transactions_mode || "");
+      }
+      if (_hasCreateData(transactionsState)) toolState.transactions = transactionsState;
+    }
     if (prefs && _hasCreateData(prefs)) toolState.prefs = prefs;
     if (_hasCreateData(toolState)) payload.tool_state = toolState;
 
@@ -3295,7 +3341,11 @@ function ensureWorksRoot(){
     var resolvedBucket = String(bucket || "").trim() || _resolveCreateWorkBucket(snapshot);
     var normalizedBucket = _normalizeCreateBucket(resolvedBucket) || "brand_assets";
     var originTool = _resolveCreateOriginTool(snapshot);
+    var transactionsSaveContext = _getTransactionsSaveContext(snapshot, originTool);
     var contentKind = _inferContentKindFromSaveSnapshot(snapshot, originTool);
+    if (transactionsSaveContext && transactionsSaveContext.transactions_mode) {
+      contentKind = String(transactionsSaveContext.transactions_mode || "");
+    }
     var primaryEntityType = _resolveCreatePrimaryEntityType(snapshot, normalizedBucket, originTool);
     var summary = _resolveCreateSummary(snapshot, activeWork);
     try{
@@ -3312,13 +3362,17 @@ function ensureWorksRoot(){
     var body = {
       bucket: normalizedBucket,
       label: String(label || ""),
-      payload: _buildCreatePayload(snapshot, activeWork, originTool, contentKind, summary)
+      payload: _buildCreatePayload(snapshot, activeWork, originTool, contentKind, summary, transactionsSaveContext)
     };
 
     if (originTool) body.origin_tool = originTool;
     if (contentKind) body.content_kind = contentKind;
     if (primaryEntityType) body.primary_entity_type = primaryEntityType;
     if (summary) body.summary = summary;
+    if (transactionsSaveContext){
+      if (transactionsSaveContext.session_id) body.session_id = String(transactionsSaveContext.session_id || "");
+      if (transactionsSaveContext.transactions_mode) body.transactions_mode = String(transactionsSaveContext.transactions_mode || "");
+    }
 
     return body;
   }
@@ -3666,6 +3720,7 @@ function ensureWorksRoot(){
           '<div class="modal-body">' +
             '<label class="paw-workname-label" for="pawWorkNameInput">Work name</label>' +
             '<input id="pawWorkNameInput" class="paw-workname-input" type="text" placeholder="e.g., Spring listing prep" />' +
+            '<div id="pawWorkNameNote" style="margin-top:10px; font-size:13px; line-height:1.45; color:rgba(15,23,42,.66);">Nothing is saved automatically. This work is saved only when you click Save.</div>' +
             '<div id="pawWorkNameError" class="paw-workname-error" aria-live="polite"></div>' +
             '<div class="paw-workname-actions">' +
               '<button class="btn" id="pawWorkNameCancel" type="button">Cancel</button>' +
@@ -3707,11 +3762,20 @@ function ensureWorksRoot(){
       var m = ensureWorkNameModal();
       if (!m) return;
       var input = document.getElementById("pawWorkNameInput");
+      var note = document.getElementById("pawWorkNameNote");
       var err = document.getElementById("pawWorkNameError");
       var saveBtn = document.getElementById("pawWorkNameSave");
+      var snapshot = _getCurrentSaveSnapshot();
+      var originTool = _resolveCreateOriginTool(snapshot);
+      var transactionsSaveContext = _getTransactionsSaveContext(snapshot, originTool);
 
       if (err) err.textContent = "";
       if (input) input.value = String(initialName || "");
+      if (note) {
+        note.textContent = transactionsSaveContext && transactionsSaveContext.session_id
+          ? "Nothing is saved automatically. If this Transactions work includes uploaded documents, those attachments are saved only when you click Save."
+          : "Nothing is saved automatically. This work is saved only when you click Save.";
+      }
 
       function submit(){
         var v = input ? String(input.value || "").trim() : "";
