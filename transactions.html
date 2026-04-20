@@ -165,6 +165,61 @@
       border-radius:999px;
       background:rgba(240,249,255,.9);
     }
+    body.paw-contracts .transactions-attached-summary{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin:0 14px 12px;
+      padding:12px 14px;
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:14px;
+      background:rgba(248,250,252,.92);
+    }
+    body.paw-contracts .transactions-attached-summary[hidden]{
+      display:none !important;
+    }
+    body.paw-contracts .transactions-attached-summary__top{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+    }
+    body.paw-contracts .transactions-attached-summary__type{
+      display:inline-flex;
+      align-items:center;
+      min-height:20px;
+      padding:0 8px;
+      border-radius:999px;
+      background:rgba(5,195,249,.12);
+      color:rgba(15,23,42,.76);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+    body.paw-contracts .transactions-attached-summary__kicker{
+      min-width:0;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:rgba(15,23,42,.52);
+    }
+    body.paw-contracts .transactions-attached-summary__title{
+      font-size:13px;
+      font-weight:800;
+      line-height:1.25;
+      color:rgba(15,23,42,.92);
+    }
+    body.paw-contracts .transactions-attached-summary__copy{
+      font-size:12px;
+      line-height:1.35;
+      color:rgba(15,23,42,.66);
+    }
+    body.paw-contracts .transactions-attached-summary__copy[hidden]{
+      display:none !important;
+    }
 
     /* Button treatment scoped to Transactions only */
     body.paw-contracts .stage-seg,
@@ -441,6 +496,15 @@ body.paw-contracts .contracts-action-row{
 
           </div>
 
+        <div id="transactionsAttachedSummary" class="transactions-attached-summary" aria-live="polite" hidden>
+          <div class="transactions-attached-summary__top">
+            <span id="transactionsAttachedType" class="transactions-attached-summary__type" hidden></span>
+            <span class="transactions-attached-summary__kicker">Attached data in use</span>
+          </div>
+          <div id="transactionsAttachedTitle" class="transactions-attached-summary__title"></div>
+          <div id="transactionsAttachedCopy" class="transactions-attached-summary__copy" hidden></div>
+        </div>
+
         <div id="messages" class="messages" aria-live="polite"></div>
 
         <div class="composer">
@@ -588,6 +652,81 @@ body.paw-contracts .contracts-action-row{
           uploadedFilesList.appendChild(item);
         });
       }
+    }
+
+    function normalizeTransactionsAttachedWorkText(value) {
+      return String(value || "").replace(/\s+/g, " ").trim();
+    }
+
+    function humanizeTransactionsAttachedWorkBucket(value) {
+      var raw = String(value || "").trim().toLowerCase();
+      if (!raw) return "";
+      if (raw === "brand") return "Brand";
+      if (raw === "brand_assets") return "Brand Assets";
+      if (raw === "listings" || raw === "listing") return "Listing";
+      if (raw === "transactions" || raw === "transaction" || raw === "deals" || raw === "deal") return "Transaction";
+      return raw.replace(/[_-]+/g, " ").replace(/\b\w/g, function (m) { return m.toUpperCase(); });
+    }
+
+    function getTransactionsActiveWork() {
+      try {
+        return (window.__PAWWorks && window.__PAWWorks.getActiveWork)
+          ? window.__PAWWorks.getActiveWork()
+          : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function getTransactionsAttachedWorkCopy(activeWork) {
+      var aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+      var summary = normalizeTransactionsAttachedWorkText(aw.summary);
+      if (summary) return summary;
+      var preview = normalizeTransactionsAttachedWorkText(aw.preview);
+      if (preview) return preview;
+      var subtitle = normalizeTransactionsAttachedWorkText(aw.subtitle);
+      if (subtitle) return subtitle;
+      var payload = aw.payload && typeof aw.payload === "object" ? aw.payload : {};
+      var pdsSummary = "";
+      try { pdsSummary = normalizeTransactionsAttachedWorkText((((payload.pds || {}).narrative || {}).summary)); } catch (_) {}
+      if (pdsSummary) return pdsSummary;
+      var portable = payload.portable && typeof payload.portable === "object" ? payload.portable : {};
+      return normalizeTransactionsAttachedWorkText(portable.summary || portable.intent_text);
+    }
+
+    function renderTransactionsAttachedWorkSummary(activeWork) {
+      var root = document.getElementById("transactionsAttachedSummary");
+      var typeEl = document.getElementById("transactionsAttachedType");
+      var titleEl = document.getElementById("transactionsAttachedTitle");
+      var copyEl = document.getElementById("transactionsAttachedCopy");
+      if (!root || !typeEl || !titleEl || !copyEl) return;
+
+      var aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+      var label = aw ? normalizeTransactionsAttachedWorkText(aw.label || aw.name) : "";
+
+      if (!aw || !label) {
+        root.hidden = true;
+        typeEl.hidden = true;
+        typeEl.textContent = "";
+        titleEl.textContent = "";
+        copyEl.hidden = true;
+        copyEl.textContent = "";
+        return;
+      }
+
+      var typeLabel = humanizeTransactionsAttachedWorkBucket(aw.bucket);
+      var copyText = getTransactionsAttachedWorkCopy(aw);
+
+      root.hidden = false;
+      typeEl.hidden = !typeLabel;
+      typeEl.textContent = typeLabel;
+      titleEl.textContent = label;
+      copyEl.hidden = !copyText;
+      copyEl.textContent = copyText;
+    }
+
+    function syncTransactionsAttachedWorkSummary() {
+      renderTransactionsAttachedWorkSummary(getTransactionsActiveWork());
     }
 
     function addSelectedFiles(fileList) {
@@ -819,6 +958,12 @@ body.paw-contracts .contracts-action-row{
         }
       }
     } catch (_) {}
+
+    window.addEventListener("paw:works:active_changed", function () {
+      syncTransactionsAttachedWorkSummary();
+    });
+
+    syncTransactionsAttachedWorkSummary();
 
     setTransactionsPrimary(selectedTransactionsPrimary);
     updateUploadedFilesUi();

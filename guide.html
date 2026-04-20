@@ -80,6 +80,61 @@
   .guide-listing-context.is-visible {
     display: block;
   }
+  .guide-attached-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0 14px 12px;
+    padding: 12px 14px;
+    border: 1px solid rgba(15,23,42,.10);
+    border-radius: 14px;
+    background: rgba(248,250,252,.92);
+  }
+  .guide-attached-summary[hidden] {
+    display: none !important;
+  }
+  .guide-attached-summary__top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .guide-attached-summary__type {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: rgba(5,195,249,.12);
+    color: rgba(15,23,42,.76);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .guide-attached-summary__kicker {
+    min-width: 0;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: rgba(15,23,42,.52);
+  }
+  .guide-attached-summary__title {
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.25;
+    color: rgba(15,23,42,.92);
+  }
+  .guide-attached-summary__copy {
+    font-size: 12px;
+    line-height: 1.35;
+    color: rgba(15,23,42,.66);
+  }
+  .guide-attached-summary__copy[hidden] {
+    display: none !important;
+  }
   @media (max-width: 560px) {
     .guide-mode-row {
       align-items: stretch;
@@ -123,6 +178,14 @@
 <button aria-pressed="false" class="btn guide-mode-btn" data-mode="coach" type="button">Coach</button>
 <button aria-pressed="false" class="btn guide-mode-btn" data-mode="tech_support" type="button">Tech Support</button>
 <button aria-pressed="false" class="btn guide-mode-btn" data-mode="general" type="button">General</button>
+</div>
+<div aria-live="polite" class="guide-attached-summary" id="guideAttachedSummary" hidden>
+<div class="guide-attached-summary__top">
+<span class="guide-attached-summary__type" id="guideAttachedType" hidden></span>
+<span class="guide-attached-summary__kicker">Attached data in use</span>
+</div>
+<div class="guide-attached-summary__title" id="guideAttachedTitle"></div>
+<div class="guide-attached-summary__copy" id="guideAttachedCopy" hidden></div>
 </div>
 <div aria-live="polite" class="guide-listing-context" id="guideListingContext"></div>
 <div class="messages" id="messages"></div>
@@ -222,6 +285,80 @@ Examples
       function clearActiveListingContext(){
         __activeListingContext = null;
         updateGuideListingIndicator();
+      }
+
+      function normalizeGuideAttachedWorkText(value) {
+        return String(value || "").replace(/\s+/g, " ").trim();
+      }
+
+      function humanizeGuideAttachedWorkBucket(value) {
+        const raw = String(value || "").trim().toLowerCase();
+        if (!raw) return "";
+        if (raw === "brand") return "Brand";
+        if (raw === "brand_assets") return "Brand Assets";
+        if (raw === "listings" || raw === "listing") return "Listing";
+        if (raw === "transactions" || raw === "transaction" || raw === "deals" || raw === "deal") return "Transaction";
+        return raw.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+      }
+
+      function getGuideActiveWork() {
+        try {
+          return (window.__PAWWorks && window.__PAWWorks.getActiveWork)
+            ? window.__PAWWorks.getActiveWork()
+            : null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function getGuideAttachedWorkCopy(activeWork) {
+        const aw = activeWork && typeof activeWork === "object" ? activeWork : {};
+        const summary = normalizeGuideAttachedWorkText(aw.summary);
+        if (summary) return summary;
+        const preview = normalizeGuideAttachedWorkText(aw.preview);
+        if (preview) return preview;
+        const subtitle = normalizeGuideAttachedWorkText(aw.subtitle);
+        if (subtitle) return subtitle;
+        const payload = aw.payload && typeof aw.payload === "object" ? aw.payload : {};
+        const pdsSummary = normalizeGuideAttachedWorkText((((payload.pds || {}).narrative || {}).summary));
+        if (pdsSummary) return pdsSummary;
+        const portable = payload.portable && typeof payload.portable === "object" ? payload.portable : {};
+        return normalizeGuideAttachedWorkText(portable.summary || portable.intent_text);
+      }
+
+      function renderGuideAttachedWorkSummary(activeWork) {
+        const root = document.getElementById("guideAttachedSummary");
+        const typeEl = document.getElementById("guideAttachedType");
+        const titleEl = document.getElementById("guideAttachedTitle");
+        const copyEl = document.getElementById("guideAttachedCopy");
+        if (!root || !typeEl || !titleEl || !copyEl) return;
+
+        const aw = activeWork && typeof activeWork === "object" ? activeWork : null;
+        const label = aw ? normalizeGuideAttachedWorkText(aw.label || aw.name) : "";
+
+        if (!aw || !label) {
+          root.hidden = true;
+          typeEl.hidden = true;
+          typeEl.textContent = "";
+          titleEl.textContent = "";
+          copyEl.hidden = true;
+          copyEl.textContent = "";
+          return;
+        }
+
+        const typeLabel = humanizeGuideAttachedWorkBucket(aw.bucket);
+        const copyText = getGuideAttachedWorkCopy(aw);
+
+        root.hidden = false;
+        typeEl.hidden = !typeLabel;
+        typeEl.textContent = typeLabel;
+        titleEl.textContent = label;
+        copyEl.hidden = !copyText;
+        copyEl.textContent = copyText;
+      }
+
+      function syncGuideAttachedWorkSummary() {
+        renderGuideAttachedWorkSummary(getGuideActiveWork());
       }
 
       function updateGuideListingIndicator(){
@@ -540,8 +677,11 @@ Examples
       // reimplement Work button behavior or Works mode open/close locally.
       window.addEventListener("paw:works:active_changed", async (e) => {
         const aw = e && e.detail ? e.detail.active_work : null;
+        renderGuideAttachedWorkSummary(aw);
         await loadGuideListingContext(aw);
       });
+
+      syncGuideAttachedWorkSummary();
 
       try {
         const initialActiveWork = (window.__PAWWorks && window.__PAWWorks.getActiveWork)
