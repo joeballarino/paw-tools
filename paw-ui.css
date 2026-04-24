@@ -2135,7 +2135,8 @@ html[data-embed="1"] body.connect-tool .composer,
 html[data-embed="1"] body.paw-presence .composer,
 html[data-embed="1"] body.paw-contracts .composer,
 html[data-embed="1"] body.paw-listing .composer{
-  border-top-color:transparent;
+  border-top:none;
+  background:transparent;
 }
 html[data-embed="1"] body.paw-ask .guide-mode-row .guide-mode-btn{
   border-color:rgba(148,163,184,.22);
