@@ -1832,22 +1832,22 @@ html.paw-compact .paw-work-status{
    ========================================================== */
 html[data-embed="1"] .panel-topbar{
   background:
-    radial-gradient(980px 240px at 12% 0%, rgba(var(--accent-rgb),.075), rgba(255,255,255,0) 58%),
-    linear-gradient(180deg, rgba(255,252,248,.98) 0%, rgba(255,255,255,.95) 52%, rgba(249,250,251,.92) 100%);
-  border-bottom:1px solid rgba(15,23,42,.06);
+    radial-gradient(980px 220px at 12% 0%, rgba(var(--accent-rgb),.045), rgba(255,255,255,0) 54%),
+    linear-gradient(180deg, rgba(255,255,255,.985) 0%, rgba(252,253,255,.965) 100%);
+  border-bottom:1px solid rgba(15,23,42,.04);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.86),
-    0 10px 26px rgba(15,23,42,.04);
+    inset 0 1px 0 rgba(255,255,255,.94),
+    0 4px 12px rgba(15,23,42,.025);
 }
 html[data-embed="1"] .topbar-row0{
-  padding:14px 16px 10px;
-  gap:14px;
-}
-html[data-embed="1"] .tool-head{
+  padding:13px 16px 8px;
   gap:12px;
 }
-html[data-embed="1"] .topbar-right{
+html[data-embed="1"] .tool-head{
   gap:10px;
+}
+html[data-embed="1"] .topbar-right{
+  gap:8px;
 }
 
 html[data-embed="1"] .utility-pair.paw-seg,
@@ -1974,7 +1974,7 @@ html[data-embed="1"] .paw-works-btn:not(.is-active)[aria-expanded="false"] + .pa
 }
 
 html[data-embed="1"] .messages{
-  padding:16px 16px 10px;
+  padding:14px 16px 4px;
   gap:12px;
 }
 html[data-embed="1"] .msg{
@@ -1994,34 +1994,33 @@ html[data-embed="1"] .msg.user .bubble{
 }
 
 html[data-embed="1"] .composer{
-  padding:14px 16px 28px;
+  padding:8px 16px 24px;
   gap:12px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.90), rgba(255,249,244,.88) 56%, rgba(255,255,255,.96) 100%);
-  border-top:1px solid rgba(148,163,184,.14);
+  background:rgba(255,255,255,.96);
+  border-top:1px solid rgba(148,163,184,.06);
 }
 html[data-embed="1"] .composer-main{
-  gap:9px;
+  gap:7px;
 }
 html[data-embed="1"] .composer-help{
-  color:rgba(71,85,105,.72);
+  color:rgba(71,85,105,.68);
   font-weight:700;
   letter-spacing:.01em;
 }
 html[data-embed="1"] .composer textarea{
   border-color:rgba(148,163,184,.22);
-  background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,251,247,.96));
+  background:rgba(255,255,255,.99);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.88),
-    0 8px 22px rgba(15,23,42,.04);
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 2px 8px rgba(15,23,42,.025);
   color:rgba(15,23,42,.92);
 }
 html[data-embed="1"] .composer textarea:focus{
-  border-color:rgba(var(--accent-rgb),.42);
+  border-color:rgba(59,130,246,.34);
   background:#fff;
   box-shadow:
-    0 0 0 4px rgba(var(--accent-rgb),.10),
-    0 10px 24px rgba(15,23,42,.05);
+    0 0 0 3px rgba(59,130,246,.09),
+    0 3px 10px rgba(15,23,42,.03);
 }
 html[data-embed="1"] .composer textarea::placeholder{
   color:rgba(100,116,139,.62);
@@ -2031,16 +2030,16 @@ html[data-embed="1"] .send{
   width:58px;
   height:58px;
   border:1px solid rgba(255,255,255,.34);
-  background:linear-gradient(145deg, rgba(56,189,248,1) 0%, rgba(37,99,235,1) 58%, rgba(30,64,175,1) 100%);
+  background:linear-gradient(145deg, rgba(59,130,246,1) 0%, rgba(37,99,235,1) 54%, rgba(30,64,175,1) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.26),
-    0 14px 30px rgba(37,99,235,.26);
+    0 12px 24px rgba(37,99,235,.28);
 }
 html[data-embed="1"] .send:hover{
-  background:linear-gradient(145deg, rgba(103,232,249,1) 0%, rgba(59,130,246,1) 58%, rgba(30,64,175,1) 100%);
+  background:linear-gradient(145deg, rgba(96,165,250,1) 0%, rgba(37,99,235,1) 54%, rgba(30,64,175,1) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.30),
-    0 16px 34px rgba(37,99,235,.30);
+    0 14px 28px rgba(37,99,235,.32);
 }
 html[data-embed="1"] .send:active{
   box-shadow:
@@ -2052,6 +2051,29 @@ html[data-embed="1"] .send-icon{
   height:30px;
 }
 
+html[data-embed="1"] body.paw-ask .guide-mode-row{
+  padding-top:8px;
+  padding-bottom:10px;
+  gap:8px;
+}
+html[data-embed="1"] body.paw-ask .guide-mode-row .guide-mode-btn{
+  border-color:rgba(148,163,184,.22);
+  background:rgba(255,255,255,.90);
+  color:rgba(30,41,59,.78);
+  box-shadow:none;
+}
+html[data-embed="1"] body.paw-ask .guide-mode-row .guide-mode-btn:hover{
+  background:rgba(248,250,252,.96);
+  border-color:rgba(148,163,184,.28);
+  color:rgba(15,23,42,.90);
+}
+html[data-embed="1"] body.paw-ask .guide-mode-row .guide-mode-btn.primary{
+  background:rgba(239,246,255,.98);
+  color:rgba(30,64,175,.98);
+  border-color:rgba(96,165,250,.46);
+  box-shadow:inset 0 0 0 1px rgba(59,130,246,.10);
+}
+
 html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="false"] + .paw-work-status{
   display:flex;
   justify-content:center;
@@ -2059,7 +2081,7 @@ html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="f
 
 @media (max-width: 560px){
   html[data-embed="1"] .topbar-row0{
-    padding:14px 14px 10px;
+    padding:13px 14px 8px;
   }
   html[data-embed="1"] .topbar-right{
     gap:8px;
@@ -2068,10 +2090,10 @@ html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="f
     margin-right:0;
   }
   html[data-embed="1"] .messages{
-    padding:14px 14px 8px;
+    padding:12px 14px 4px;
   }
   html[data-embed="1"] .composer{
-    padding:14px 14px 24px;
+    padding:8px 14px 22px;
   }
   html[data-embed="1"] .tool-head .paw-work-status,
   html[data-embed="1"].paw-compact .paw-work-status{
