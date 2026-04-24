@@ -63,6 +63,96 @@ html[data-embed="1"] body{ background:transparent; }
 html[data-embed="1"] .app{ padding:0; background:transparent; }
 html[data-embed="1"] .frame{ max-width:none; background:transparent; }
 html[data-embed="1"] .panel{ border-radius:0; border:none; box-shadow:none; background:transparent; }
+html[data-embed="1"] .panel-topbar{
+  background:rgba(255,255,255,.96);
+  border-bottom:1px solid rgba(15,23,42,.06);
+}
+html[data-embed="1"] .topbar-row0{
+  gap:10px;
+  padding:10px 14px 9px;
+}
+html[data-embed="1"] .tool-head{
+  align-items:center;
+  gap:8px;
+}
+html[data-embed="1"] .topbar-right{
+  align-items:center;
+  gap:8px;
+}
+html[data-embed="1"] .paw-mystuff-btn{
+  background:rgba(255,255,255,.80);
+  border-color:rgba(15,23,42,.08);
+  box-shadow:none;
+}
+html[data-embed="1"] .paw-mystuff-btn:hover{
+  background:rgba(15,23,42,.04);
+}
+html[data-embed="1"] #pawMyStuffBtn.paw-mystuff-btn.paw-works-btn,
+html[data-embed="1"] .paw-works-btn{
+  background:rgba(var(--accent-rgb),.84);
+  border-color:rgba(var(--accent-rgb),.28);
+  box-shadow:none;
+}
+html[data-embed="1"] .paw-works-btn:hover{
+  background:rgba(var(--accent-rgb),.90);
+  border-color:rgba(var(--accent-rgb),.34);
+}
+html[data-embed="1"] .paw-works-btn.is-active{
+  background:rgba(var(--accent-rgb),.94);
+  border-color:rgba(var(--accent-rgb),.40);
+}
+html[data-embed="1"] .paw-works-btn .works-paw{
+  opacity:.96;
+}
+html[data-embed="1"] .paw-works-btn .works-label{
+  letter-spacing:0;
+}
+html[data-embed="1"] .paw-works-btn .works-chevron{
+  margin-left:6px;
+  opacity:.92;
+}
+html[data-embed="1"] .paw-seg,
+html[data-embed="1"] .topbar-right.paw-seg{
+  border-color:rgba(15,23,42,.08);
+  background:rgba(255,255,255,.82);
+  box-shadow:none;
+}
+html[data-embed="1"] .paw-seg__btn,
+html[data-embed="1"] .util-btn{
+  color:rgba(15,23,42,.80);
+}
+html[data-embed="1"] .paw-seg__btn:hover,
+html[data-embed="1"] .util-btn:hover{
+  background:rgba(15,23,42,.04);
+}
+html[data-embed="1"] .paw-seg__btn + .paw-seg__btn,
+html[data-embed="1"] .util-btn + .util-btn{
+  border-left-color:rgba(15,23,42,.06);
+}
+html[data-embed="1"] .paw-plan-usage-pill{
+  border-color:rgba(15,23,42,.08);
+  background:rgba(255,255,255,.82);
+  box-shadow:none;
+  color:rgba(15,23,42,.66);
+}
+html[data-embed="1"] .messages{
+  padding-top:12px;
+  padding-bottom:12px;
+}
+html[data-embed="1"] .composer{
+  padding-top:12px;
+  background:transparent;
+}
+html[data-embed="1"] .composer-main{
+  gap:6px;
+}
+html[data-embed="1"] .composer-help{
+  color:rgba(15,23,42,.60);
+}
+html[data-embed="1"] .composer textarea{
+  border-color:rgba(15,23,42,.10);
+  background:rgba(255,255,255,.96);
+}
 
 .panel-topbar{
   /* Shared PAW tool header background.
