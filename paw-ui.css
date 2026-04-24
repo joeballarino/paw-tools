@@ -1860,12 +1860,21 @@ html[data-embed="1"] .topbar-row0{
   padding:11px 16px 9px;
   gap:12px;
 }
+html[data-embed="1"] body.connect-tool .panel-topbar::after,
+html[data-embed="1"] body.paw-presence .panel-topbar::after,
+html[data-embed="1"] body.paw-contracts .panel-topbar::after,
 html[data-embed="1"] body.paw-listing .panel-topbar::after{
   content:none;
 }
+html[data-embed="1"] body.connect-tool .topbar-row0,
+html[data-embed="1"] body.paw-presence .topbar-row0,
+html[data-embed="1"] body.paw-contracts .topbar-row0,
 html[data-embed="1"] body.paw-listing .topbar-row0{
   position:relative;
 }
+html[data-embed="1"] body.connect-tool .topbar-row0::after,
+html[data-embed="1"] body.paw-presence .topbar-row0::after,
+html[data-embed="1"] body.paw-contracts .topbar-row0::after,
 html[data-embed="1"] body.paw-listing .topbar-row0::after{
   content:"";
   position:absolute;
@@ -2188,6 +2197,9 @@ html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="f
     left:14px;
     right:14px;
   }
+  html[data-embed="1"] body.connect-tool .topbar-row0::after,
+  html[data-embed="1"] body.paw-presence .topbar-row0::after,
+  html[data-embed="1"] body.paw-contracts .topbar-row0::after,
   html[data-embed="1"] body.paw-listing .topbar-row0::after{
     left:14px;
     right:14px;
