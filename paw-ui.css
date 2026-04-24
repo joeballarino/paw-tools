@@ -1820,3 +1820,265 @@ html.paw-compact .paw-work-status{
     justify-content:flex-start;
   }
 }
+
+/* ==========================================================
+   PAW - Embed Tool Polish (Phase 1)
+   ----------------------------------------------------------
+   Scope:
+   - Embed-only visual refresh for Circle iframe tool pages.
+   - CSS-only. No DOM, behavior, or shell contract changes.
+   - Keep the shared selectors intact; only soften and modernize
+     the embedded presentation.
+   ========================================================== */
+html[data-embed="1"] .panel-topbar{
+  background:
+    radial-gradient(980px 240px at 12% 0%, rgba(var(--accent-rgb),.075), rgba(255,255,255,0) 58%),
+    linear-gradient(180deg, rgba(255,252,248,.98) 0%, rgba(255,255,255,.95) 52%, rgba(249,250,251,.92) 100%);
+  border-bottom:1px solid rgba(15,23,42,.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.86),
+    0 10px 26px rgba(15,23,42,.04);
+}
+html[data-embed="1"] .topbar-row0{
+  padding:14px 16px 10px;
+  gap:14px;
+}
+html[data-embed="1"] .tool-head{
+  gap:12px;
+}
+html[data-embed="1"] .topbar-right{
+  gap:10px;
+}
+
+html[data-embed="1"] .utility-pair.paw-seg,
+html[data-embed="1"] .topbar-right.paw-seg{
+  border-color:rgba(148,163,184,.22);
+  background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(248,250,252,.88));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 6px 16px rgba(15,23,42,.05);
+}
+html[data-embed="1"] .paw-seg__btn,
+html[data-embed="1"] .util-btn{
+  color:rgba(15,23,42,.78);
+  font-weight:750;
+  transition:
+    background .18s ease,
+    color .18s ease,
+    box-shadow .18s ease,
+    transform .18s ease;
+}
+html[data-embed="1"] .paw-seg__btn:hover,
+html[data-embed="1"] .util-btn:hover{
+  background:rgba(255,255,255,.72);
+  color:rgba(15,23,42,.92);
+}
+html[data-embed="1"] .paw-seg__btn:focus-visible,
+html[data-embed="1"] .util-btn:focus-visible{
+  outline:none;
+  box-shadow:inset 0 0 0 2px rgba(var(--accent-rgb),.16);
+}
+html[data-embed="1"] .paw-seg__btn + .paw-seg__btn,
+html[data-embed="1"] .util-btn + .util-btn{
+  border-left-color:rgba(148,163,184,.18);
+}
+
+html[data-embed="1"] .paw-plan-usage-slot{
+  margin-right:12px;
+}
+html[data-embed="1"] .paw-plan-usage-pill{
+  min-height:36px;
+  padding:0 13px;
+  border-color:rgba(148,163,184,.22);
+  background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(248,250,252,.90));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 6px 16px rgba(15,23,42,.05);
+  color:rgba(30,41,59,.70);
+  font-weight:800;
+  letter-spacing:.015em;
+}
+html[data-embed="1"] .paw-plan-usage-pill.is-warning{
+  border-color:rgba(217,119,6,.20);
+  background:linear-gradient(180deg, rgba(255,251,235,.98), rgba(254,243,199,.78));
+  color:rgba(146,64,14,.92);
+}
+html[data-embed="1"] .paw-plan-usage-pill.is-high,
+html[data-embed="1"] .paw-plan-usage-pill.is-over-limit{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.86),
+    0 6px 16px rgba(127,29,29,.06);
+}
+
+html[data-embed="1"] .paw-works-btn{
+  min-height:38px;
+  padding-left:14px;
+  padding-right:14px;
+  border-color:rgba(29,78,216,.42);
+  background:
+    linear-gradient(135deg, rgba(14,165,233,.98) 0%, rgba(37,99,235,.98) 48%, rgba(30,64,175,.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.20),
+    0 10px 22px rgba(37,99,235,.22);
+}
+html[data-embed="1"] .paw-works-btn:hover{
+  background:
+    linear-gradient(135deg, rgba(56,189,248,.98) 0%, rgba(37,99,235,1) 48%, rgba(30,64,175,1) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.24),
+    0 12px 28px rgba(37,99,235,.26);
+}
+html[data-embed="1"] .paw-works-btn.is-active{
+  border-color:rgba(30,64,175,.52);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.24),
+    0 14px 30px rgba(30,64,175,.28);
+}
+html[data-embed="1"] .paw-works-btn:focus-visible{
+  outline:none;
+  box-shadow:
+    0 0 0 4px rgba(59,130,246,.18),
+    0 12px 28px rgba(37,99,235,.26);
+}
+html[data-embed="1"] .paw-works-btn .works-paw{
+  width:19px;
+  height:19px;
+}
+html[data-embed="1"] .paw-works-btn .works-label{
+  font-weight:800;
+  letter-spacing:.01em;
+}
+html[data-embed="1"] .paw-works-btn .works-chevron{
+  margin-left:10px;
+}
+
+html[data-embed="1"] .paw-work-status{
+  margin-left:10px;
+  color:rgba(30,41,59,.64);
+  font-weight:800;
+  letter-spacing:.01em;
+}
+html[data-embed="1"] .paw-works-btn:not(.is-active)[aria-expanded="false"] + .paw-work-status{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+html[data-embed="1"] .paw-works-btn:not(.is-active)[aria-expanded="false"] + .paw-work-status::before{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:linear-gradient(180deg, rgba(74,222,128,1), rgba(22,163,74,1));
+  box-shadow:0 0 0 3px rgba(34,197,94,.14);
+  flex:0 0 auto;
+}
+
+html[data-embed="1"] .messages{
+  padding:16px 16px 10px;
+  gap:12px;
+}
+html[data-embed="1"] .msg{
+  gap:12px;
+}
+html[data-embed="1"] .msg .bubble{
+  border-color:rgba(148,163,184,.20);
+  border-radius:18px;
+  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(251,252,253,.90));
+  box-shadow:0 10px 24px rgba(15,23,42,.045);
+  color:rgba(15,23,42,.88);
+}
+html[data-embed="1"] .msg.user .bubble{
+  border-color:rgba(var(--accent-rgb),.18);
+  background:linear-gradient(180deg, rgba(239,246,255,.96), rgba(224,242,254,.78));
+  box-shadow:0 10px 24px rgba(var(--accent-rgb),.08);
+}
+
+html[data-embed="1"] .composer{
+  padding:14px 16px 28px;
+  gap:12px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.90), rgba(255,249,244,.88) 56%, rgba(255,255,255,.96) 100%);
+  border-top:1px solid rgba(148,163,184,.14);
+}
+html[data-embed="1"] .composer-main{
+  gap:9px;
+}
+html[data-embed="1"] .composer-help{
+  color:rgba(71,85,105,.72);
+  font-weight:700;
+  letter-spacing:.01em;
+}
+html[data-embed="1"] .composer textarea{
+  border-color:rgba(148,163,184,.22);
+  background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,251,247,.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.88),
+    0 8px 22px rgba(15,23,42,.04);
+  color:rgba(15,23,42,.92);
+}
+html[data-embed="1"] .composer textarea:focus{
+  border-color:rgba(var(--accent-rgb),.42);
+  background:#fff;
+  box-shadow:
+    0 0 0 4px rgba(var(--accent-rgb),.10),
+    0 10px 24px rgba(15,23,42,.05);
+}
+html[data-embed="1"] .composer textarea::placeholder{
+  color:rgba(100,116,139,.62);
+}
+
+html[data-embed="1"] .send{
+  width:58px;
+  height:58px;
+  border:1px solid rgba(255,255,255,.34);
+  background:linear-gradient(145deg, rgba(56,189,248,1) 0%, rgba(37,99,235,1) 58%, rgba(30,64,175,1) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.26),
+    0 14px 30px rgba(37,99,235,.26);
+}
+html[data-embed="1"] .send:hover{
+  background:linear-gradient(145deg, rgba(103,232,249,1) 0%, rgba(59,130,246,1) 58%, rgba(30,64,175,1) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.30),
+    0 16px 34px rgba(37,99,235,.30);
+}
+html[data-embed="1"] .send:active{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    0 8px 18px rgba(37,99,235,.24);
+}
+html[data-embed="1"] .send-icon{
+  width:30px;
+  height:30px;
+}
+
+html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="false"] + .paw-work-status{
+  display:flex;
+  justify-content:center;
+}
+
+@media (max-width: 560px){
+  html[data-embed="1"] .topbar-row0{
+    padding:14px 14px 10px;
+  }
+  html[data-embed="1"] .topbar-right{
+    gap:8px;
+  }
+  html[data-embed="1"] .paw-plan-usage-slot{
+    margin-right:0;
+  }
+  html[data-embed="1"] .messages{
+    padding:14px 14px 8px;
+  }
+  html[data-embed="1"] .composer{
+    padding:14px 14px 24px;
+  }
+  html[data-embed="1"] .tool-head .paw-work-status,
+  html[data-embed="1"].paw-compact .paw-work-status{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    margin-left:0 !important;
+  }
+}
