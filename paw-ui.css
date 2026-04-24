@@ -2127,6 +2127,15 @@ html[data-embed="1"] body.paw-presence .presence-controls,
 html[data-embed="1"] body.paw-contracts .contracts-controls,
 html[data-embed="1"] body.paw-listing .controls-row{
   padding-top:10px;
+  border-top:none;
+  border-bottom:none;
+  box-shadow:none;
+}
+html[data-embed="1"] body.connect-tool .composer,
+html[data-embed="1"] body.paw-presence .composer,
+html[data-embed="1"] body.paw-contracts .composer,
+html[data-embed="1"] body.paw-listing .composer{
+  border-top-color:transparent;
 }
 html[data-embed="1"] body.paw-ask .guide-mode-row .guide-mode-btn{
   border-color:rgba(148,163,184,.22);
