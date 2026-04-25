@@ -1906,8 +1906,11 @@ html[data-embed="1"] .topbar-right.paw-seg{
   box-shadow:none;
   overflow:visible;
 }
-html[data-embed="1"] .paw-seg__btn,
-html[data-embed="1"] .util-btn{
+html[data-embed="1"] .utility-pair.paw-seg .paw-seg__btn,
+html[data-embed="1"] .topbar-right.paw-seg .paw-seg__btn,
+html[data-embed="1"] .util-btn,
+html[data-embed="1"] #reset,
+html[data-embed="1"] #tips{
   min-width:auto;
   flex:0 0 auto;
   padding:0 12px;
@@ -1926,21 +1929,63 @@ html[data-embed="1"] .util-btn{
     box-shadow .18s ease,
     transform .18s ease;
 }
-html[data-embed="1"] .paw-seg__btn:hover,
-html[data-embed="1"] .util-btn:hover{
+html[data-embed="1"] .utility-pair.paw-seg .paw-seg__btn:hover,
+html[data-embed="1"] .topbar-right.paw-seg .paw-seg__btn:hover,
+html[data-embed="1"] .util-btn:hover,
+html[data-embed="1"] #reset:hover,
+html[data-embed="1"] #tips:hover{
   background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(250,251,253,.94));
   color:rgba(15,23,42,.92);
 }
-html[data-embed="1"] .paw-seg__btn:focus-visible,
-html[data-embed="1"] .util-btn:focus-visible{
+html[data-embed="1"] .utility-pair.paw-seg .paw-seg__btn:focus-visible,
+html[data-embed="1"] .topbar-right.paw-seg .paw-seg__btn:focus-visible,
+html[data-embed="1"] .util-btn:focus-visible,
+html[data-embed="1"] #reset:focus-visible,
+html[data-embed="1"] #tips:focus-visible{
   outline:none;
   box-shadow:
     inset 0 0 0 2px rgba(var(--accent-rgb),.16),
     0 2px 8px rgba(15,23,42,.024);
 }
-html[data-embed="1"] .paw-seg__btn + .paw-seg__btn,
+html[data-embed="1"] .utility-pair.paw-seg .paw-seg__btn + .paw-seg__btn,
+html[data-embed="1"] .topbar-right.paw-seg .paw-seg__btn + .paw-seg__btn,
 html[data-embed="1"] .util-btn + .util-btn{
   border-left-color:rgba(148,163,184,.18);
+}
+
+html[data-embed="1"] body.connect-tool .connect-seg.paw-seg,
+html[data-embed="1"] body.paw-contracts .transactions-primary-seg.paw-seg{
+  gap:0;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(255,255,255,.72);
+  border-radius:999px;
+  overflow:hidden;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+}
+html[data-embed="1"] body.connect-tool .connect-seg-btn.paw-seg__btn,
+html[data-embed="1"] body.paw-contracts .transactions-primary-btn.paw-seg__btn{
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  color:rgba(15,23,42,.86);
+}
+html[data-embed="1"] body.connect-tool .connect-seg-btn.paw-seg__btn:hover,
+html[data-embed="1"] body.paw-contracts .transactions-primary-btn.paw-seg__btn:hover{
+  background:rgba(15,23,42,.05);
+  color:rgba(15,23,42,.92);
+}
+html[data-embed="1"] body.connect-tool .connect-seg-btn.paw-seg__btn + .connect-seg-btn.paw-seg__btn,
+html[data-embed="1"] body.paw-contracts .transactions-primary-btn.paw-seg__btn + .transactions-primary-btn.paw-seg__btn{
+  border-left:1px solid rgba(15,23,42,.08);
+}
+html[data-embed="1"] body.connect-tool .connect-seg-btn.is-selected,
+html[data-embed="1"] body.connect-tool .connect-seg-btn[aria-pressed="true"],
+html[data-embed="1"] body.paw-contracts .transactions-primary-btn.is-selected,
+html[data-embed="1"] body.paw-contracts .transactions-primary-btn[aria-pressed="true"]{
+  background:rgba(5,195,249,.18);
+  color:rgba(15,23,42,.92);
+  box-shadow:inset 0 0 0 1px rgba(15,23,42,.08);
 }
 
 html[data-embed="1"] .paw-plan-usage-slot{
