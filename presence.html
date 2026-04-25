@@ -380,6 +380,80 @@
             <img src="https://paw-tools.pages.dev/paw.png" class="send-icon" alt="">
           </button>
         </div>
+        <section aria-label="Presence quick help" class="guide-resting-cards" id="presenceRestingCards">
+          <article class="guide-resting-card guide-resting-card--modes">
+            <div class="guide-resting-card__head">
+              <span aria-hidden="true" class="guide-resting-card__icon guide-resting-card__icon--modes">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path class="guide-resting-icon-fill" d="M11.7 4.2l2.1 5.1 5.1 2-5.1 2.1-2.1 5.1-2.1-5.1-5.1-2.1 5.1-2 2.1-5.1z"></path>
+                  <path class="guide-resting-icon-fill guide-resting-icon-accent" d="M18.9 2.6l.72 1.74 1.78.7-1.78.72-.72 1.74-.72-1.74-1.78-.72 1.78-.7.72-1.74z"></path>
+                </svg>
+              </span>
+              <h2 class="guide-resting-card__title">Presence Shortcuts</h2>
+            </div>
+            <div class="guide-resting-list" role="list">
+              <button class="guide-resting-mode" data-presence-shortcut data-presence-primary-value="bio" data-presence-secondary-value="standard" data-presence-placeholder="Tell PAW who you serve, how you work, and what you want people to know about you." type="button">
+                <span>Standard bio</span>
+              </button>
+              <button class="guide-resting-mode" data-presence-shortcut data-presence-primary-value="article" data-presence-secondary-value="local" data-presence-placeholder="Tell PAW the local topic, audience, and practical takeaway you want the article to cover." type="button">
+                <span>Local article</span>
+              </button>
+              <button class="guide-resting-mode" data-presence-shortcut data-presence-primary-value="guide" data-presence-secondary-value="buyer" data-presence-placeholder="Tell PAW what buyers need to understand, prepare for, or watch out for." type="button">
+                <span>Buyer guide</span>
+              </button>
+              <button class="guide-resting-mode" data-presence-shortcut data-presence-primary-value="social_post" data-presence-secondary-value="facebook" data-presence-placeholder="Tell PAW what you want to share on Facebook and the audience you want to reach." type="button">
+                <span>Facebook post</span>
+              </button>
+            </div>
+          </article>
+          <article class="guide-resting-card guide-resting-card--tools">
+            <div class="guide-resting-card__head">
+              <span aria-hidden="true" class="guide-resting-card__icon guide-resting-card__icon--tools">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path class="guide-resting-icon-fill" d="M6.1 5.4h6.7v2.15H9.78l5.35 5.34-1.52 1.52-5.36-5.34v3.02H6.1V5.4z"></path>
+                  <path class="guide-resting-icon-stroke" d="M17.45 10.2v7.25H6.55V10.2"></path>
+                </svg>
+              </span>
+              <h2 class="guide-resting-card__title">Try Another Tool</h2>
+            </div>
+            <div class="guide-tool-links" role="list">
+              <a class="guide-tool-link" data-presence-nav="GUIDE" href="./guide.html?embed=1">
+                <span class="guide-tool-link__name">Guide</span>
+                <span class="guide-tool-link__meta">PAW help</span>
+              </a>
+              <a class="guide-tool-link" data-presence-nav="CONNECT" href="./connect.html?embed=1">
+                <span class="guide-tool-link__name">Connect</span>
+                <span class="guide-tool-link__meta">Email &amp; text</span>
+              </a>
+              <a class="guide-tool-link" data-presence-nav="LISTINGS" href="./listing.html?embed=1">
+                <span class="guide-tool-link__name">Listings</span>
+                <span class="guide-tool-link__meta">Property copy</span>
+              </a>
+              <a class="guide-tool-link" data-presence-nav="TRANSACTIONS" href="./transactions.html?embed=1">
+                <span class="guide-tool-link__name">Transactions</span>
+                <span class="guide-tool-link__meta">Forms &amp; terms</span>
+              </a>
+            </div>
+          </article>
+          <article class="guide-resting-card guide-resting-card--miska">
+            <div class="guide-resting-miska__head">
+              <img alt="" aria-hidden="true" class="guide-resting-miska__image" src="./assets/miska-sitting.png">
+              <h2 class="guide-resting-card__title">Miska says...</h2>
+            </div>
+            <div class="guide-resting-miska__copy">
+              <p>Presence helps you create public-facing content that builds trust and visibility. Use it for bios, articles, social posts, local education, and guide-style content that sounds polished and ready to publish. <a class="guide-resting-inline-link" id="presenceRestingLearnMore" href="#">Learn more.</a></p>
+            </div>
+          </article>
+        </section>
+        <div class="guide-resting-disclaimer" role="note">
+          <span aria-hidden="true" class="guide-resting-disclaimer__icon">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 3.2l7 2.7v5.2c0 4.6-2.9 8.7-7 10-4.1-1.3-7-5.4-7-10V5.9l7-2.7z"></path>
+              <path d="M8.8 12.1l2.1 2.1 4.5-4.7"></path>
+            </svg>
+          </span>
+          <p>PAW is designed to be so useful and reliable that you may trust it too much. But AI can still make mistakes. Always verify facts, review important details, and confirm legal, compliance, broker, MLS, state-specific, financial, or professional guidance before relying on any output.</p>
+        </div>
 
       </div>
     </div>
@@ -700,6 +774,31 @@
       renderPresenceControls();
     }
 
+    function presenceShellHasContent() {
+      try {
+        const st = (shell && shell.getState) ? shell.getState() : null;
+        if (st && typeof st.input === "string" && st.input.trim()) return true;
+        if (st && Array.isArray(st.history) && st.history.length) return true;
+      } catch (_) {}
+      try {
+        const prompt = document.getElementById("prompt");
+        if (prompt && String(prompt.value || "").trim()) return true;
+      } catch (_) {}
+      try {
+        const messages = document.getElementById("messages");
+        if (messages && messages.children && messages.children.length) return true;
+      } catch (_) {}
+      return false;
+    }
+
+    function syncPresenceRestingCards() {
+      try {
+        const cards = document.getElementById("presenceRestingCards");
+        if (!cards) return;
+        cards.hidden = presenceShellHasContent();
+      } catch (_) {}
+    }
+
     // Reset is a full Presence reset, not just a local selector reset.
     // shell.reset() clears shell-managed UI, but attached Work lives in shared session state,
     // so we explicitly detach through the existing shared API to match Connect behavior.
@@ -713,6 +812,8 @@
       } catch (_) {}
       resetPresenceControls();
       syncPresenceAttachedWorkSummary();
+      syncPresenceRestingCards();
+      try { setTimeout(syncPresenceRestingCards, 0); } catch (_) {}
     }
 
     function initPresenceControls() {
@@ -756,6 +857,66 @@
 
     initPresenceControls();
 
+    try {
+      Array.from(document.querySelectorAll("[data-presence-shortcut]")).forEach((button) => {
+        button.addEventListener("click", function () {
+          presenceState.primary = String(button.getAttribute("data-presence-primary-value") || "");
+          presenceState.secondary = String(button.getAttribute("data-presence-secondary-value") || "");
+          presenceState.otherText = "";
+          showPresenceValidation = false;
+          renderPresenceControls();
+
+          const prompt = document.getElementById("prompt");
+          if (prompt) {
+            prompt.value = "";
+            const placeholder = String(button.getAttribute("data-presence-placeholder") || "");
+            if (placeholder) prompt.setAttribute("placeholder", placeholder);
+            try { prompt.focus(); } catch (_) {}
+          }
+          syncPresenceRestingCards();
+        });
+      });
+    } catch (_) {}
+
+    try {
+      const navLinks = document.querySelectorAll("[data-presence-nav]");
+      navLinks.forEach((link) => {
+        link.addEventListener("click", (e) => {
+          const destination = String(link.getAttribute("data-presence-nav") || "").toUpperCase();
+          if (!destination) return;
+          const isInIframe = (() => { try { return window.self !== window.top; } catch (_) { return true; } })();
+          if (!isInIframe) return;
+          try { e.preventDefault(); } catch (_) {}
+          try {
+            window.parent.postMessage({
+              type: "paw_navigate_request_v1",
+              destination,
+              query: null
+            }, "*");
+          } catch (_) {}
+        });
+      });
+    } catch (_) {}
+
+    try {
+      const learnMore = document.getElementById("presenceRestingLearnMore");
+      const tips = document.getElementById("tips");
+      if (learnMore && tips) {
+        learnMore.addEventListener("click", (e) => {
+          try { e.preventDefault(); } catch (_) {}
+          try { tips.click(); } catch (_) {}
+        });
+      }
+    } catch (_) {}
+
+    try {
+      const prompt = document.getElementById("prompt");
+      if (prompt) {
+        prompt.addEventListener("input", syncPresenceRestingCards);
+        prompt.addEventListener("change", syncPresenceRestingCards);
+      }
+    } catch (_) {}
+
     // PAW Tool Shell init (required for consistent My Works mode across tools)
     // tool-shell.js owns the shared Work button click behavior, status text,
     // Works mode open/close, and Works root mounting.
@@ -777,7 +938,10 @@
             return { cancel: true };
           },
           getDeliverableMeta: getPresenceDeliverableMeta,
-          getPrefs: getPresencePrefs
+          getPrefs: getPresencePrefs,
+          onResponse: function () {
+            try { syncPresenceRestingCards(); } catch (_) {}
+          }
         });
       }
     } catch (_) {}
@@ -787,6 +951,15 @@
     });
 
     syncPresenceAttachedWorkSummary();
+    syncPresenceRestingCards();
+
+    try {
+      const messages = document.getElementById("messages");
+      if (messages && window.MutationObserver) {
+        const presenceRestingObserver = new MutationObserver(() => syncPresenceRestingCards());
+        presenceRestingObserver.observe(messages, { childList: true, subtree: true, characterData: true });
+      }
+    } catch (_) {}
   </script>
 
   <!-- ==========================================================
