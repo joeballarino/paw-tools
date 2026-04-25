@@ -911,7 +911,7 @@ body.paw-contracts .contracts-action-row{
           apiEndpoint: API_ENDPOINT,
           toolId: "transactions",
           inlineDeliverableCopy: true,
-          composerWorkingState: { enabled: true, message: "PAW is working…" },
+          composerWorkingState: { enabled: true },
           beforeSend: function () {
             const missingGroups = getMissingTransactionsPrimaryGroups();
             if (!missingGroups.length) return null;

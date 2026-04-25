@@ -1122,7 +1122,7 @@ if ($input) {
           : null;
       const composerWorkingEnabled = !!($input && composerWorkingConfig && composerWorkingConfig.enabled === true);
       const composerWorkingMessage =
-        safeText(composerWorkingConfig && composerWorkingConfig.message) || "PAW is on it";
+        safeText(composerWorkingConfig && composerWorkingConfig.message) || "Fetching your response...";
       const $composer = $input && $input.closest ? $input.closest(".composer") : null;
       const $composerStatusMountParent = $composer && $composer.parentElement ? $composer.parentElement : null;
       const $composerStatusMountBefore =
@@ -1237,16 +1237,19 @@ if ($input) {
             node.setAttribute("aria-live", "polite");
             node.setAttribute("role", "status");
             node.hidden = true;
+            const iconWrap = document.createElement("span");
+            iconWrap.className = "paw-composer-status__icon";
+            iconWrap.setAttribute("aria-hidden", "true");
+            const icon = document.createElement("img");
+            icon.src = "/assets/paw-fetch-dog.png";
+            icon.alt = "";
+            icon.loading = "eager";
+            icon.decoding = "async";
+            iconWrap.appendChild(icon);
             const label = document.createElement("span");
             label.className = "paw-composer-status__label";
-            const dots = document.createElement("span");
-            dots.className = "paw-composer-status__dots";
-            dots.setAttribute("aria-hidden", "true");
-            for (let i = 0; i < 3; i += 1) {
-              dots.appendChild(document.createElement("span"));
-            }
+            node.appendChild(iconWrap);
             node.appendChild(label);
-            node.appendChild(dots);
             $composerBusyMessage = node;
             $composerBusyMessageLabel = label;
           }
