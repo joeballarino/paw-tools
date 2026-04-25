@@ -1844,7 +1844,7 @@ html[data-embed="1"] .panel-topbar::after{
   pointer-events:none;
 }
 html[data-embed="1"] .topbar-row0{
-  padding:11px 16px 10px;
+  padding:11px 16px 16px;
   gap:12px;
 }
 html[data-embed="1"] body.connect-tool .panel-topbar::after,
@@ -2156,7 +2156,7 @@ html[data-embed="1"] .msg.user .bubble{
 }
 
 html[data-embed="1"] .composer{
-  padding:12px 16px 24px;
+  padding:8px 16px 24px;
   gap:12px;
   background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.985));
   border-top:1px solid rgba(148,163,184,.035);
@@ -2214,16 +2214,16 @@ html[data-embed="1"] .send-icon{
 }
 
 html[data-embed="1"] body.paw-ask .guide-mode-row{
-  padding-top:24px;
-  padding-bottom:20px;
+  padding-top:20px;
+  padding-bottom:12px;
   gap:8px;
 }
 html[data-embed="1"] body.connect-tool .connect-controls,
 html[data-embed="1"] body.paw-presence .presence-controls,
 html[data-embed="1"] body.paw-contracts .contracts-controls,
 html[data-embed="1"] body.paw-listing .controls-row{
-  padding-top:24px;
-  padding-bottom:20px;
+  padding-top:20px;
+  padding-bottom:12px;
   border-top:none;
   border-bottom:none;
   box-shadow:none;
@@ -2292,7 +2292,7 @@ html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="f
     right:14px;
   }
   html[data-embed="1"] .topbar-row0{
-    padding:11px 14px 10px;
+    padding:11px 14px 14px;
   }
   html[data-embed="1"] .topbar-right{
     gap:8px;
@@ -2320,18 +2320,18 @@ html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="f
     padding:12px 14px 4px;
   }
   html[data-embed="1"] body.paw-ask .guide-mode-row{
-    padding-top:18px;
-    padding-bottom:16px;
+    padding-top:16px;
+    padding-bottom:10px;
   }
   html[data-embed="1"] body.connect-tool .connect-controls,
   html[data-embed="1"] body.paw-presence .presence-controls,
   html[data-embed="1"] body.paw-contracts .contracts-controls,
   html[data-embed="1"] body.paw-listing .controls-row{
-    padding-top:18px;
-    padding-bottom:16px;
+    padding-top:16px;
+    padding-bottom:10px;
   }
   html[data-embed="1"] .composer{
-    padding:10px 14px 22px;
+    padding:8px 14px 22px;
   }
   html[data-embed="1"] .tool-head .paw-work-status,
   html[data-embed="1"].paw-compact .paw-work-status{
