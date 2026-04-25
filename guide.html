@@ -197,6 +197,71 @@
 <img alt="" class="send-icon" src="https://paw-tools.pages.dev/paw.png"/>
 </button>
 </div>
+<section aria-label="Guide quick help" class="guide-resting-cards" id="guideRestingCards">
+<article class="guide-resting-card guide-resting-card--modes">
+<div class="guide-resting-card__head">
+<span aria-hidden="true" class="guide-resting-card__icon guide-resting-card__icon--modes">
+<svg viewBox="0 0 24 24" focusable="false">
+<path class="guide-resting-icon-fill" d="M11.7 4.2l2.1 5.1 5.1 2-5.1 2.1-2.1 5.1-2.1-5.1-5.1-2.1 5.1-2 2.1-5.1z"></path>
+<path class="guide-resting-icon-fill guide-resting-icon-accent" d="M18.9 2.6l.72 1.74 1.78.7-1.78.72-.72 1.74-.72-1.74-1.78-.72 1.78-.7.72-1.74z"></path>
+</svg>
+</span>
+<h2 class="guide-resting-card__title">Guide Modes</h2>
+</div>
+<div class="guide-resting-list" role="list">
+<button class="guide-resting-mode" data-guide-mode-card="guide" data-guide-placeholder="Tell PAW what you’re trying to do, and it will point you to the right tool or next step." type="button">
+<span>Choose the right PAW tool</span>
+</button>
+<button class="guide-resting-mode" data-guide-mode-card="coach" data-guide-placeholder="Tell Coach what’s happening in your business, and what decision or next step you’re working through." type="button">
+<span>Work through a business challenge</span>
+</button>
+<button class="guide-resting-mode" data-guide-mode-card="tech_support" data-guide-placeholder="Describe the tech problem, what you clicked, and what happened next." type="button">
+<span>Get help with a tech issue</span>
+</button>
+<button class="guide-resting-mode" data-guide-mode-card="general" data-guide-placeholder="Ask a general question or describe what you want help thinking through." type="button">
+<span>Ask a general question</span>
+</button>
+</div>
+</article>
+<article class="guide-resting-card guide-resting-card--tools">
+<div class="guide-resting-card__head">
+<span aria-hidden="true" class="guide-resting-card__icon guide-resting-card__icon--tools">
+<svg viewBox="0 0 24 24" focusable="false">
+<path class="guide-resting-icon-fill" d="M6.1 5.4h6.7v2.15H9.78l5.35 5.34-1.52 1.52-5.36-5.34v3.02H6.1V5.4z"></path>
+<path class="guide-resting-icon-stroke" d="M17.45 10.2v7.25H6.55V10.2"></path>
+</svg>
+</span>
+<h2 class="guide-resting-card__title">Try Another Tool</h2>
+</div>
+<div class="guide-tool-links" role="list">
+<a class="guide-tool-link" data-guide-nav="CONNECT" href="./connect.html?embed=1">
+<span class="guide-tool-link__name">Connect</span>
+<span class="guide-tool-link__meta">Email &amp; text</span>
+</a>
+<a class="guide-tool-link" data-guide-nav="PRESENCE" href="./presence.html?embed=1">
+<span class="guide-tool-link__name">Presence</span>
+<span class="guide-tool-link__meta">Public content</span>
+</a>
+<a class="guide-tool-link" data-guide-nav="LISTINGS" href="./listing.html?embed=1">
+<span class="guide-tool-link__name">Listings</span>
+<span class="guide-tool-link__meta">Property copy</span>
+</a>
+<a class="guide-tool-link" data-guide-nav="TRANSACTIONS" href="./transactions.html?embed=1">
+<span class="guide-tool-link__name">Transactions</span>
+<span class="guide-tool-link__meta">Forms &amp; terms</span>
+</a>
+</div>
+</article>
+<article class="guide-resting-card guide-resting-card--miska">
+<div class="guide-resting-miska__head">
+<img alt="" aria-hidden="true" class="guide-resting-miska__image" src="./assets/miska-sitting.png"/>
+<h2 class="guide-resting-card__title">Miska says…</h2>
+</div>
+<div class="guide-resting-miska__copy">
+<p>Guide gives you four ways to get unstuck. PAW Help helps you choose the right tool. Coach helps with business decisions. Tech Support helps with simple tech issues. General is for anything else. <button class="guide-resting-inline-link" id="guideRestingLearnMore" type="button">Learn more.</button></p>
+</div>
+</article>
+</section>
 </div>
 </div>
 </div>
@@ -252,6 +317,8 @@ Examples
       };
 
       let selectedMode = "guide";
+      let guideModePlaceholderOverride = "";
+      let guideHasPendingDraft = false;
       let __activeListingContext = null;
       let __activeListingLoadSeq = 0;
 
@@ -270,16 +337,54 @@ Examples
         try {
           const $input = document.getElementById("input");
           if (!$input) return;
-          const next = MODE_PLACEHOLDERS[selectedMode] || MODE_PLACEHOLDERS.general;
+          const next = guideModePlaceholderOverride || MODE_PLACEHOLDERS[selectedMode] || MODE_PLACEHOLDERS.general;
           $input.setAttribute("placeholder", next);
         } catch (_) {}
       }
 
-      function setMode(nextMode){
+      function setMode(nextMode, opts){
         const next = MODE_PLACEHOLDERS[nextMode] ? nextMode : "general";
+        opts = opts || {};
+        guideModePlaceholderOverride = typeof opts.placeholder === "string" ? opts.placeholder : "";
         selectedMode = next;
         applyModeUI();
         applyModePlaceholder();
+      }
+
+      function guideShellHasContent(){
+        try {
+          const st = (shell && shell.getState) ? shell.getState() : null;
+          if (st && typeof st.input === "string" && st.input.trim()) return true;
+          if (st && Array.isArray(st.history) && st.history.length) return true;
+        } catch (_) {}
+        try {
+          const input = document.getElementById("input");
+          if (input && String(input.value || "").trim()) return true;
+        } catch (_) {}
+        try {
+          const messages = document.getElementById("messages");
+          if (messages && messages.children && messages.children.length) return true;
+        } catch (_) {}
+        return false;
+      }
+
+      function syncGuideRestingCards(){
+        try {
+          const cards = document.getElementById("guideRestingCards");
+          if (!cards) return;
+          cards.hidden = !!guideHasPendingDraft || guideShellHasContent();
+        } catch (_) {}
+      }
+
+      function guideDraftHasContent(draft){
+        try {
+          const shellState = draft && draft.shell ? draft.shell : {};
+          const hasInput = typeof shellState.input === "string" && shellState.input.trim();
+          const hasHistory = Array.isArray(shellState.history) && shellState.history.length;
+          return !!(hasInput || hasHistory);
+        } catch (_) {
+          return false;
+        }
       }
 
       function clearActiveListingContext(){
@@ -499,11 +604,60 @@ Examples
             const mode = String(btn.getAttribute("data-mode") || "general");
             setMode(mode);
             scheduleDraftSave();
+            syncGuideRestingCards();
           });
         });
       } catch (_) {}
 
       setMode("guide");
+      syncGuideRestingCards();
+
+      try {
+        const restingModeButtons = document.querySelectorAll("[data-guide-mode-card]");
+        restingModeButtons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const mode = String(btn.getAttribute("data-guide-mode-card") || "general");
+            const placeholder = String(btn.getAttribute("data-guide-placeholder") || "");
+            setMode(mode, { placeholder });
+            const input = document.getElementById("input");
+            if (input) {
+              input.value = "";
+              try { input.focus(); } catch (_) {}
+            }
+            syncGuideRestingCards();
+          });
+        });
+      } catch (_) {}
+
+      try {
+        const learnMore = document.getElementById("guideRestingLearnMore");
+        const tips = document.getElementById("tips");
+        if (learnMore && tips) {
+          learnMore.addEventListener("click", () => {
+            try { tips.click(); } catch (_) {}
+          });
+        }
+      } catch (_) {}
+
+      try {
+        const navLinks = document.querySelectorAll("[data-guide-nav]");
+        navLinks.forEach((link) => {
+          link.addEventListener("click", (e) => {
+            const destination = String(link.getAttribute("data-guide-nav") || "").toUpperCase();
+            if (!destination) return;
+            const isInIframe = (() => { try { return window.self !== window.top; } catch (_) { return true; } })();
+            if (!isInIframe) return;
+            try { e.preventDefault(); } catch (_) {}
+            try {
+              window.parent.postMessage({
+                type: "paw_navigate_request_v1",
+                destination,
+                query: null
+              }, "*");
+            } catch (_) {}
+          });
+        });
+      } catch (_) {}
 
       // ==========================================================
       // Local Save + Resume (Assistant tool)
@@ -604,6 +758,7 @@ Examples
 
       function fullReset(){
         try { storageDel(DRAFT_KEY); } catch (_) {}
+        guideHasPendingDraft = false;
         closeResumeModal();
         try { if (shell && shell.reset) shell.reset(); } catch (_) {}
         try {
@@ -611,6 +766,7 @@ Examples
             window.__PAWWorks.detachWork();
           }
         } catch (_) {}
+        syncGuideRestingCards();
       }
 
       // Intercept Reset so we can guarantee draft deletion.
@@ -640,6 +796,8 @@ Examples
         if ($input) {
           $input.addEventListener("input", scheduleDraftSave);
           $input.addEventListener("change", scheduleDraftSave);
+          $input.addEventListener("input", syncGuideRestingCards);
+          $input.addEventListener("change", syncGuideRestingCards);
         }
       } catch (_) {}
 
@@ -663,14 +821,26 @@ Examples
         if ($resumeGo) $resumeGo.addEventListener("click", () => {
           const d = storageGet(DRAFT_KEY);
           closeResumeModal();
+          guideHasPendingDraft = false;
           if (d && typeof d.mode === "string") setMode(d.mode);
           if (d && d.shell && shell && shell.setState) shell.setState(d.shell);
+          syncGuideRestingCards();
         });
       } catch (_) {}
 
       // On load: show resume prompt (never silent restore)
       const existingDraft = storageGet(DRAFT_KEY);
+      guideHasPendingDraft = guideDraftHasContent(existingDraft);
       if (existingDraft) openResumeModal(existingDraft);
+      syncGuideRestingCards();
+
+      try {
+        const messages = document.getElementById("messages");
+        if (messages && window.MutationObserver) {
+          const guideRestingObserver = new MutationObserver(() => syncGuideRestingCards());
+          guideRestingObserver.observe(messages, { childList: true });
+        }
+      } catch (_) {}
 
       // Shared active-work hook.
       // This tool may react to the shell-owned active work, but it must not
