@@ -2299,7 +2299,7 @@ function resetAutoGrowTextarea($ta){
               '<button class="modal-close" id="pawTipsClose" aria-label="Close" type="button">✕</button>' +
             '</div>' +
             '<div class="modal-body">' +
-              '<div id="pawTipsBody" style="white-space:pre-wrap;"></div>' +
+              '<div id="pawTipsBody"></div>' +
             '</div>' +
           '</div>';
 
@@ -2321,13 +2321,90 @@ function resetAutoGrowTextarea($ta){
       }catch(e){ return null; }
     }
 
+    function appendTipsInlineText(parent, text){
+      try{
+        var raw = String(text || "");
+        var re = /\*\*([^*]+)\*\*/g;
+        var last = 0;
+        var match;
+        while ((match = re.exec(raw)) !== null){
+          if (match.index > last) {
+            parent.appendChild(document.createTextNode(raw.slice(last, match.index)));
+          }
+          var strong = document.createElement("strong");
+          strong.appendChild(document.createTextNode(match[1]));
+          parent.appendChild(strong);
+          last = re.lastIndex;
+        }
+        if (last < raw.length) {
+          parent.appendChild(document.createTextNode(raw.slice(last)));
+        }
+      }catch(_){
+        parent.appendChild(document.createTextNode(String(text || "")));
+      }
+    }
+
+    function renderSafeHelpText(container, text){
+      try{
+        while (container.firstChild) container.removeChild(container.firstChild);
+
+        var lines = String(text || "").replace(/\r\n?/g, "\n").split("\n");
+        var paragraphLines = [];
+        var currentList = null;
+
+        function flushParagraph(){
+          if (!paragraphLines.length) return;
+          var p = document.createElement("p");
+          paragraphLines.forEach(function(line, index){
+            if (index) p.appendChild(document.createElement("br"));
+            appendTipsInlineText(p, line);
+          });
+          container.appendChild(p);
+          paragraphLines = [];
+        }
+
+        function closeList(){
+          currentList = null;
+        }
+
+        lines.forEach(function(line){
+          var trimmed = String(line || "").trim();
+          if (!trimmed){
+            flushParagraph();
+            closeList();
+            return;
+          }
+
+          var bullet = String(line || "").match(/^\s*[-*]\s+(.+)$/);
+          if (bullet){
+            flushParagraph();
+            if (!currentList){
+              currentList = document.createElement("ul");
+              container.appendChild(currentList);
+            }
+            var li = document.createElement("li");
+            appendTipsInlineText(li, bullet[1]);
+            currentList.appendChild(li);
+            return;
+          }
+
+          closeList();
+          paragraphLines.push(trimmed);
+        });
+
+        flushParagraph();
+      }catch(_){
+        container.textContent = String(text || "");
+      }
+    }
+
     function openTipsModal(text){
       try{
         var m = ensureTipsModal();
         if (!m) return;
 
         var body = document.getElementById("pawTipsBody");
-        if (body) body.textContent = String(text || "");
+        if (body) renderSafeHelpText(body, text);
 
         m.classList.add("show");
         m.setAttribute("aria-hidden","false");
