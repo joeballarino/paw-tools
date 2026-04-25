@@ -2550,24 +2550,26 @@ html[data-embed="1"] body.paw-ask .guide-resting-card--miska{
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__head{
   display:flex;
-  align-items:center;
-  gap:14px;
+  align-items:flex-end;
+  gap:12px;
+  line-height:1;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__copy{
   min-width:0;
-  max-width:88%;
-  padding-top:4px;
-  padding-left:34px;
+  max-width:96%;
+  padding-top:2px;
+  padding-left:22px;
+  padding-right:8px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__head .guide-resting-card__title{
-  margin:0;
+  margin:0 0 9px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card--miska p{
   margin:0;
   color:rgba(30,41,59,.76);
-  font-size:14px;
+  font-size:14.5px;
   font-weight:600;
-  line-height:1.48;
+  line-height:1.5;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-inline-link{
   display:inline;
