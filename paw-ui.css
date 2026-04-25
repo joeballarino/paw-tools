@@ -2555,7 +2555,9 @@ html[data-embed="1"] body.paw-ask .guide-resting-miska__head{
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__copy{
   min-width:0;
-  padding-top:10px;
+  max-width:88%;
+  padding-top:4px;
+  padding-left:34px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__head .guide-resting-card__title{
   margin:0;
@@ -2563,9 +2565,9 @@ html[data-embed="1"] body.paw-ask .guide-resting-miska__head .guide-resting-card
 html[data-embed="1"] body.paw-ask .guide-resting-card--miska p{
   margin:0;
   color:rgba(30,41,59,.76);
-  font-size:13.5px;
+  font-size:14px;
   font-weight:600;
-  line-height:1.46;
+  line-height:1.48;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-inline-link{
   display:inline;
