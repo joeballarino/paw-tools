@@ -2418,8 +2418,8 @@ html[data-embed="1"] body.paw-ask .guide-resting-card__icon{
   box-shadow:none;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card__icon svg{
-  width:17px;
-  height:17px;
+  width:18px;
+  height:18px;
   display:block;
   fill:none;
   stroke:currentColor;
@@ -2427,12 +2427,17 @@ html[data-embed="1"] body.paw-ask .guide-resting-card__icon svg{
   stroke-linecap:round;
   stroke-linejoin:round;
 }
-html[data-embed="1"] body.paw-ask .guide-resting-card__icon--modes svg{
-  fill:rgba(37,99,235,.14);
-}
-html[data-embed="1"] body.paw-ask .guide-resting-card__icon--tools svg circle{
-  fill:currentColor;
+html[data-embed="1"] body.paw-ask .guide-resting-icon-fill{
+  fill:rgba(37,99,235,.98);
   stroke:none;
+}
+html[data-embed="1"] body.paw-ask .guide-resting-icon-accent{
+  fill:rgba(37,99,235,.86);
+}
+html[data-embed="1"] body.paw-ask .guide-resting-icon-stroke{
+  fill:none;
+  stroke:rgba(37,99,235,.98);
+  stroke-width:2.05;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card__title{
   margin:0;
@@ -2496,12 +2501,12 @@ html[data-embed="1"] body.paw-ask .guide-resting-mode{
     linear-gradient(90deg, rgba(239,246,255,.78), rgba(255,255,255,.76));
 }
 html[data-embed="1"] body.paw-ask .guide-tool-link{
-  min-height:43px;
+  min-height:49px;
   border:0;
   border-radius:0;
   background:transparent;
   box-shadow:none;
-  padding:11px 28px 11px 0;
+  padding:14px 28px 14px 0;
 }
 html[data-embed="1"] body.paw-ask .guide-tool-link:not(:last-child){
   border-bottom:1px solid rgba(148,163,184,.18);
@@ -2540,23 +2545,22 @@ html[data-embed="1"] body.paw-ask .guide-resting-card--miska{
   overflow:hidden;
   display:block;
   background:
-    radial-gradient(circle at 88% 92%, rgba(191,219,254,.58), rgba(191,219,254,0) 42%),
-    linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,255,255,.94) 48%, rgba(248,250,252,.90));
-  border-color:rgba(147,197,253,.24);
+    linear-gradient(145deg, rgba(239,246,255,.96), rgba(228,240,255,.88));
+  border-color:rgba(147,197,253,.30);
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__copy{
   min-width:0;
-  padding-top:10px;
+  padding-top:5px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card--miska .guide-resting-card__title{
-  margin-bottom:9px;
+  margin-bottom:7px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card--miska p{
   margin:0;
   color:rgba(30,41,59,.76);
-  font-size:13px;
+  font-size:13.5px;
   font-weight:600;
-  line-height:1.45;
+  line-height:1.46;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-inline-link{
   display:inline;
@@ -2574,8 +2578,8 @@ html[data-embed="1"] body.paw-ask .guide-resting-inline-link{
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__image{
   display:block;
-  width:76px;
-  height:92px;
+  width:88px;
+  height:104px;
   object-fit:contain;
   object-position:left top;
   opacity:.96;
@@ -2612,8 +2616,8 @@ html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="f
     display:block;
   }
   html[data-embed="1"] body.paw-ask .guide-resting-miska__image{
-    width:64px;
-    height:80px;
+    width:76px;
+    height:92px;
   }
 }
 
