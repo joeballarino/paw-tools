@@ -761,6 +761,40 @@ function removeNode(node) {
     return data;
   }
 
+  async function postFormData(url, formData, csrfToken) {
+    await waitForPAWAuthReady();
+
+    const headers = {};
+    try {
+      const t = (window.PAWAuth && window.PAWAuth.getToken) ? window.PAWAuth.getToken() : "";
+      if (t) headers["Authorization"] = "Bearer " + t;
+    } catch (_) {}
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    const text = await res.text();
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch (_) {
+      data = { transcript: text || "" };
+    }
+
+    if (!res.ok) {
+      const msg =
+        (data && (data.error || data.message || data.reply || data.transcript)) ||
+        "Request failed (" + res.status + ")";
+      throw new Error(msg);
+    }
+
+    return data;
+  }
+
   function buildPayloadBase(toolId, history, prefs, extraPayload) {
     const payload = {
       tool: toolId || "",
@@ -1133,6 +1167,294 @@ if ($input) {
         $input && $input.closest
           ? ($input.closest(".composer-main") || $input.parentElement || null)
           : null;
+
+      function installVoiceInput() {
+        if (!$input || !$composerMain || !apiEndpoint) return;
+        if ($composerMain.querySelector(".paw-voice-btn")) return;
+
+        const canRecord = !!(
+          window.MediaRecorder &&
+          navigator.mediaDevices &&
+          typeof navigator.mediaDevices.getUserMedia === "function"
+        );
+
+        const state = {
+          status: canRecord ? "idle" : "unsupported",
+          stream: null,
+          recorder: null,
+          chunks: [],
+          startedAt: 0,
+          durationMs: 0,
+          warningTimer: 0,
+          stopTimer: 0,
+          stopPromise: null
+        };
+
+        const btn = document.createElement("button");
+        btn.className = "paw-voice-btn";
+        btn.type = "button";
+        btn.setAttribute("aria-label", canRecord ? "Record voice input" : "Voice input is not available");
+        btn.setAttribute("title", canRecord ? "Record voice input" : "Voice input is not available");
+        btn.setAttribute("aria-pressed", "false");
+        btn.innerHTML =
+          '<span class="paw-voice-btn__icon" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24" focusable="false">' +
+              '<path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Z"></path>' +
+              '<path d="M18 11a6 6 0 0 1-12 0"></path>' +
+              '<path d="M12 17v4"></path>' +
+              '<path d="M8 21h8"></path>' +
+            '</svg>' +
+          '</span>' +
+          '<span class="paw-voice-btn__spinner" aria-hidden="true"></span>';
+        $composerMain.appendChild(btn);
+
+        function setVoiceState(next) {
+          state.status = next || "idle";
+          btn.classList.toggle("is-recording", state.status === "recording");
+          btn.classList.toggle("is-warning", state.status === "warning");
+          btn.classList.toggle("is-processing", state.status === "processing");
+          btn.classList.toggle("is-unsupported", state.status === "unsupported");
+          btn.disabled = state.status === "processing" || state.status === "unsupported";
+          btn.setAttribute("aria-pressed", state.status === "recording" || state.status === "warning" ? "true" : "false");
+          if (state.status === "processing") btn.setAttribute("aria-busy", "true");
+          else btn.removeAttribute("aria-busy");
+
+          if (state.status === "recording" || state.status === "warning") {
+            btn.setAttribute("aria-label", "Stop recording voice input");
+            btn.setAttribute("title", "Stop recording voice input");
+          } else if (state.status === "processing") {
+            btn.setAttribute("aria-label", "Transcribing voice input");
+            btn.setAttribute("title", "Transcribing voice input");
+          } else if (state.status === "unsupported") {
+            btn.setAttribute("aria-label", "Voice input is not available");
+            btn.setAttribute("title", "Voice input is not available");
+          } else {
+            btn.setAttribute("aria-label", "Record voice input");
+            btn.setAttribute("title", "Record voice input");
+          }
+        }
+
+        function clearRecordingTimers() {
+          if (state.warningTimer) {
+            clearTimeout(state.warningTimer);
+            state.warningTimer = 0;
+          }
+          if (state.stopTimer) {
+            clearTimeout(state.stopTimer);
+            state.stopTimer = 0;
+          }
+        }
+
+        function cleanupRecording() {
+          clearRecordingTimers();
+          try {
+            if (state.stream && state.stream.getTracks) {
+              state.stream.getTracks().forEach(function (track) {
+                try { track.stop(); } catch (_) {}
+              });
+            }
+          } catch (_) {}
+          state.stream = null;
+          state.recorder = null;
+          state.chunks = [];
+          state.startedAt = 0;
+          state.durationMs = 0;
+          state.stopPromise = null;
+        }
+
+        function getPreferredAudioMimeType() {
+          const preferred = [
+            "audio/webm;codecs=opus",
+            "audio/webm",
+            "audio/mp4"
+          ];
+          try {
+            if (!window.MediaRecorder || typeof window.MediaRecorder.isTypeSupported !== "function") return "";
+            for (let i = 0; i < preferred.length; i += 1) {
+              if (window.MediaRecorder.isTypeSupported(preferred[i])) return preferred[i];
+            }
+          } catch (_) {}
+          return "";
+        }
+
+        function getVoiceAudioFilename(mimeType) {
+          const mime = String(mimeType || "").toLowerCase();
+          if (mime.indexOf("mp4") !== -1) return "voice-input.m4a";
+          if (mime.indexOf("webm") !== -1) return "voice-input.webm";
+          return "voice-input.audio";
+        }
+
+        function dispatchComposerInput() {
+          try {
+            $input.dispatchEvent(new Event("input", { bubbles: true }));
+          } catch (_) {
+            try {
+              const ev = document.createEvent("Event");
+              ev.initEvent("input", true, true);
+              $input.dispatchEvent(ev);
+            } catch (_) {}
+          }
+          try { pawScheduleLayoutPing(); } catch (_) {}
+        }
+
+        function appendTranscriptToComposer(transcript) {
+          const nextText = safeText(transcript);
+          if (!nextText) return;
+
+          const current = String($input.value || "");
+          const hasSelectionApi =
+            typeof $input.selectionStart === "number" &&
+            typeof $input.selectionEnd === "number";
+          const hasFocus = document.activeElement === $input;
+
+          if (hasFocus && hasSelectionApi) {
+            const start = Math.max(0, Math.min($input.selectionStart, current.length));
+            const end = Math.max(start, Math.min($input.selectionEnd, current.length));
+            const before = current.slice(0, start);
+            const after = current.slice(end);
+            let insert = nextText;
+            if (before && !/\s$/.test(before)) insert = " " + insert;
+            if (after && !/^\s/.test(after)) insert = insert + " ";
+            $input.value = before + insert + after;
+            const caret = before.length + insert.length;
+            try { $input.setSelectionRange(caret, caret); } catch (_) {}
+          } else if (!safeText(current)) {
+            $input.value = nextText;
+          } else {
+            const separator = /\s$/.test(current) ? "" : " ";
+            $input.value = current + separator + nextText;
+          }
+
+          dispatchComposerInput();
+        }
+
+        async function transcribeRecording(audioBlob, durationMs) {
+          const formData = new FormData();
+          formData.append("audio", audioBlob, getVoiceAudioFilename(audioBlob && audioBlob.type));
+          formData.append("duration_ms", String(Math.max(0, Math.round(durationMs || 0))));
+
+          const url = String(apiEndpoint || "").replace(/\/+$/, "") + "/voice/transcribe";
+          const data = await postFormData(url, formData, getCSRFTokenFromMeta());
+          const transcript = safeText(data && data.transcript);
+          if (!transcript) throw new Error("No transcript returned.");
+          appendTranscriptToComposer(transcript);
+        }
+
+        function stopRecording() {
+          if (!state.recorder) return Promise.resolve(null);
+          if (state.stopPromise) return state.stopPromise;
+
+          clearRecordingTimers();
+          state.durationMs = state.startedAt ? Date.now() - state.startedAt : 0;
+
+          state.stopPromise = new Promise(function (resolve, reject) {
+            const recorder = state.recorder;
+            recorder.onstop = function () {
+              try {
+                const blobType = recorder.mimeType || getPreferredAudioMimeType() || "";
+                const audioBlob = new Blob(state.chunks, blobType ? { type: blobType } : {});
+                const durationMs = state.durationMs;
+                cleanupRecording();
+                resolve({ blob: audioBlob, durationMs: durationMs });
+              } catch (err) {
+                cleanupRecording();
+                reject(err);
+              }
+            };
+            recorder.onerror = function (event) {
+              cleanupRecording();
+              reject((event && event.error) || new Error("Recording failed."));
+            };
+            try {
+              if (recorder.state !== "inactive") recorder.stop();
+              else recorder.onstop();
+            } catch (err) {
+              cleanupRecording();
+              reject(err);
+            }
+          });
+
+          return state.stopPromise;
+        }
+
+        async function stopAndTranscribe() {
+          if (state.status !== "recording" && state.status !== "warning") return;
+
+          try {
+            setVoiceState("processing");
+            const result = await stopRecording();
+            if (!result || !result.blob || !result.blob.size) {
+              setVoiceState("idle");
+              return;
+            }
+            await transcribeRecording(result.blob, result.durationMs);
+          } catch (_) {
+            try { showToast("Voice input is not available right now."); } catch (_) {}
+          } finally {
+            cleanupRecording();
+            setVoiceState(canRecord ? "idle" : "unsupported");
+          }
+        }
+
+        async function startRecording() {
+          if (!canRecord || state.status !== "idle") return;
+
+          let stream = null;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mimeType = getPreferredAudioMimeType();
+            const options = mimeType ? { mimeType: mimeType } : undefined;
+            const recorder = new MediaRecorder(stream, options);
+
+            state.stream = stream;
+            state.recorder = recorder;
+            state.chunks = [];
+            state.startedAt = Date.now();
+
+            recorder.ondataavailable = function (event) {
+              if (event && event.data && event.data.size > 0) state.chunks.push(event.data);
+            };
+            recorder.onerror = function () {
+              cleanupRecording();
+              setVoiceState("idle");
+              try { showToast("Voice input is not available right now."); } catch (_) {}
+            };
+
+            recorder.start();
+            setVoiceState("recording");
+
+            state.warningTimer = setTimeout(function () {
+              if (state.status === "recording") setVoiceState("warning");
+            }, 30000);
+            state.stopTimer = setTimeout(function () {
+              stopAndTranscribe();
+            }, 40000);
+          } catch (_) {
+            if (stream && stream.getTracks) {
+              try { stream.getTracks().forEach(function (track) { track.stop(); }); } catch (__) {}
+            }
+            cleanupRecording();
+            setVoiceState("idle");
+            try { showToast("Microphone permission is needed to record."); } catch (__) {}
+          }
+        }
+
+        btn.addEventListener("click", function () {
+          if (state.status === "processing" || state.status === "unsupported") return;
+          if (state.status === "recording" || state.status === "warning") {
+            stopAndTranscribe();
+            return;
+          }
+          startRecording();
+        });
+        btn.addEventListener("mousedown", function (event) {
+          try { event.preventDefault(); } catch (_) {}
+        });
+
+        setVoiceState(state.status);
+      }
+
+      installVoiceInput();
 
       const deliverableMode = config.deliverableMode !== false; // default true
       const inlineDeliverableCopy = config.inlineDeliverableCopy === true;
