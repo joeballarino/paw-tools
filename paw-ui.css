@@ -2382,7 +2382,7 @@ html[data-embed="1"] body.paw-ask .guide-resting-cards{
   display:grid;
   grid-template-columns:minmax(0, .95fr) minmax(0, .95fr) minmax(0, 1.1fr);
   gap:14px;
-  padding:0 18px 28px;
+  padding:20px 18px 28px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-cards[hidden]{
   display:none !important;
@@ -2403,7 +2403,7 @@ html[data-embed="1"] body.paw-ask .guide-resting-card__head{
   display:flex;
   align-items:center;
   gap:10px;
-  margin:0 0 14px;
+  margin:0 0 17px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card__icon{
   width:32px;
@@ -2444,7 +2444,7 @@ html[data-embed="1"] body.paw-ask .guide-resting-list,
 html[data-embed="1"] body.paw-ask .guide-tool-links{
   display:flex;
   flex-direction:column;
-  gap:7px;
+  gap:9px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-mode,
 html[data-embed="1"] body.paw-ask .guide-tool-link{
@@ -2517,18 +2517,15 @@ html[data-embed="1"] body.paw-ask .guide-tool-link__meta{
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card--miska{
   overflow:hidden;
-  display:flex;
-  align-items:flex-start;
-  gap:14px;
+  display:block;
   background:
-    radial-gradient(circle at 24% 22%, rgba(191,219,254,.62), rgba(191,219,254,0) 38%),
-    linear-gradient(145deg, rgba(239,246,255,.82), rgba(255,255,255,.94) 52%, rgba(248,250,252,.90));
+    radial-gradient(circle at 88% 92%, rgba(191,219,254,.58), rgba(191,219,254,0) 42%),
+    linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,255,255,.94) 48%, rgba(248,250,252,.90));
   border-color:rgba(147,197,253,.24);
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__copy{
   min-width:0;
-  flex:1 1 auto;
-  padding-top:2px;
+  padding-top:10px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card--miska .guide-resting-card__title{
   margin-bottom:9px;
@@ -2555,11 +2552,11 @@ html[data-embed="1"] body.paw-ask .guide-resting-inline-link{
   cursor:pointer;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__image{
-  flex:0 0 76px;
+  display:block;
   width:76px;
   height:92px;
   object-fit:contain;
-  object-position:center top;
+  object-position:left top;
   opacity:.96;
   pointer-events:none;
   filter:drop-shadow(0 8px 13px rgba(15,23,42,.10));
@@ -2591,10 +2588,9 @@ html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="f
     font-size:11px;
   }
   html[data-embed="1"] body.paw-ask .guide-resting-card--miska{
-    gap:10px;
+    display:block;
   }
   html[data-embed="1"] body.paw-ask .guide-resting-miska__image{
-    flex-basis:64px;
     width:64px;
     height:80px;
   }
