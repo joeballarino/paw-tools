@@ -2275,7 +2275,7 @@ function resetAutoGrowTextarea($ta){
 
       if ($reset) $reset.addEventListener("click", reset);
 
-      if ($tips && typeof config.tipsText === "string") {
+      if ($tips) {
         
     // Tips & How To (PAW modal, not browser-native alert)
     // ---------------------------------------------------
@@ -2342,7 +2342,58 @@ function resetAutoGrowTextarea($ta){
         m.setAttribute("aria-hidden","true");
       }catch(e){}
     }
-$tips.addEventListener("click", function () { openTipsModal(config.tipsText || ""); });
+
+    function normalizeTipsToolName(rawToolId){
+      var raw = safeText(rawToolId).toLowerCase();
+      if (raw === "assistant" || raw === "guide") return "guide";
+      if (raw === "connect") return "connect";
+      if (raw === "presence") return "presence";
+      if (raw === "listing_description_writer" || raw === "listing") return "listing";
+      if (raw === "transactions" || raw === "contracts") return "transactions";
+      return raw;
+    }
+
+    function getToolHelpAnswer(data){
+      try{
+        return (
+          safeText(data && data.answer) ||
+          safeText(data && data.reply) ||
+          safeText(data && data.message) ||
+          safeText(data && data.data && data.data.answer)
+        );
+      }catch(_){
+        return "";
+      }
+    }
+
+    var tipsHelpSeq = 0;
+    $tips.addEventListener("click", function () {
+      var seq = ++tipsHelpSeq;
+      openTipsModal("Loading help...");
+
+      (async function(){
+        try{
+          if (!apiEndpoint) throw new Error("Missing API endpoint configuration.");
+          var toolHelpUrl = String(apiEndpoint || "").replace(/\/+$/, "") + "/tool-help";
+          var data = await postJSON(toolHelpUrl, {
+            tool: normalizeTipsToolName(toolId),
+            question: ""
+          }, getCSRFTokenFromMeta());
+
+          if (seq !== tipsHelpSeq) return;
+          var answer = getToolHelpAnswer(data);
+          if (!answer) throw new Error("Help is not available right now.");
+          openTipsModal(answer);
+        }catch(_){
+          if (seq !== tipsHelpSeq) return;
+          openTipsModal(
+            typeof config.tipsText === "string" && config.tipsText
+              ? config.tipsText
+              : "Help is not available right now. Please try again in a moment."
+          );
+        }
+      })();
+    });
       }
 
       
