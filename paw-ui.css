@@ -1900,6 +1900,17 @@ html[data-embed="1"] .topbar-right{
   gap:8px;
 }
 
+@media (min-width: 561px){
+  html[data-embed="1"] .topbar-right{
+    margin-left:auto;
+  }
+  html[data-embed="1"] .topbar-right .utility-pair.paw-seg,
+  html[data-embed="1"] .topbar-right.paw-seg{
+    min-width:0;
+    width:auto;
+  }
+}
+
 html[data-embed="1"] .utility-pair.paw-seg,
 html[data-embed="1"] .topbar-right.paw-seg{
   gap:8px;
