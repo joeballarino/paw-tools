@@ -2548,12 +2548,17 @@ html[data-embed="1"] body.paw-ask .guide-resting-card--miska{
     linear-gradient(145deg, rgba(239,246,255,.96), rgba(228,240,255,.88));
   border-color:rgba(147,197,253,.30);
 }
+html[data-embed="1"] body.paw-ask .guide-resting-miska__head{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
 html[data-embed="1"] body.paw-ask .guide-resting-miska__copy{
   min-width:0;
-  padding-top:5px;
+  padding-top:10px;
 }
-html[data-embed="1"] body.paw-ask .guide-resting-card--miska .guide-resting-card__title{
-  margin-bottom:7px;
+html[data-embed="1"] body.paw-ask .guide-resting-miska__head .guide-resting-card__title{
+  margin:0;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card--miska p{
   margin:0;
