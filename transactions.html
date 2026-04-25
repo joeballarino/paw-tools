@@ -516,6 +516,80 @@ body.paw-contracts .contracts-action-row{
             <img src="https://paw-tools.pages.dev/paw.png" class="send-icon" alt="">
           </button>
         </div>
+        <section aria-label="Transactions quick help" class="guide-resting-cards" id="transactionsRestingCards">
+          <article class="guide-resting-card guide-resting-card--modes">
+            <div class="guide-resting-card__head">
+              <span aria-hidden="true" class="guide-resting-card__icon guide-resting-card__icon--modes">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path class="guide-resting-icon-fill" d="M11.7 4.2l2.1 5.1 5.1 2-5.1 2.1-2.1 5.1-2.1-5.1-5.1-2.1 5.1-2 2.1-5.1z"></path>
+                  <path class="guide-resting-icon-fill guide-resting-icon-accent" d="M18.9 2.6l.72 1.74 1.78.7-1.78.72-.72 1.74-.72-1.74-1.78-.72 1.78-.7.72-1.74z"></path>
+                </svg>
+              </span>
+              <h2 class="guide-resting-card__title">Transaction Shortcuts</h2>
+            </div>
+            <div class="guide-resting-list" role="list">
+              <button class="guide-resting-mode" data-transactions-shortcut data-transactions-primary-value="client_report" data-transactions-placeholder="Upload or describe the transaction document, and PAW will help summarize key dates, terms, responsibilities, and next steps." type="button">
+                <span>Client report</span>
+              </button>
+              <button class="guide-resting-mode" data-transactions-shortcut data-transactions-primary-value="write_terms" data-transactions-placeholder="Describe the business terms you need to organize, and PAW will help you shape practical language or a clear request." type="button">
+                <span>Write terms</span>
+              </button>
+              <button class="guide-resting-mode" data-transactions-shortcut data-transactions-primary-value="negotiation" data-transactions-placeholder="Describe the issue, your side of the deal, and what outcome you are trying to reach." type="button">
+                <span>Negotiation help</span>
+              </button>
+              <button class="guide-resting-mode" data-transactions-shortcut data-transactions-primary-value="form_help" data-transactions-placeholder="Upload the form or describe the section you are working on, and PAW will help explain what to review or complete." type="button">
+                <span>Form help</span>
+              </button>
+            </div>
+          </article>
+          <article class="guide-resting-card guide-resting-card--tools">
+            <div class="guide-resting-card__head">
+              <span aria-hidden="true" class="guide-resting-card__icon guide-resting-card__icon--tools">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path class="guide-resting-icon-fill" d="M6.1 5.4h6.7v2.15H9.78l5.35 5.34-1.52 1.52-5.36-5.34v3.02H6.1V5.4z"></path>
+                  <path class="guide-resting-icon-stroke" d="M17.45 10.2v7.25H6.55V10.2"></path>
+                </svg>
+              </span>
+              <h2 class="guide-resting-card__title">Try Another Tool</h2>
+            </div>
+            <div class="guide-tool-links" role="list">
+              <a class="guide-tool-link" data-transactions-nav="GUIDE" href="./guide.html?embed=1">
+                <span class="guide-tool-link__name">Guide</span>
+                <span class="guide-tool-link__meta">PAW help</span>
+              </a>
+              <a class="guide-tool-link" data-transactions-nav="CONNECT" href="./connect.html?embed=1">
+                <span class="guide-tool-link__name">Connect</span>
+                <span class="guide-tool-link__meta">Email &amp; text</span>
+              </a>
+              <a class="guide-tool-link" data-transactions-nav="PRESENCE" href="./presence.html?embed=1">
+                <span class="guide-tool-link__name">Presence</span>
+                <span class="guide-tool-link__meta">Public content</span>
+              </a>
+              <a class="guide-tool-link" data-transactions-nav="LISTINGS" href="./listing.html?embed=1">
+                <span class="guide-tool-link__name">Listings</span>
+                <span class="guide-tool-link__meta">Property copy</span>
+              </a>
+            </div>
+          </article>
+          <article class="guide-resting-card guide-resting-card--miska">
+            <div class="guide-resting-miska__head">
+              <img alt="" aria-hidden="true" class="guide-resting-miska__image" src="./assets/miska-sitting.png">
+              <h2 class="guide-resting-card__title">Miska says...</h2>
+            </div>
+            <div class="guide-resting-miska__copy">
+              <p>Transactions helps you work through real estate documents and deal questions. Use it to prepare client-friendly summaries from transaction documents, organize business terms, think through negotiation options, or get plain-English help with forms. <a class="guide-resting-inline-link" id="transactionsRestingLearnMore" href="#">Learn more.</a></p>
+            </div>
+          </article>
+        </section>
+        <div class="guide-resting-disclaimer" role="note">
+          <span aria-hidden="true" class="guide-resting-disclaimer__icon">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 3.2l7 2.7v5.2c0 4.6-2.9 8.7-7 10-4.1-1.3-7-5.4-7-10V5.9l7-2.7z"></path>
+              <path d="M8.8 12.1l2.1 2.1 4.5-4.7"></path>
+            </svg>
+          </span>
+          <p>PAW is designed to be so useful and reliable that you may trust it too much. But AI can still make mistakes. Always verify facts, review important details, and confirm legal, compliance, broker, MLS, state-specific, financial, or professional guidance before relying on any output.</p>
+        </div>
 
       </div>
     </div>
@@ -531,6 +605,8 @@ body.paw-contracts .contracts-action-row{
     const transactionsPrimaryBlock = document.getElementById("transactionsPrimaryBlock");
     const transactionsPrimaryButtons = Array.from(document.querySelectorAll("[data-transactions-primary]"));
     const resetBtn = document.getElementById("reset");
+    const transactionsInput = document.getElementById("input");
+    const TRANSACTIONS_DEFAULT_PLACEHOLDER = transactionsInput ? String(transactionsInput.getAttribute("placeholder") || "") : "";
 
     let selectedTransactionsPrimary = "";
     let showTransactionsPrimaryValidation = false;
@@ -541,6 +617,7 @@ body.paw-contracts .contracts-action-row{
     let isAutoReviewRunning = false;
     let shouldReviewPendingAfterCurrent = false;
     let suppressNextUploadOnlyReply = false;
+    let transactionsRestingSubmitted = false;
 
     function getTransactionsDeliverableMeta() {
       return { openModal: false };
@@ -779,6 +856,7 @@ body.paw-contracts .contracts-action-row{
     function fullResetTransactions() {
       showTransactionsPrimaryValidation = false;
       showTransactionsPrimaryPrompt = false;
+      transactionsRestingSubmitted = false;
       setTransactionsPrimary("");
       resetUploadState();
       try {
@@ -790,6 +868,38 @@ body.paw-contracts .contracts-action-row{
         if (window.__PAWWorks && window.__PAWWorks.detachWork) {
           window.__PAWWorks.detachWork();
         }
+      } catch (_) {}
+      try {
+        if (transactionsInput && TRANSACTIONS_DEFAULT_PLACEHOLDER) {
+          transactionsInput.setAttribute("placeholder", TRANSACTIONS_DEFAULT_PLACEHOLDER);
+        }
+      } catch (_) {}
+      syncTransactionsRestingCards();
+      try { setTimeout(syncTransactionsRestingCards, 0); } catch (_) {}
+    }
+
+    function transactionsShellHasContent() {
+      if (transactionsRestingSubmitted) return true;
+      try {
+        var st = shellApi && shellApi.getState ? shellApi.getState() : null;
+        if (st && typeof st.input === "string" && st.input.trim()) return true;
+        if (st && Array.isArray(st.history) && st.history.length) return true;
+      } catch (_) {}
+      try {
+        if (transactionsInput && String(transactionsInput.value || "").trim()) return true;
+      } catch (_) {}
+      try {
+        var messages = document.getElementById("messages");
+        if (messages && messages.children && messages.children.length) return true;
+      } catch (_) {}
+      return false;
+    }
+
+    function syncTransactionsRestingCards() {
+      try {
+        var cards = document.getElementById("transactionsRestingCards");
+        if (!cards) return;
+        cards.hidden = transactionsShellHasContent();
       } catch (_) {}
     }
 
@@ -890,6 +1000,60 @@ body.paw-contracts .contracts-action-row{
       });
     });
 
+    try {
+      Array.from(document.querySelectorAll("[data-transactions-shortcut]")).forEach(function (button) {
+        button.addEventListener("click", function () {
+          setTransactionsPrimary(button.getAttribute("data-transactions-primary-value"));
+
+          if (transactionsInput) {
+            transactionsInput.value = "";
+            var placeholder = String(button.getAttribute("data-transactions-placeholder") || "");
+            if (placeholder) transactionsInput.setAttribute("placeholder", placeholder);
+            try { transactionsInput.focus(); } catch (_) {}
+          }
+          syncTransactionsRestingCards();
+        });
+      });
+    } catch (_) {}
+
+    try {
+      var transactionsNavLinks = document.querySelectorAll("[data-transactions-nav]");
+      transactionsNavLinks.forEach(function (link) {
+        link.addEventListener("click", function (event) {
+          var destination = String(link.getAttribute("data-transactions-nav") || "").toUpperCase();
+          if (!destination) return;
+          var isInIframe = (function () { try { return window.self !== window.top; } catch (_) { return true; } })();
+          if (!isInIframe) return;
+          try { event.preventDefault(); } catch (_) {}
+          try {
+            window.parent.postMessage({
+              type: "paw_navigate_request_v1",
+              destination: destination,
+              query: null
+            }, "*");
+          } catch (_) {}
+        });
+      });
+    } catch (_) {}
+
+    try {
+      var transactionsLearnMore = document.getElementById("transactionsRestingLearnMore");
+      var tips = document.getElementById("tips");
+      if (transactionsLearnMore && tips) {
+        transactionsLearnMore.addEventListener("click", function (event) {
+          try { event.preventDefault(); } catch (_) {}
+          try { tips.click(); } catch (_) {}
+        });
+      }
+    } catch (_) {}
+
+    try {
+      if (transactionsInput) {
+        transactionsInput.addEventListener("input", syncTransactionsRestingCards);
+        transactionsInput.addEventListener("change", syncTransactionsRestingCards);
+      }
+    } catch (_) {}
+
     if (resetBtn) {
       resetBtn.addEventListener("click", function (event) {
         try {
@@ -913,7 +1077,11 @@ body.paw-contracts .contracts-action-row{
           composerWorkingState: { enabled: true },
           beforeSend: function () {
             const missingGroups = getMissingTransactionsPrimaryGroups();
-            if (!missingGroups.length) return null;
+            if (!missingGroups.length) {
+              transactionsRestingSubmitted = true;
+              syncTransactionsRestingCards();
+              return null;
+            }
 
             showTransactionsPrimaryPrompt = false;
             showTransactionsPrimaryValidation = true;
@@ -948,8 +1116,10 @@ body.paw-contracts .contracts-action-row{
                 showTransactionsPrimaryPrompt = true;
                 updateTransactionsPrimaryValidationState();
               }
+              try { syncTransactionsRestingCards(); } catch (_) {}
               return { skipDefault: true };
             }
+            try { syncTransactionsRestingCards(); } catch (_) {}
           }
         });
         if (getPendingFiles().length) {
@@ -963,9 +1133,21 @@ body.paw-contracts .contracts-action-row{
     });
 
     syncTransactionsAttachedWorkSummary();
+    syncTransactionsRestingCards();
 
     setTransactionsPrimary(selectedTransactionsPrimary);
     updateUploadedFilesUi();
+    syncTransactionsRestingCards();
+
+    try {
+      var messages = document.getElementById("messages");
+      if (messages && window.MutationObserver) {
+        var transactionsRestingObserver = new MutationObserver(function () {
+          syncTransactionsRestingCards();
+        });
+        transactionsRestingObserver.observe(messages, { childList: true, subtree: true, characterData: true });
+      }
+    } catch (_) {}
   </script>
 
   <!-- ==========================================================
