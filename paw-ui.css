@@ -2382,7 +2382,7 @@ html[data-embed="1"] body.paw-ask .guide-resting-cards{
   display:grid;
   grid-template-columns:minmax(0, .95fr) minmax(0, .95fr) minmax(0, 1.1fr);
   gap:14px;
-  padding:20px 18px 28px;
+  padding:20px 18px 14px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-cards[hidden]{
   display:none !important;
@@ -2596,11 +2596,10 @@ html[data-embed="1"] body.paw-ask .guide-resting-miska__image{
   filter:drop-shadow(0 8px 13px rgba(15,23,42,.10));
 }
 html[data-embed="1"] body.paw-ask .guide-resting-disclaimer{
-  grid-column:1 / -1;
   display:flex;
   align-items:flex-start;
   gap:10px;
-  margin:2px 2px 0;
+  margin:0 20px 28px;
   padding:14px 2px 0;
   border-top:1px solid rgba(148,163,184,.18);
   color:rgba(51,65,85,.76);
@@ -2669,6 +2668,15 @@ html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="f
 @media (max-width: 700px){
   html[data-embed="1"] body.paw-ask .guide-resting-cards{
     display:none !important;
+  }
+  html[data-embed="1"] body.paw-ask .guide-resting-disclaimer{
+    gap:8px;
+    margin:0 16px 20px;
+    padding-top:12px;
+  }
+  html[data-embed="1"] body.paw-ask .guide-resting-disclaimer p{
+    max-width:none;
+    line-height:1.42;
   }
 }
 
