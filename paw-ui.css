@@ -2390,17 +2390,53 @@ html[data-embed="1"] body.paw-ask .guide-resting-cards[hidden]{
 html[data-embed="1"] body.paw-ask .guide-resting-card{
   min-width:0;
   min-height:214px;
-  border:1px solid rgba(148,163,184,.20);
+  border:1px solid rgba(148,163,184,.18);
   border-radius:8px;
-  background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(248,250,252,.82));
-  box-shadow:0 10px 24px rgba(15,23,42,.04);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.86));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.72),
+    0 12px 28px rgba(15,23,42,.045);
   padding:18px 18px 16px;
 }
-html[data-embed="1"] body.paw-ask .guide-resting-card__title{
+html[data-embed="1"] body.paw-ask .guide-resting-card__head{
+  display:flex;
+  align-items:center;
+  gap:10px;
   margin:0 0 14px;
-  color:rgba(15,23,42,.92);
+}
+html[data-embed="1"] body.paw-ask .guide-resting-card__icon{
+  width:32px;
+  height:32px;
+  flex:0 0 32px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  color:rgba(37,99,235,.86);
+  background:linear-gradient(145deg, rgba(219,234,254,.96), rgba(239,246,255,.78));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.82),
+    0 6px 14px rgba(37,99,235,.08);
+}
+html[data-embed="1"] body.paw-ask .guide-resting-card__icon svg{
+  width:17px;
+  height:17px;
+  display:block;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.9;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+html[data-embed="1"] body.paw-ask .guide-resting-card__icon--modes svg{
+  fill:rgba(37,99,235,.10);
+}
+html[data-embed="1"] body.paw-ask .guide-resting-card__title{
+  margin:0;
+  color:rgba(15,23,42,.96);
   font-size:15px;
-  font-weight:800;
+  font-weight:850;
   line-height:1.2;
   letter-spacing:0;
 }
@@ -2408,30 +2444,52 @@ html[data-embed="1"] body.paw-ask .guide-resting-list,
 html[data-embed="1"] body.paw-ask .guide-tool-links{
   display:flex;
   flex-direction:column;
-  gap:8px;
+  gap:7px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-mode,
 html[data-embed="1"] body.paw-ask .guide-tool-link{
   width:100%;
-  min-height:38px;
+  min-height:40px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  border:1px solid rgba(148,163,184,.18);
-  border-radius:999px;
-  background:rgba(255,255,255,.82);
-  color:rgba(30,41,59,.88);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
-  padding:8px 13px;
+  position:relative;
+  border:1px solid rgba(148,163,184,.14);
+  border-radius:8px;
+  background:rgba(255,255,255,.72);
+  color:rgba(15,23,42,.90);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.66);
+  padding:9px 32px 9px 12px;
   font:inherit;
   font-size:13px;
-  font-weight:750;
+  font-weight:760;
   line-height:1.2;
   text-align:left;
   text-decoration:none;
   cursor:pointer;
   transition:background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+html[data-embed="1"] body.paw-ask .guide-resting-mode::after,
+html[data-embed="1"] body.paw-ask .guide-tool-link::after{
+  content:"";
+  position:absolute;
+  right:12px;
+  top:50%;
+  width:7px;
+  height:7px;
+  border-right:1.5px solid currentColor;
+  border-bottom:1.5px solid currentColor;
+  opacity:.45;
+  transform:translateY(-50%) rotate(-45deg);
+}
+html[data-embed="1"] body.paw-ask .guide-resting-mode{
+  background:
+    linear-gradient(90deg, rgba(239,246,255,.78), rgba(255,255,255,.76));
+}
+html[data-embed="1"] body.paw-ask .guide-tool-link{
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.84), rgba(248,250,252,.76));
 }
 html[data-embed="1"] body.paw-ask .guide-resting-mode:hover,
 html[data-embed="1"] body.paw-ask .guide-tool-link:hover{
@@ -2452,23 +2510,28 @@ html[data-embed="1"] body.paw-ask .guide-tool-link__name{
 }
 html[data-embed="1"] body.paw-ask .guide-tool-link__meta{
   flex:0 0 auto;
-  color:rgba(71,85,105,.68);
+  color:rgba(71,85,105,.62);
   font-size:12px;
-  font-weight:700;
+  font-weight:650;
   white-space:nowrap;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card--miska{
-  position:relative;
   overflow:hidden;
   display:flex;
   align-items:flex-start;
+  gap:14px;
   background:
-    linear-gradient(145deg, rgba(239,246,255,.86), rgba(255,255,255,.92) 54%, rgba(248,250,252,.86));
+    radial-gradient(circle at 24% 22%, rgba(191,219,254,.62), rgba(191,219,254,0) 38%),
+    linear-gradient(145deg, rgba(239,246,255,.82), rgba(255,255,255,.94) 52%, rgba(248,250,252,.90));
+  border-color:rgba(147,197,253,.24);
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__copy{
-  position:relative;
-  z-index:1;
-  max-width:72%;
+  min-width:0;
+  flex:1 1 auto;
+  padding-top:2px;
+}
+html[data-embed="1"] body.paw-ask .guide-resting-card--miska .guide-resting-card__title{
+  margin-bottom:9px;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-card--miska p{
   margin:0;
@@ -2492,15 +2555,14 @@ html[data-embed="1"] body.paw-ask .guide-resting-inline-link{
   cursor:pointer;
 }
 html[data-embed="1"] body.paw-ask .guide-resting-miska__image{
-  position:absolute;
-  right:-12px;
-  bottom:-8px;
-  width:min(42%, 150px);
-  max-height:190px;
+  flex:0 0 76px;
+  width:76px;
+  height:92px;
   object-fit:contain;
-  object-position:right bottom;
-  opacity:.92;
+  object-position:center top;
+  opacity:.96;
   pointer-events:none;
+  filter:drop-shadow(0 8px 13px rgba(15,23,42,.10));
 }
 
 html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="false"] + .paw-work-status{
@@ -2518,11 +2580,23 @@ html[data-embed="1"].paw-compact .paw-works-btn:not(.is-active)[aria-expanded="f
   html[data-embed="1"] body.paw-ask .guide-resting-mode,
   html[data-embed="1"] body.paw-ask .guide-tool-link{
     padding-left:11px;
-    padding-right:11px;
+    padding-right:28px;
     font-size:12px;
   }
-  html[data-embed="1"] body.paw-ask .guide-resting-miska__copy{
-    max-width:76%;
+  html[data-embed="1"] body.paw-ask .guide-resting-mode::after,
+  html[data-embed="1"] body.paw-ask .guide-tool-link::after{
+    right:10px;
+  }
+  html[data-embed="1"] body.paw-ask .guide-tool-link__meta{
+    font-size:11px;
+  }
+  html[data-embed="1"] body.paw-ask .guide-resting-card--miska{
+    gap:10px;
+  }
+  html[data-embed="1"] body.paw-ask .guide-resting-miska__image{
+    flex-basis:64px;
+    width:64px;
+    height:80px;
   }
 }
 
