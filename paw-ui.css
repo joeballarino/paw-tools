@@ -761,8 +761,29 @@ body.connect-tool .composer{
     0 0 0 3px rgba(var(--accent-rgb),.16),
     0 5px 14px rgba(15,23,42,.08);
 }
+.paw-voice-btn.is-arming{
+  border-color:rgba(var(--accent-rgb),.28);
+  background:rgba(239,246,255,.94);
+  color:rgba(30,64,175,.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 0 0 3px rgba(var(--accent-rgb),.08),
+    0 5px 14px rgba(var(--accent-rgb),.10);
+}
+.paw-voice-btn.is-arming::before{
+  content:"";
+  position:absolute;
+  inset:5px;
+  border-radius:999px;
+  border:2px solid rgba(var(--accent-rgb),.12);
+  border-top-color:rgba(var(--accent-rgb),.88);
+  pointer-events:none;
+  animation:pawVoiceSpin .72s linear infinite;
+}
 .paw-voice-btn__icon,
 .paw-voice-btn__spinner{
+  position:relative;
+  z-index:1;
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -835,9 +856,13 @@ body.connect-tool .composer{
   .paw-voice-btn,
   .paw-voice-btn.is-recording,
   .paw-voice-btn.is-warning,
+  .paw-voice-btn.is-arming::before,
   .paw-voice-btn__spinner{
     animation:none;
     transition:none;
+  }
+  .paw-voice-btn.is-arming::before{
+    border-color:rgba(var(--accent-rgb),.42);
   }
 }
 .composer textarea[data-paw-working="1"]{

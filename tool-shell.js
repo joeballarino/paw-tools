@@ -1210,6 +1210,7 @@ if ($input) {
 
         function setVoiceState(next) {
           state.status = next || "idle";
+          btn.classList.remove("is-arming");
           btn.classList.toggle("is-recording", state.status === "recording");
           btn.classList.toggle("is-warning", state.status === "warning");
           btn.classList.toggle("is-processing", state.status === "processing");
@@ -1397,10 +1398,11 @@ if ($input) {
         }
 
         async function startRecording() {
-          if (!canRecord || state.status !== "idle") return;
+          if (!canRecord || state.status !== "idle" || btn.classList.contains("is-arming")) return;
 
           let stream = null;
           try {
+            btn.classList.add("is-arming");
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mimeType = getPreferredAudioMimeType();
             const options = mimeType ? { mimeType: mimeType } : undefined;
