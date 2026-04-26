@@ -778,7 +778,7 @@ body.connect-tool .composer{
   border:2px solid rgba(var(--accent-rgb),.12);
   border-top-color:rgba(var(--accent-rgb),.88);
   pointer-events:none;
-  animation:pawVoiceSpin .72s linear infinite;
+  animation:pawVoiceSpin 1.05s linear infinite;
 }
 .paw-voice-btn__icon,
 .paw-voice-btn__spinner{
@@ -814,6 +814,16 @@ body.connect-tool .composer{
     0 0 0 4px rgba(var(--accent-rgb),.10),
     0 6px 16px rgba(var(--accent-rgb),.14);
   animation:pawVoicePulse 1.25s ease-in-out infinite;
+}
+.paw-voice-btn.is-recording.is-arming{
+  border-color:rgba(var(--accent-rgb),.28);
+  background:rgba(239,246,255,.94);
+  color:rgba(30,64,175,.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 0 0 3px rgba(var(--accent-rgb),.08),
+    0 5px 14px rgba(var(--accent-rgb),.10);
+  animation:none;
 }
 .paw-voice-btn.is-warning{
   border-color:rgba(220,38,38,.22);
