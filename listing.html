@@ -283,6 +283,84 @@
           </button>
         </div>
 
+        <section aria-label="Listings quick help" class="guide-resting-cards" id="listingRestingCards">
+          <article class="guide-resting-card guide-resting-card--modes">
+            <div class="guide-resting-card__head">
+              <span aria-hidden="true" class="guide-resting-card__icon guide-resting-card__icon--modes">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path class="guide-resting-icon-fill" d="M11.7 4.2l2.1 5.1 5.1 2-5.1 2.1-2.1 5.1-2.1-5.1-5.1-2.1 5.1-2 2.1-5.1z"></path>
+                  <path class="guide-resting-icon-fill guide-resting-icon-accent" d="M18.9 2.6l.72 1.74 1.78.7-1.78.72-.72 1.74-.72-1.74-1.78-.72 1.78-.7.72-1.74z"></path>
+                </svg>
+              </span>
+              <h2 class="guide-resting-card__title">For Best Results</h2>
+            </div>
+            <div class="guide-resting-list" role="list">
+              <button class="guide-resting-mode" data-listing-shortcut data-listing-placeholder="Use the Most Compelling Feature field above to tell PAW what should lead the listing story and why it matters." type="button">
+                <span>Lead with the best feature</span>
+              </button>
+              <button class="guide-resting-mode" data-listing-shortcut data-listing-placeholder="Include upgrades, layout details, condition, outdoor spaces, setting, and anything that helps explain why the property stands out." type="button">
+                <span>Share the strongest facts</span>
+              </button>
+              <button class="guide-resting-mode" data-listing-shortcut data-listing-placeholder="Copy property details from a public listing page, old MLS record, or your notes, then paste them here for PAW to turn into polished remarks." type="button">
+                <span>Paste from a listing source</span>
+              </button>
+              <button class="guide-resting-mode" data-listing-shortcut data-listing-placeholder="After PAW drafts the remarks, you&rsquo;ll be able to review local highlights, choose useful points of interest, or add your own." type="button">
+                <span>Add local highlights</span>
+              </button>
+            </div>
+          </article>
+
+          <article class="guide-resting-card guide-resting-card--tools">
+            <div class="guide-resting-card__head">
+              <span aria-hidden="true" class="guide-resting-card__icon guide-resting-card__icon--tools">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path class="guide-resting-icon-fill" d="M6.1 5.4h6.7v2.15H9.78l5.35 5.34-1.52 1.52-5.36-5.34v3.02H6.1V5.4z"></path>
+                  <path class="guide-resting-icon-stroke" d="M17.45 10.2v7.25H6.55V10.2"></path>
+                </svg>
+              </span>
+              <h2 class="guide-resting-card__title">Try Another Tool</h2>
+            </div>
+            <div class="guide-tool-links" role="list">
+              <a class="guide-tool-link" data-listing-nav="GUIDE" href="./guide.html?embed=1">
+                <span class="guide-tool-link__name">Guide</span>
+                <span class="guide-tool-link__meta">PAW help</span>
+              </a>
+              <a class="guide-tool-link" data-listing-nav="CONNECT" href="./connect.html?embed=1">
+                <span class="guide-tool-link__name">Connect</span>
+                <span class="guide-tool-link__meta">Email &amp; text</span>
+              </a>
+              <a class="guide-tool-link" data-listing-nav="PRESENCE" href="./presence.html?embed=1">
+                <span class="guide-tool-link__name">Presence</span>
+                <span class="guide-tool-link__meta">Public content</span>
+              </a>
+              <a class="guide-tool-link" data-listing-nav="TRANSACTIONS" href="./transactions.html?embed=1">
+                <span class="guide-tool-link__name">Transactions</span>
+                <span class="guide-tool-link__meta">Forms &amp; terms</span>
+              </a>
+            </div>
+          </article>
+
+          <article class="guide-resting-card guide-resting-card--miska">
+            <div class="guide-resting-miska__head">
+              <img alt="" aria-hidden="true" class="guide-resting-miska__image" src="./assets/miska-sitting.png">
+              <h2 class="guide-resting-card__title">Miska says...</h2>
+            </div>
+            <div class="guide-resting-miska__copy">
+              <p>Listings helps your remarks earn attention for the right reasons. It is designed to make buyers stop and read, then make them want to see the property, while staying grounded in the facts and compliance-aware. <a class="guide-resting-inline-link" id="listingRestingLearnMore" href="#">Learn more.</a></p>
+            </div>
+          </article>
+        </section>
+
+        <div class="guide-resting-disclaimer" role="note">
+          <span aria-hidden="true" class="guide-resting-disclaimer__icon">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 3.2l7 2.7v5.2c0 4.6-2.9 8.7-7 10-4.1-1.3-7-5.4-7-10V5.9l7-2.7z"></path>
+              <path d="M8.8 12.1l2.1 2.1 4.5-4.7"></path>
+            </svg>
+          </span>
+          <p>PAW is designed to be so useful and reliable that you may trust it too much. But AI can still make mistakes. Always verify facts, review important details, and confirm legal, compliance, broker, MLS, state-specific, financial, or professional guidance before relying on any output.</p>
+        </div>
+
       </div>
     </div>
   </div>
@@ -366,6 +444,7 @@ Examples
       const $porch = document.getElementById("porchSel");
       const $compelling = document.getElementById("compellingInp");
       const $input = document.getElementById("input");
+      const LISTING_DEFAULT_PLACEHOLDER = $input ? String($input.getAttribute("placeholder") || "") : "";
 
       // Local highlights modal elements
       const $localModal = document.getElementById("localModal");
@@ -587,6 +666,7 @@ Examples
 
           // Restore chat history
           if (shell && shell.setState && d.shell) shell.setState(d.shell);
+          syncListingRestingCards();
 
           return true;
         } catch (_) {
@@ -626,6 +706,7 @@ Examples
           if ($porch) $porch.value = "";
           if ($compelling) $compelling.value = "";
           if ($input) $input.value = "";
+          if ($input && LISTING_DEFAULT_PLACEHOLDER) $input.setAttribute("placeholder", LISTING_DEFAULT_PLACEHOLDER);
         } catch (_) {}
 
         // Clear shell thread
@@ -635,6 +716,8 @@ Examples
             window.__PAWWorks.detachWork();
           }
         } catch (_) {}
+        syncListingRestingCards();
+        try { setTimeout(syncListingRestingCards, 0); } catch (_) {}
       }
 
 
@@ -943,6 +1026,30 @@ Examples
         renderListingAttachedWorkSummary(getListingActiveWork());
       }
 
+      function listingShellHasContent() {
+        try {
+          const st = (shell && shell.getState) ? shell.getState() : null;
+          if (st && typeof st.input === "string" && st.input.trim()) return true;
+          if (st && Array.isArray(st.history) && st.history.length) return true;
+        } catch (_) {}
+        try {
+          if ($input && String($input.value || "").trim()) return true;
+        } catch (_) {}
+        try {
+          const messages = document.getElementById("messages");
+          if (messages && messages.children && messages.children.length) return true;
+        } catch (_) {}
+        return false;
+      }
+
+      function syncListingRestingCards() {
+        try {
+          const cards = document.getElementById("listingRestingCards");
+          if (!cards) return;
+          cards.hidden = listingShellHasContent();
+        } catch (_) {}
+      }
+
       // Shared Work shell init.
       // tool-shell.js wires the Work button and owns Works mode lifecycle.
       // Listing may consume shared Work state after init, but must not duplicate that logic locally.
@@ -1094,6 +1201,67 @@ const shell = window.PAWToolShell.init({
       });
 
       syncListingAttachedWorkSummary();
+      syncListingRestingCards();
+
+      try {
+        Array.from(document.querySelectorAll("[data-listing-shortcut]")).forEach((button) => {
+          button.addEventListener("click", () => {
+            if ($input) {
+              $input.value = "";
+              const placeholder = String(button.getAttribute("data-listing-placeholder") || "");
+              if (placeholder) $input.setAttribute("placeholder", placeholder);
+              try { $input.focus(); } catch (_) {}
+            }
+            syncListingRestingCards();
+          });
+        });
+      } catch (_) {}
+
+      try {
+        const navLinks = document.querySelectorAll("[data-listing-nav]");
+        navLinks.forEach((link) => {
+          link.addEventListener("click", (e) => {
+            const destination = String(link.getAttribute("data-listing-nav") || "").toUpperCase();
+            if (!destination) return;
+            const isInIframe = (() => { try { return window.self !== window.top; } catch (_) { return true; } })();
+            if (!isInIframe) return;
+            try { e.preventDefault(); } catch (_) {}
+            try {
+              window.parent.postMessage({
+                type: "paw_navigate_request_v1",
+                destination,
+                query: null
+              }, "*");
+            } catch (_) {}
+          });
+        });
+      } catch (_) {}
+
+      try {
+        const learnMore = document.getElementById("listingRestingLearnMore");
+        const tips = document.getElementById("tips");
+        if (learnMore && tips) {
+          learnMore.addEventListener("click", (e) => {
+            try { e.preventDefault(); } catch (_) {}
+            try { tips.click(); } catch (_) {}
+          });
+        }
+      } catch (_) {}
+
+      try {
+        if ($input) {
+          $input.addEventListener("input", syncListingRestingCards);
+          $input.addEventListener("change", syncListingRestingCards);
+        }
+      } catch (_) {}
+
+      try {
+        const messages = document.getElementById("messages");
+        if (messages && window.MutationObserver) {
+          const listingRestingObserver = new MutationObserver(() => syncListingRestingCards());
+          listingRestingObserver.observe(messages, { childList: true, subtree: true });
+        }
+      } catch (_) {}
 
       // ==========================================================
       // POI modal controls
