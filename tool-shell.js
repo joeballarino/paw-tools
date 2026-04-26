@@ -1185,6 +1185,7 @@ if ($input) {
           chunks: [],
           startedAt: 0,
           durationMs: 0,
+          armingTimer: 0,
           warningTimer: 0,
           stopTimer: 0,
           stopPromise: null
@@ -1208,9 +1209,28 @@ if ($input) {
           '<span class="paw-voice-btn__spinner" aria-hidden="true"></span>';
         $composerMain.appendChild(btn);
 
+        const ARMING_VISUAL_MS = 1800;
+
+        function clearArmingVisual() {
+          if (state.armingTimer) {
+            clearTimeout(state.armingTimer);
+            state.armingTimer = 0;
+          }
+          btn.classList.remove("is-arming");
+        }
+
+        function beginArmingVisual() {
+          clearArmingVisual();
+          btn.classList.add("is-arming");
+          state.armingTimer = setTimeout(function () {
+            state.armingTimer = 0;
+            btn.classList.remove("is-arming");
+          }, ARMING_VISUAL_MS);
+        }
+
         function setVoiceState(next) {
           state.status = next || "idle";
-          btn.classList.remove("is-arming");
+          if (state.status !== "recording") clearArmingVisual();
           btn.classList.toggle("is-recording", state.status === "recording");
           btn.classList.toggle("is-warning", state.status === "warning");
           btn.classList.toggle("is-processing", state.status === "processing");
@@ -1402,7 +1422,7 @@ if ($input) {
 
           let stream = null;
           try {
-            btn.classList.add("is-arming");
+            beginArmingVisual();
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mimeType = getPreferredAudioMimeType();
             const options = mimeType ? { mimeType: mimeType } : undefined;
